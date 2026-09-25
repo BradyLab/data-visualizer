@@ -1,7 +1,7 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
 
 const app: Express = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // 1. Global Middleware
 app.use(express.json()); // Parses incoming JSON payloads

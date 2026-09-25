@@ -1,0 +1,30 @@
+services:
+  backend:
+    image: node:current-alpine
+    working_dir: /backend-express
+    volumes:
+      - ./backend-express:/backend-express
+      - ./commons:/commons
+    ports:
+      - "3001:3001"
+    command: sh -c "rm -rf dist/ &&
+                    npm install &&
+                    npm run build &&
+                    npm run dev"
+                    # npx sequelize-cli db:migrate && before run dev
+    # depends_on:
+    #   postgres:
+    #     condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: on-failure
+  
+  frontend:
+    image: node:current-alpine
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - ./commons:/commons
+    ports:
+      - "3000:3000"
+    command: sh -c "npm install && npm run dev -- --host --port 3000"
