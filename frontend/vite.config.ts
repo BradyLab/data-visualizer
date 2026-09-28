@@ -16,7 +16,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@src': path.resolve(__dirname, './src'),
+      '@src': path.resolve(__dirname, './src'),//TODO DIRNAME REPLACE
       '@commons': path.resolve(__dirname, '../commons')
     },
   },
