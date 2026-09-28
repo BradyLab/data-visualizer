@@ -1,0 +1,86 @@
+<script setup lang="ts"></script>
+
+<template>
+    <v-container class="py-6 px-12">
+        <v-text-field
+            placeholder="DATASET NAME"
+            variant="plain"
+            class="text-headline-small mb-2"
+            hide-details
+        ></v-text-field>
+        <v-divider class="mb-4"></v-divider>
+
+        <v-row class="text-body-medium mb-1 mx-4">Description</v-row>
+        <v-textarea
+            placeholder="Type a description of the dataset here"
+            rows="2"
+            hide-details
+            class="mb-4 mx-4"
+        ></v-textarea>
+
+        <v-row class="text-body-medium mb-1 mx-4">DOI</v-row>
+        <v-text-field prepend-inner-icon="mdi-link" placeholder="Add a DOI link here" density="compact" hide-details class="mb-4 mx-4"></v-text-field>
+
+        <v-row class="text-body-medium mb-1 mx-4">Raw Data Download Link (NCBI/SRA)</v-row>
+        <v-text-field placeholder="Add a DOI link here" density="compact" hide-details class="mb-4 mx-4"></v-text-field>
+
+        <v-row class="mx-4">
+            <v-file-upload density="compact" title="Upload Raw Data File" clearable !multiple hide-details></v-file-upload>
+            <!-- <v-btn color="primary" prepend-icon="mdi-upload">Upload raw data file</v-btn> -->
+        </v-row>
+
+        <v-row class="text-body-medium mb-1 mx-4">Add Your Treatments</v-row>
+        <v-combobox
+            :items="['Treatment 1', 'Treatment 2', 'Treatment 3', 'Control']"
+            :model-value="['Treatment 1', 'Treatment 2', 'Treatment 3', 'Control']"
+            multiple
+            chips
+            closable-chips
+            density="comfortable"
+            hide-details
+            class="mb-4 mx-4"
+        ></v-combobox>
+
+        <v-row class="text-body-medium mb-1 mx-4">Pick Your Plots</v-row>
+        <v-combobox
+            :items="['UMAP DimPlot', 'Dot Plot', 'Tissue Plot', 'Plot 4']"
+            :model-value="['UMAP DimPlot', 'Dot Plot', 'Tissue Plot', 'Plot 4']"
+            multiple
+            chips
+            closable-chips
+            density="comfortable"
+            hide-details
+            class="mb-8 mx-4"
+        ></v-combobox>
+
+        <v-row class="mx-4">
+            <v-file-upload density="compact" title="Upload Cover Photo" clearable !multiple hide-details></v-file-upload>
+            <!-- <v-btn color="primary" prepend-icon="mdi-upload">Upload cover photo</v-btn> -->
+        </v-row>
+        <v-row class="mx-4">
+            <v-file-upload density="compact" title="Upload .rds File" clearable !multiple hide-details></v-file-upload>
+            <!-- <v-btn color="primary" prepend-icon="mdi-upload">Upload .rds file</v-btn> -->
+        </v-row>
+        <v-row class="justify-right mx-4">
+            <v-spacer/>
+            <v-col class="justify-right" cols="auto">
+                <v-btn>Create New Dataset</v-btn>
+            </v-col>
+            
+        </v-row>
+    </v-container>
+</template>
+
+<style scoped>
+:deep(.v-file-upload-dropzone--density-compact) {
+    padding: 10px 0;
+    gap: 0.5rem;
+}
+:deep(.v-file-upload-icon) {
+    font-size: 1.25rem;
+    margin-bottom: 0;
+}
+:deep(.v-file-upload-title) {
+    font-size: 0.8125rem;
+}
+</style>
