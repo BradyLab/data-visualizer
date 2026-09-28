@@ -1,19 +1,14 @@
 <script setup lang="ts">
-import { useRouter, useRoute } from "vue-router";
+import { useRoute } from "vue-router";
 import BradyLabLogo from "@src/components/BradyLabLogo.vue";
 import LayoutHelper from "@src/components/LayoutHelper.vue";
 // import { sports } from "@src/interfaces/sportsInfo";
 
-const router = useRouter();
 const route = useRoute();
-
-function navTo(route: string) {
-    router.push(route);
-}
 </script>
 
 <template>
-    <v-footer class="pa-0 pl-1" v-if="!route.meta.hideFooter">
+    <v-footer class="pa-0 pl-1" style="min-height: unset; height: auto;" v-if="!route.meta.hideFooter">
         <v-container fluid class="pa-0">
             <v-row class="align-center">
                 <BradyLabLogo/>
@@ -32,3 +27,9 @@ function navTo(route: string) {
         </v-container>
     </v-footer>
 </template>
+
+<style scoped>
+.v-footer {
+  flex: 0 0 auto;
+}
+</style>

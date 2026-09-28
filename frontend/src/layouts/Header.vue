@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { useRouter, useRoute } from "vue-router";
+import { useRouter } from "vue-router";
 import { datasets } from "../interfaces/datasetTest";
 import BradyLabLogo from "@src/components/BradyLabLogo.vue";
 import LayoutHelper from "@src/components/LayoutHelper.vue";
 
 const router = useRouter();
-const route = useRoute();
 
 function navTo(route: string) {
     router.push(route);
