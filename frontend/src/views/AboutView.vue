@@ -1,15 +1,11 @@
+<script setup lang="ts"></script>
+
 <template>
-  <div class="about">
-    <h1>This is an about page</h1>
-  </div>
+    <h1>ABOUTVIEW.VUE You did it!</h1>
+    <p>
+        Visit
+        <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the documentation
+    </p>
 </template>
 
-<style>
-@media (min-width: 1024px) {
-  .about {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-  }
-}
-</style>
+<style scoped></style>
