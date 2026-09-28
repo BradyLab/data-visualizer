@@ -21,7 +21,7 @@ export default (app: App) => {
                 //info
                 //success
                 //warning
-                text: "#000000",
+                text: "#FFFFFF",
             },
             variables: {},
         },

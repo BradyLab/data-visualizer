@@ -27,7 +27,7 @@ function navTo(route: string) {
                     </template>
 
                     <v-list>
-                        <v-list-item v-for="dataset in datasets" @click="navTo('/' + dataset.url)">
+                        <v-list-item v-for="dataset in datasets" @click="navTo('/dataset/' + dataset.url)">
                             {{ dataset.name }}
                         </v-list-item>
                     </v-list>
@@ -37,7 +37,14 @@ function navTo(route: string) {
                 |
             </v-col>
             <v-col cols="auto">
-                HELP
+                <a 
+                    href="https://docs.google.com/document/d/1VB1B6OtJmUqrp9LV7py-gPYMQm0WqmPKwHOjb4I01S0/edit?tab=t.0#heading=h.pfplectqnb9t" 
+                    target="_blank"
+                    :class="{ 'text-decoration-none': true }"
+                    class="text-text"
+                >
+                    HELP
+                </a>
             </v-col>
             <LayoutHelper/>
             
@@ -53,13 +60,13 @@ function navTo(route: string) {
 
                     <!--    TODO: add bradylab signin/signup -->
                     <v-list>
-                        <v-list-item @click="navTo('/')">
+                        <v-list-item @click="navTo('/login')">
                             LOG IN
                         </v-list-item>
-                        <v-list-item @click="navTo('/')">
+                        <v-list-item @click="navTo('/settings')">
                             SETTINGS
                         </v-list-item>
-                        <v-list-item @click="navTo('/')">
+                        <v-list-item>
                             LOG OUT
                         </v-list-item>
                     </v-list>
