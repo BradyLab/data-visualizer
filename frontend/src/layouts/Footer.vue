@@ -13,27 +13,21 @@ function navTo(route: string) {
 </script>
 
 <template>
-    <v-footer class="pa-0 pl-1">
+    <v-footer class="pa-0 pl-1" v-if="!route.meta.hideFooter">
         <v-container fluid class="pa-0">
             <v-row class="align-center">
-                <v-col class="cursor-pointer pa-0" cols="auto" @click="navTo('/home')">
-                    <img alt="Brady Lab logo" class="logo" src="@src/assets/BradyLabNewLogo.png" width="100" height="59"/>
-                </v-col>
+                <BradyLabLogo/>
                 <v-col cols="auto" class="ml-n4">
-                    HELP
+                    <a 
+                        href="https://docs.google.com/document/d/1VB1B6OtJmUqrp9LV7py-gPYMQm0WqmPKwHOjb4I01S0/edit?tab=t.0#heading=h.pfplectqnb9t" 
+                        target="_blank"
+                        :class="{ 'text-decoration-none': true }"
+                        class="text-text"
+                    >
+                        HELP
+                    </a>
                 </v-col>
-                <v-col cols="auto">
-                    |
-                </v-col>
-                <v-col cols="auto">
-                    ABOUT
-                </v-col>
-                <v-col cols="auto">
-                    |
-                </v-col>
-                <v-col cols="auto">
-                    FEEDBACK
-                </v-col>
+                <LayoutHelper/>
             </v-row>
         </v-container>
     </v-footer>
