@@ -52,6 +52,11 @@ export default (app: App) => {
             border: "2px solid",
             clearable: true,
         },
+        VFileUpload: {
+            VBtn: {
+                color: "#FFFFFF"
+            }
+        }
     };
 
     //creation
