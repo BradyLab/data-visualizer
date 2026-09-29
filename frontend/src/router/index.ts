@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -13,37 +12,37 @@ const router = createRouter({
     {
       path: '/home',
       name: 'home',
-      component: async () => await import("../views/HomeView.vue"),
+      component: async () => await import("@src/views/HomeView.vue"),
       meta: { hideFooter: false },
     },
     {
       path: '/about',
       name: 'about',
-      component: () => import('../views/AboutView.vue'),
+      component: () => import('@src/views/AboutView.vue'),
       meta: { hideFooter: false },
     },
     {
       path: '/settings',
       name: 'settings',
-      component: () => import('../views/SettingsView.vue'),
+      component: () => import('@src/views/SettingsView.vue'),
       meta: { hideFooter: false },
     },
     {
-      path: '/dataset',
+      path: '/dataset/:datasetTitle',
       name: 'dataset',
-      component: () => import('../views/DatasetView.vue'),
+      component: () => import('@src/views/DatasetView.vue'),
       meta: { hideFooter: false },
     },
     {
       path: '/new',
       name: 'new',
-      component: () => import('../views/NewDatasetView.vue'),
+      component: () => import('@src/views/EditDatasetView.vue'),
       meta: { hideFooter: false },
     },
     {
       path: '/login',
       name: 'login',
-      component: () => import('../views/LoginView.vue'),
+      component: () => import('@src/views/LoginView.vue'),
       meta: { hideFooter: true },
     },
   ],
