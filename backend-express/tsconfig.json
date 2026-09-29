@@ -2,7 +2,7 @@
   // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
     // File Layout
-    "rootDir": "./src",
+    "rootDir": "..",
     "outDir": "./dist",
 
     // Environment Settings
@@ -11,10 +11,9 @@
     "target": "ES2022",
     "moduleResolution": "NodeNext",
     "esModuleInterop": true,
-    "types": [],
     // For nodejs:
     // "lib": ["esnext"],
-    // "types": ["node"],
+    "types": ["node"],
     // and npm install -D @types/node
 
     // Other Outputs
@@ -34,15 +33,23 @@
     // "noFallthroughCasesInSwitch": true,
     // "noPropertyAccessFromIndexSignature": true,
     "forceConsistentCasingInFileNames": true,
+    "allowImportingTsExtensions": true,
+    "emitDeclarationOnly": true,
 
     // Recommended Options
     "strict": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "jsx": "react-jsx",
     // "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
+    "paths": {
+      "@commons/*": ["../commons/*"],
+      "@src/*": ["./src/*"],
+    }
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "migrations/**/*", "../commons/**/*", "src/config.ts"]
 }

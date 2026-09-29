@@ -7,18 +7,42 @@ services:
       - ./commons:/commons
     ports:
       - "3001:3001"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=data_visualizer
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
     command: sh -c "rm -rf dist/ &&
                     npm install &&
                     npm run build &&
+                    npm run db:migrate &&
+                    npm run db:seed &&
                     npm run dev"
-                    # npx sequelize-cli db:migrate && before run dev
-    # depends_on:
-    #   postgres:
-    #     condition: service_healthy
+    depends_on:
+      postgres:
+        condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: on-failure
-  
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: data_visualizer
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: on-failure
+
   frontend:
     image: node:current-alpine
     working_dir: /app
@@ -27,4 +51,7 @@ services:
       - ./commons:/commons
     ports:
       - "3000:3000"
-    command: sh -c "npm install && npm run dev -- --host --port 3000"
+    command: sh -c "npm install && npm run dev --host"
+
+volumes:
+  postgres-data:
