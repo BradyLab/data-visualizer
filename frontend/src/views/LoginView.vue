@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref } from "vue";
 
 const showPass = ref(false);
 </script>
 
 <template>
-    <v-container class="d-flex justify-center" style="padding-top: 64px;">
+    <v-container class="d-flex justify-center" style="padding-top: 64px">
         <v-card class="pa-8" max-width="490" width="100%" variant="outlined" rounded="lg">
             <v-row class="d-flex justify-center mb-6">
                 <img src="@src/assets/BradyLabNewLogo.png" alt="Brady Lab logo" width="180" />
