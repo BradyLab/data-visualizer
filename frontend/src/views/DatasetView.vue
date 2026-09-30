@@ -1,7 +1,9 @@
 <script setup lang="ts"></script>
 
+<!-- Dataset page UI mockup. Currently shows static placeholder data; selections are not yet wired to state -->
 <template>
     <v-container class="px-12">
+        <!-- Title, DOI, and action buttons -->
         <v-row class="mb-4">
             <v-col>
                 <h1 class="text-h6 my-0 font-weight-bold">DATASET NAME</h1>
@@ -13,8 +15,10 @@
             </v-col>
         </v-row>
 
+        <!-- Dataset description -->
         <v-row class="text-body-large">DESCRIPTION HERE</v-row>
 
+        <!-- Gene selector (multi-select with removable chips) -->
         <v-row class="text-body-medium mx-4">Pick Your Genes</v-row>
         <v-combobox
             :items="['Gene 1', 'Gene 2', 'Gene 3']"
@@ -28,6 +32,7 @@
             class="mb-4 mx-4"
         ></v-combobox>
 
+        <!-- Cell type selector (multi-select with removable chips) -->
         <div class="text-body-medium mb-1 mx-4">Pick Your Cell Types</div>
         <v-combobox
             :items="['Cell Type 1', 'Cell Type 2', 'Cell Type 3']"
@@ -41,6 +46,7 @@
             class="mb-6 mx-4"
         ></v-combobox>
 
+        <!-- Treatment and plot checkboxes, side by side on wider screens -->
         <v-row class="mx-4">
             <v-col cols="12" md="6">
                 <div class="text-body-medium mb-1">Pick Your Treatments</div>
@@ -58,12 +64,14 @@
             </v-col>
         </v-row>
 
+        <!-- Button that will generate the selected plots -->
         <div class="d-flex justify-center mt-6">
             <v-btn color="primary">Generate Plots</v-btn>
         </div>
     </v-container>
 </template>
 
+/* Shrink the checkboxes to make the option lists more compact (:deep is needed to style Vuetify's inner elements) */
 <style scoped>
 :deep(.v-checkbox .v-selection-control) {
     --v-input-control-height: 28px;

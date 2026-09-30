@@ -1,9 +1,12 @@
 <script setup lang="ts">
+// Placeholder dataset list (to be replaced by backend data)
 import { datasets } from "@src/interfaces/datasetTest";
 import { useRouter } from "vue-router";
 
+// Router instance used for programmatic navigation
 const router = useRouter();
 
+// Navigate to the given route path
 function navTo(route: string) {
     router.push(route);
 }
@@ -13,6 +16,7 @@ function navTo(route: string) {
     <v-container class="px-12">
         <h1 class="text-h6 font-weight-bold mb-4">SETTINGS</h1>
 
+        <!-- Account-level actions -->
         <v-row class="mb-6 mx-4">
             <v-col cols="auto">
                 <v-btn color="primary" prepend-icon="mdi-plus" @click="navTo('/new')">New Dataset</v-btn>
@@ -22,6 +26,7 @@ function navTo(route: string) {
             </v-col>
         </v-row>
 
+        <!-- One row per dataset: name (links to the dataset), private/public switch, and edit button -->
         <v-row v-for="dataset in datasets" align="center" class="mx-4">
             <v-col @click="navTo('/dataset/' + dataset.url)">{{ dataset.name }}</v-col>
             <v-col cols="auto" class="d-flex align-center">

@@ -1,5 +1,6 @@
 <script setup lang="ts"></script>
 
+<!-- Placeholder about page from the Vue project template -->
 <template>
     <h1>ABOUTVIEW.VUE You did it!</h1>
     <p>
