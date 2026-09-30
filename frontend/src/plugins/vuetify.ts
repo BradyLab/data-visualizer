@@ -1,3 +1,4 @@
+// Vuetify plugin: configures the theme, default component props, and icon set
 //imports
 import type { App } from "vue";
 import { createVuetify } from "vuetify";

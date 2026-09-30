@@ -1,8 +1,12 @@
 import { createRouter, createWebHistory } from "vue-router";
 
+// Route table. Views are lazy-loaded so each page is only downloaded when visited.
+// meta.hideFooter controls whether the footer is shown on that page
 const router = createRouter({
+    // Use browser history mode (clean URLs, no #)
     history: createWebHistory(import.meta.env.BASE_URL),
     routes: [
+        // Root path redirects to the home page
         {
             path: "/",
             name: "default",
@@ -27,18 +31,21 @@ const router = createRouter({
             component: () => import("@src/views/SettingsView.vue"),
             meta: { hideFooter: false },
         },
+        // Shows the dataset with the URL slug in :datasetTitle
         {
             path: "/dataset/:datasetTitle",
             name: "dataset",
             component: () => import("@src/views/DatasetView.vue"),
             meta: { hideFooter: false },
         },
+        // Page for creating a new dataset
         {
             path: "/new",
             name: "new",
             component: () => import("@src/views/EditDatasetView.vue"),
             meta: { hideFooter: false },
         },
+        // Login page (footer hidden)
         {
             path: "/login",
             name: "login",

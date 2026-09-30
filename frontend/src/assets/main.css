@@ -1,5 +1,7 @@
+/* Global styles from the Vue project template */
 @import "./base.css";
 
+/* Root app container */
 #app {
     max-width: 1280px;
     margin: 0 auto;
@@ -7,6 +9,7 @@
     font-weight: normal;
 }
 
+/* Link styling */
 a,
 .green {
     text-decoration: none;
@@ -21,6 +24,7 @@ a,
     }
 }
 
+/* Wide-screen layout overrides */
 @media (min-width: 1024px) {
     body {
         display: flex;
