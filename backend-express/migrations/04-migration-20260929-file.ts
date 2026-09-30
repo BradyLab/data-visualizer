@@ -1,0 +1,82 @@
+// This is an empty template migration; copy it as a starting point for new migrations
+// Migration: up() applies schema changes, down() reverts them
+"use strict";
+
+import { DataTypes, type QueryInterface, type Sequelize } from "sequelize";
+import { FileTypes } from "@commons/file.ts";
+// Minimal logger so migration errors/info are easy to spot in console output
+const migrationLogger = {
+    error: (e: unknown) => {
+        console.error("[Migrations]", e);
+    },
+    info: (...args: unknown[]) => {
+        console.log("[Migrations]", ...args);
+    },
+};
+
+// Apply the migration
+export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
+    try {
+        // add schema changes
+        await queryInterface.createTable("Files", { 
+            id: {
+                type: DataTypes.UUID,
+                allowNull: false,
+                primaryKey: true,
+            },
+            dataset_id: {
+                type: DataTypes.UUID,
+                allowNull: false,
+                references: { model: "Datasets", key: "id" },
+            },
+            type: {
+                type: DataTypes.ENUM(...Object.values(FileTypes)),
+                allowNull: false,
+            },
+            sizeBytes: {
+                type: DataTypes.INTEGER,
+                allowNull: false,
+            },
+            ogName: {
+                type: DataTypes.STRING,
+                allowNull: false,
+            },
+            createdAt: {
+                type: DataTypes.DATE,
+                allowNull: false,
+            },
+            updatedAt: {
+                type: DataTypes.DATE,
+                allowNull: true,
+            },
+            deletedAt: {
+                type: DataTypes.DATE,
+                allowNull: true,
+            },
+        })
+
+        // Each dataset can have at most one file of each type
+        await queryInterface.addConstraint("Files", {
+            fields: ["dataset_id", "type"],
+            type: "unique",
+            name: "Files_dataset_id_type_unique",
+        })
+    } catch (error) {
+        migrationLogger.error(error);
+        throw error;
+    }
+}
+
+// Revert the migration
+export async function down(queryInterface: QueryInterface, sequelize: Sequelize) {
+    try {
+        // revert schema changes
+        await queryInterface.dropTable("Files")
+    } catch (error) {
+        migrationLogger.error(error);
+        throw error;
+    }
+}
+
+// Export both functions as the default export for the migration runner
+export default { up, down };

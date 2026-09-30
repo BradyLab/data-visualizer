@@ -1,17 +1,23 @@
 export enum UserRoles {
   ADMIN = "ADMIN",
-  BETA = "BETA",
-  USER = "USER",
+  LAB_MEMBER = "LAB_MEMBER",
+  EXTERNAL = "EXTERNAL",
   GUEST = "GUEST",
+}
+
+export enum UserStatus {
+  INVITED = "INVITED",
+  ACTIVE = "ACTIVE",
+  INACTIVE = "INACTIVE",
 }
 
 export interface IUser {
   id: string;
   email: string;
-  displayName?: string | undefined;
-  username: string;
-  emailNotifs: boolean;
-  role: UserRoles[];
+  name: string;
+  role: UserRoles;
+  status: UserStatus;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt: Date;
 }
