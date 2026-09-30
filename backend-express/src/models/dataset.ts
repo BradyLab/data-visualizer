@@ -1,20 +1,19 @@
 // Sequelize model for the Users table (columns must stay in sync with the user migration)
-import { Column, DataType, HasMany, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
+import { Column, DataType, ForeignKey, HasMany, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
 // Shared role enum and user interface from the commons package
-import { IUser, UserRoles, UserStatus } from "@commons/user.ts";
-import { Permissions } from "./permission.ts";
+import { IDataset, DatasetPlots } from "@commons/dataset.ts";
+import { Users } from "./user.ts"
+import { Permissions } from "./permission.ts"
 
-export interface IUserPass extends IUser {
-    password: string;
-}
+export type {IDataset}
 
 // Maps this class to the "Users" table and enables createdAt/updatedAt timestamps
 @Table({
-    tableName: "Users",
+    tableName: "Datasets",
     paranoid: true,
     timestamps: true,
 })
-export class Users extends Model<IUserPass> {
+export class Datasets extends Model<IDataset> {
     // Unique user identifier, auto-generated as a UUIDv4
     @PrimaryKey
     @Column({
@@ -24,41 +23,58 @@ export class Users extends Model<IUserPass> {
     })
     declare id: string;
 
-    // Login/contact email; must be unique
-    @Unique
-    @Column({
-        type: DataType.STRING,
-        allowNull: false,
-    })
-    declare email: string;
-
-    // Hashed password
-    @Column({
-        type: DataType.STRING,
-        allowNull: false,
-    })
-    declare password: string;
-
-    // User's name
+    // Dataset name
     @Column({
         type: DataType.STRING,
         allowNull: false,
     })
     declare name: string;
 
-    // Access level; values come from the UserRoles enum
+    @ForeignKey(() => Users)
     @Column({
-        type: DataType.ENUM(...Object.values(UserRoles)),
+        type: DataType.UUID,
         allowNull: false,
     })
-    declare role: string;
+    declare owner: string;
 
-    // User's status; values come from the UserStatus enum
+    @Unique
     @Column({
-        type: DataType.ENUM(...Object.values(UserStatus)),
+        type: DataType.STRING,
         allowNull: false,
     })
-    declare status: string;
+    declare url: string;
+
+    @Column({
+        type: DataType.STRING,
+        allowNull: false,
+    })
+    declare description: string;
+
+    @Column({
+        type: DataType.STRING,
+        allowNull: true,
+        defaultValue: "",
+    })
+    declare doi: string;
+
+    @Column({
+        type: DataType.STRING,
+        allowNull: true,
+        defaultValue: "",
+    })
+    declare rawDataLink: string;
+
+    @Column({
+        type: DataType.ARRAY(DataType.STRING),
+        allowNull: false,
+    })
+    declare treatments: string[];
+
+    @Column({
+        type: DataType.ARRAY(DataType.ENUM(...Object.values(DatasetPlots))),
+        allowNull: false,
+    })
+    declare plots: string[];
 
     // Row creation time
     @Column({
@@ -81,11 +97,11 @@ export class Users extends Model<IUserPass> {
     })
     declare deletedAt: Date;
 
-    // Soft-deleting a user (user.destroy()) also soft-deletes their permissions.
+    // Soft-deleting a dataset (dataset.destroy()) also soft-deletes its permissions.
     // hooks: true makes Sequelize load and destroy each child row individually, which honors paranoid mode;
-    // it does not apply to bulk deletes like Users.destroy({ where }) unless individualHooks: true is passed
-    @HasMany(() => Permissions, { foreignKey: "user_id", onDelete: "CASCADE", onUpdate: "CASCADE", hooks: true })
+    // it does not apply to bulk deletes like Datasets.destroy({ where }) unless individualHooks: true is passed
+    @HasMany(() => Permissions, { foreignKey: "dataset_id", onDelete: "CASCADE", onUpdate: "CASCADE", hooks: true })
     declare permissions?: Permissions[];
 }
 
-export default Users;
+export default Datasets;
