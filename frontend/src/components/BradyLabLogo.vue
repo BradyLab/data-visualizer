@@ -10,6 +10,6 @@ function navTo(route: string) {
 
 <template>
     <v-col cols="auto" class="cursor-pointer mt-2" @click="navTo('/home')">
-        <img alt="Brady Lab logo" class="logo" src="@src/assets/BradyLabNewLogo.png" width="100" height="58"/>
+        <img alt="Brady Lab logo" class="logo" src="@src/assets/BradyLabNewLogo.png" width="100" height="58" />
     </v-col>
 </template>

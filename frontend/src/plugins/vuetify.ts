@@ -54,9 +54,9 @@ export default (app: App) => {
         },
         VFileUpload: {
             VBtn: {
-                color: "#FFFFFF"
-            }
-        }
+                color: "#FFFFFF",
+            },
+        },
     };
 
     //creation

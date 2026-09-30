@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { datasets } from '@src/interfaces/datasetTest';
+import { datasets } from "@src/interfaces/datasetTest";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
@@ -23,7 +23,7 @@ function navTo(route: string) {
         </v-row>
 
         <v-row v-for="dataset in datasets" align="center" class="mx-4">
-            <v-col @click="navTo('/dataset/'+dataset.url)">{{dataset.name}}</v-col>
+            <v-col @click="navTo('/dataset/' + dataset.url)">{{ dataset.name }}</v-col>
             <v-col cols="auto" class="d-flex align-center">
                 <span class="mr-2">Private</span>
                 <v-switch :model-value="false" color="primary" density="compact" inset hide-details></v-switch>

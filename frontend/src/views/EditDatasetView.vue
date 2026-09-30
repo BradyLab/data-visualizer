@@ -2,24 +2,20 @@
 
 <template>
     <v-container class="py-6 px-12">
-        <v-text-field
-            placeholder="DATASET NAME"
-            variant="plain"
-            class="text-headline-small mb-2"
-            hide-details
-        ></v-text-field>
+        <v-text-field placeholder="DATASET NAME" variant="plain" class="text-headline-small mb-2" hide-details></v-text-field>
         <v-divider class="mb-4"></v-divider>
 
         <v-row class="text-body-medium mb-1 mx-4">Description</v-row>
-        <v-textarea
-            placeholder="Type a description of the dataset here"
-            rows="2"
-            hide-details
-            class="mb-4 mx-4"
-        ></v-textarea>
+        <v-textarea placeholder="Type a description of the dataset here" rows="2" hide-details class="mb-4 mx-4"></v-textarea>
 
         <v-row class="text-body-medium mb-1 mx-4">DOI</v-row>
-        <v-text-field prepend-inner-icon="mdi-link" placeholder="Add a DOI link here" density="compact" hide-details class="mb-4 mx-4"></v-text-field>
+        <v-text-field
+            prepend-inner-icon="mdi-link"
+            placeholder="Add a DOI link here"
+            density="compact"
+            hide-details
+            class="mb-4 mx-4"
+        ></v-text-field>
 
         <v-row class="text-body-medium mb-1 mx-4">Raw Data Download Link (NCBI/SRA)</v-row>
         <v-text-field placeholder="Add a DOI link here" density="compact" hide-details class="mb-4 mx-4"></v-text-field>
@@ -62,11 +58,10 @@
             <!-- <v-btn color="primary" prepend-icon="mdi-upload">Upload .rds file</v-btn> -->
         </v-row>
         <v-row class="justify-right mx-4">
-            <v-spacer/>
+            <v-spacer />
             <v-col class="justify-right" cols="auto">
                 <v-btn>Create New Dataset</v-btn>
             </v-col>
-            
         </v-row>
     </v-container>
 </template>

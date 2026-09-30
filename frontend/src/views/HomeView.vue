@@ -17,12 +17,11 @@ function navTo(route: string) {
                 <v-card @click="navTo('/dataset/' + dataset.url)">
                     <div class="dataset-thumb"></div>
                     <v-card-item>
-                        <v-card-title class="text-body-2 font-weight-bold">{{dataset.name}}</v-card-title>
+                        <v-card-title class="text-body-2 font-weight-bold">{{ dataset.name }}</v-card-title>
                         <v-card-subtitle>[description here]</v-card-subtitle>
                     </v-card-item>
                 </v-card>
             </v-col>
-            
         </v-row>
     </v-container>
 </template>

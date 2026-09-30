@@ -14,15 +14,13 @@ function navTo(route: string) {
 <template>
     <v-app-bar scroll-behavior="hide" app>
         <template v-slot:prepend>
-            <BradyLabLogo/>
+            <BradyLabLogo />
         </template>
         <v-row class="align-center ml-2">
             <v-col cols="auto">
                 <v-menu open-on-hover>
                     <template v-slot:activator="{ props }">
-                        <div v-bind="props">
-                            DATASETS <v-icon>mdi-chevron-down</v-icon>
-                        </div>
+                        <div v-bind="props">DATASETS <v-icon>mdi-chevron-down</v-icon></div>
                     </template>
 
                     <v-list>
@@ -32,12 +30,10 @@ function navTo(route: string) {
                     </v-list>
                 </v-menu>
             </v-col>
+            <v-col cols="auto"> | </v-col>
             <v-col cols="auto">
-                |
-            </v-col>
-            <v-col cols="auto">
-                <a 
-                    href="https://docs.google.com/document/d/1VB1B6OtJmUqrp9LV7py-gPYMQm0WqmPKwHOjb4I01S0/edit?tab=t.h5arv6ibis4c" 
+                <a
+                    href="https://docs.google.com/document/d/1VB1B6OtJmUqrp9LV7py-gPYMQm0WqmPKwHOjb4I01S0/edit?tab=t.h5arv6ibis4c"
                     target="_blank"
                     :class="{ 'text-decoration-none': true }"
                     class="text-text"
@@ -45,32 +41,24 @@ function navTo(route: string) {
                     HELP
                 </a>
             </v-col>
-            <LayoutHelper/>
-            
+            <LayoutHelper />
         </v-row>
 
         <template v-slot:append>
             <v-menu open-on-hover>
-                    <template v-slot:activator="{ props }">
-                        <div v-bind="props">
-                            <v-icon>mdi-dots-vertical</v-icon>
-                        </div>
-                    </template>
+                <template v-slot:activator="{ props }">
+                    <div v-bind="props">
+                        <v-icon>mdi-dots-vertical</v-icon>
+                    </div>
+                </template>
 
-                    <!--    TODO: add bradylab signin/signup -->
-                    <v-list>
-                        <v-list-item @click="navTo('/login')">
-                            LOG IN
-                        </v-list-item>
-                        <v-list-item @click="navTo('/settings')">
-                            SETTINGS
-                        </v-list-item>
-                        <v-list-item>
-                            LOG OUT
-                        </v-list-item>
-                    </v-list>
-                </v-menu>
-            
+                <!--    TODO: add bradylab signin/signup -->
+                <v-list>
+                    <v-list-item @click="navTo('/login')"> LOG IN </v-list-item>
+                    <v-list-item @click="navTo('/settings')"> SETTINGS </v-list-item>
+                    <v-list-item> LOG OUT </v-list-item>
+                </v-list>
+            </v-menu>
         </template>
     </v-app-bar>
 </template>
