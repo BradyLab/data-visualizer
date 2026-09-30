@@ -7,7 +7,7 @@ import { sequelize } from "./database.js";
 const PORT = process.env.API_PORT || 3001;
 
 export const get = () => {
-    const app: Express = express()
+    const app: Express = express();
     app.use(express.json()); // Parses incoming JSON payloads
     app.use(express.urlencoded({ extended: true }));
 
@@ -27,7 +27,7 @@ export const get = () => {
     //OTHER ROUTERS HERE
 
     return app;
-}
+};
 
 export const start = async () => {
     const app = get();
@@ -56,6 +56,6 @@ export const start = async () => {
     } catch (error: any) {
         console.error("Error occurred: ", error.message);
     }
-}
+};
 
 start();
