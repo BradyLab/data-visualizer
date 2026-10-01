@@ -3,9 +3,12 @@
 // Placeholder dataset list (to be replaced by backend data)
 import { datasets } from "../interfaces/datasetTest";
 import { useRouter } from "vue-router";
+import { useAuthStore } from "@src/stores/auth";
 
 // Router instance used for programmatic navigation
 const router = useRouter();
+
+const auth = useAuthStore();
 
 // Navigate to the given route path
 function navTo(route: string) {
@@ -16,6 +19,7 @@ function navTo(route: string) {
 <template>
     <!-- Landing page: grid of dataset cards -->
     <v-container class="py-6">
+        <!-- Welcome {{ auth.user.name }} -->
         <h1 class="text-h6 font-weight-bold mb-4">BRADY LAB DATASETS</h1>
         <v-row>
             <!-- One card per dataset; clicking opens the dataset page -->

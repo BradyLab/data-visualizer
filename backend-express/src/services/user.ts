@@ -1,18 +1,12 @@
 // Database access for Users; the password hash is never returned to callers
-import { randomBytes, scryptSync } from "node:crypto";
 import { Users, IUserPass } from "../models/user.ts";
 import { pick } from "../utils/pick.ts";
+import { hashPassword } from "@src/utils/password.ts";
 
 // Whitelist of columns clients may set (see utils/pick.ts)
 const USER_FIELDS = ["email", "password", "name", "role", "status"] as const;
 // Query option that keeps the password hash out of query results
 const PUBLIC_ATTRIBUTES = { exclude: ["password"] };
-
-// Hashes a password as "salt:hash" (hex) using scrypt
-const hashPassword = (password: string) => {
-    const salt = randomBytes(16).toString("hex");
-    return `${salt}:${scryptSync(password, salt, 64).toString("hex")}`;
-};
 
 // Hashes the password field (if present) before it is stored
 const prepare = (body: unknown) => {

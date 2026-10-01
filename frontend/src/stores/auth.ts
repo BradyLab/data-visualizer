@@ -1,0 +1,109 @@
+// Pinia store for the logged-in user and their login token
+import { ref, computed } from "vue";
+import { defineStore } from "pinia";
+import axios from "axios";
+import { UserRoles, UserStatus, type IUser } from "@commons/user";
+import { authApi } from "@src/api/auth";
+import { useRouter } from "vue-router";
+
+// localStorage key for the token so the session survives a page reload
+const TOKEN_KEY = "token";
+
+// Reads the saved token; storage can be unavailable (e.g. blocked site data)
+const loadToken = () => {
+    try {
+        return localStorage.getItem(TOKEN_KEY);
+    } catch {
+        return null;
+    }
+};
+
+const router = useRouter();
+
+export const useAuthStore = defineStore("auth", () => {
+    const token = ref<string | null>(loadToken());
+    const user = ref<IUser>({
+        id: "",
+        email: "",
+        name: "GUEST USER",
+        role: UserRoles.GUEST,
+        status: UserStatus.ACTIVE,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: new Date()
+    });
+    const loading = ref(false);
+    const error = ref<string | null>(null);
+
+    const isLoggedIn = computed(() => !!token.value);
+
+    // Saves the token, and makes every axios request send it
+    function setToken(value: string | null) {
+        token.value = value;
+        try {
+            if (value) localStorage.setItem(TOKEN_KEY, value);
+            else localStorage.removeItem(TOKEN_KEY);
+        } catch {
+            // Storage unavailable; the session just won't survive a reload
+        }
+        if (value) axios.defaults.headers.common["Authorization"] = `Bearer ${value}`;
+        else delete axios.defaults.headers.common["Authorization"];
+    }
+
+    /** Logs in; returns true on success, or false with `error` set to a message for the user */
+    async function login(email: string, password: string) {
+        loading.value = true;
+        error.value = null;
+        try {
+            const result = await authApi.login({ email, password });
+            setToken(result.token);
+            user.value = result.user;
+            return true;
+        } catch (err) {
+            error.value =
+                axios.isAxiosError(err) && err.response?.status === 401
+                    ? "Invalid email or password"
+                    : "Unable to log in. Please try again.";
+            return false;
+        } finally {
+            loading.value = false;
+        }
+    }
+
+    /** Restores the user from a saved token (call on app start); logs out if the token is no longer valid */
+    async function restore() {
+        if (!token.value) return;
+        setToken(token.value);
+        try {
+            user.value = await authApi.me();
+        } catch {
+            logout();
+        }
+    }
+
+    /** Clears the token and user */
+    function logout() {
+        setToken(null);
+        user.value = {
+            id: "",
+            email: "",
+            name: "GUEST USER",
+            role: UserRoles.GUEST,
+            status: UserStatus.ACTIVE,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            deletedAt: new Date()
+        };
+    }
+
+    return {
+        token,
+        user,
+        loading,
+        error,
+        isLoggedIn,
+        login,
+        restore,
+        logout
+    };
+});
