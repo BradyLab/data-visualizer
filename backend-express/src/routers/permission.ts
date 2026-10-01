@@ -2,6 +2,7 @@
 import { Router } from "express";
 import * as controller from "../controllers/permission.ts";
 
+// Express router for the permission CRUD endpoints
 const router = Router();
 
 router.get("/", controller.list);

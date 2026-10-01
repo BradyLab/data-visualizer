@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// Page footer: logo and HELP/ABOUT/FEEDBACK links; hidden on routes with meta.hideFooter
 import { useRoute } from "vue-router";
 import BradyLabLogo from "@src/components/BradyLabLogo.vue";
 import LayoutHelper from "@src/components/LayoutHelper.vue";

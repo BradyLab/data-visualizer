@@ -1,4 +1,6 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+// Dataset page view: choose genes, cell types, treatments and plots for a dataset (static mockup, no logic yet)
+</script>
 
 <!-- Dataset page UI mockup. Currently shows static placeholder data; selections are not yet wired to state -->
 <template>

@@ -2,6 +2,7 @@
 import { Permissions, IPermission } from "../models/permission.ts";
 import { pick } from "../utils/pick.ts";
 
+// Whitelist of columns clients may set (see utils/pick.ts)
 const PERMISSION_FIELDS = ["user_id", "dataset_id", "perm"] as const;
 
 // Optional filters so clients can list by user and/or dataset
@@ -12,6 +13,7 @@ export const getAll = (filters: { user_id?: string; dataset_id?: string }) => {
     return Permissions.findAll({ where });
 };
 
+/** Finds a permission by its user_id + dataset_id pair, or null */
 export const getById = (user_id: string, dataset_id: string) => Permissions.findOne({ where: { user_id, dataset_id } });
 
 // Re-activates a previously soft-deleted permission instead of violating the composite primary key
@@ -35,6 +37,7 @@ export const update = async (user_id: string, dataset_id: string, body: unknown)
     return permission.update(pick<IPermission>(body, ["perm"]));
 };
 
+/** Soft-deletes a permission; returns false if not found */
 export const remove = async (user_id: string, dataset_id: string) => {
     const permission = await getById(user_id, dataset_id);
     if (!permission) return false;

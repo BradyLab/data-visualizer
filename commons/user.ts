@@ -1,3 +1,6 @@
+// Shared user types used by both the frontend and backend
+
+// Roles that determine a user's level of access in the app
 export enum UserRoles {
   ADMIN = "ADMIN",
   LAB_MEMBER = "LAB_MEMBER",
@@ -5,12 +8,14 @@ export enum UserRoles {
   GUEST = "GUEST",
 }
 
+// Account lifecycle states
 export enum UserStatus {
   INVITED = "INVITED",
   ACTIVE = "ACTIVE",
   INACTIVE = "INACTIVE",
 }
 
+// A user account as stored in the Users table
 export interface IUser {
   id: string;
   email: string;

@@ -1,4 +1,9 @@
 // Copies only the allowed keys from a request body so clients cannot set columns like id or createdAt
+/**
+ * Builds a partial object containing only the listed keys that are defined on body.
+ * @param body untrusted input (e.g. req.body); null/undefined is treated as {}
+ * @param keys whitelist of keys to copy
+ */
 export const pick = <T extends object>(body: unknown, keys: readonly (keyof T)[]): Partial<T> => {
     const source = (body ?? {}) as Partial<T>;
     const result: Partial<T> = {};

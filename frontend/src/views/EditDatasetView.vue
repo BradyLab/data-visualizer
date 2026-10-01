@@ -1,4 +1,6 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+// Create-dataset page view: form fields and file uploads (static mockup, no logic yet)
+</script>
 
 <!-- Form for creating a new dataset. UI only for now; nothing is submitted -->
 <template>
@@ -66,7 +68,7 @@
             <v-file-upload density="compact" title="Upload .rds File" clearable !multiple hide-details></v-file-upload>
             <!-- <v-btn color="primary" prepend-icon="mdi-upload">Upload .rds file</v-btn> -->
         </v-row>
-        
+
         <!-- Submit button -->
         <v-row class="justify-right mx-4">
             <v-spacer />

@@ -3,7 +3,9 @@ import { randomBytes, scryptSync } from "node:crypto";
 import { Users, IUserPass } from "../models/user.ts";
 import { pick } from "../utils/pick.ts";
 
+// Whitelist of columns clients may set (see utils/pick.ts)
 const USER_FIELDS = ["email", "password", "name", "role", "status"] as const;
+// Query option that keeps the password hash out of query results
 const PUBLIC_ATTRIBUTES = { exclude: ["password"] };
 
 // Hashes a password as "salt:hash" (hex) using scrypt
@@ -25,12 +27,16 @@ const toPublic = (user: Users) => {
     return rest;
 };
 
+/** Returns all non-deleted users without passwords */
 export const getAll = () => Users.findAll({ attributes: PUBLIC_ATTRIBUTES });
 
+/** Finds a user by primary key without the password, or null */
 export const getById = (id: string) => Users.findByPk(id, { attributes: PUBLIC_ATTRIBUTES });
 
+/** Creates a user (password is hashed first) and returns it without the password */
 export const create = async (body: unknown) => toPublic(await Users.create(prepare(body) as IUserPass));
 
+/** Updates a user (password is re-hashed if provided); returns null if not found */
 export const update = async (id: string, body: unknown) => {
     const user = await Users.findByPk(id);
     if (!user) return null;

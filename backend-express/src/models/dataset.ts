@@ -1,13 +1,13 @@
-// Sequelize model for the Users table (columns must stay in sync with the user migration)
+// Sequelize model for the Datasets table (columns must stay in sync with the dataset migration)
 import { Column, DataType, ForeignKey, HasMany, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
-// Shared role enum and user interface from the commons package
+// Shared dataset interface and plot types from the commons package
 import { IDataset, DatasetPlots } from "@commons/dataset.ts";
-import { Users } from "./user.ts"
-import { Permissions } from "./permission.ts"
+import { Users } from "./user.ts";
+import { Permissions } from "./permission.ts";
 
-export type {IDataset}
+export type { IDataset };
 
-// Maps this class to the "Users" table and enables createdAt/updatedAt timestamps
+// Maps this class to the "Datasets" table and enables createdAt/updatedAt timestamps (paranoid: true = soft deletes via deletedAt)
 @Table({
     tableName: "Datasets",
     paranoid: true,
@@ -30,6 +30,7 @@ export class Datasets extends Model<IDataset> {
     })
     declare name: string;
 
+    // User who owns the dataset
     @ForeignKey(() => Users)
     @Column({
         type: DataType.UUID,
@@ -37,6 +38,7 @@ export class Datasets extends Model<IDataset> {
     })
     declare owner: string;
 
+    // Unique URL/slug for the dataset
     @Unique
     @Column({
         type: DataType.STRING,
@@ -44,12 +46,14 @@ export class Datasets extends Model<IDataset> {
     })
     declare url: string;
 
+    // Free-text description
     @Column({
         type: DataType.STRING,
         allowNull: false,
     })
     declare description: string;
 
+    // Optional DOI of the associated publication
     @Column({
         type: DataType.STRING,
         allowNull: true,
@@ -57,6 +61,7 @@ export class Datasets extends Model<IDataset> {
     })
     declare doi: string;
 
+    // Optional link to the raw data
     @Column({
         type: DataType.STRING,
         allowNull: true,
@@ -64,12 +69,14 @@ export class Datasets extends Model<IDataset> {
     })
     declare rawDataLink: string;
 
+    // Treatment names used in the dataset
     @Column({
         type: DataType.ARRAY(DataType.STRING),
         allowNull: false,
     })
     declare treatments: string[];
 
+    // Plot types to display; values come from the DatasetPlots enum
     @Column({
         type: DataType.ARRAY(DataType.ENUM(...Object.values(DatasetPlots))),
         allowNull: false,

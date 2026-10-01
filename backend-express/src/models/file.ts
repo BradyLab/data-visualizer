@@ -1,18 +1,18 @@
-// Sequelize model for the Users table (columns must stay in sync with the user migration)
+// Sequelize model for the Files table (columns must stay in sync with the file migration)
 import { Column, DataType, ForeignKey, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
-// Shared role enum and user interface from the commons package
+// Shared file interface and file types from the commons package
 import { IFile, FileTypes } from "@commons/file.ts";
-import { Datasets } from "./dataset.ts"
+import { Datasets } from "./dataset.ts";
 
-export type {IFile}
+export type { IFile };
 
-// Maps this class to the "Users" table and enables createdAt/updatedAt timestamps
+// Maps this class to the "Files" table and enables createdAt/updatedAt timestamps
 @Table({
     tableName: "Files",
     timestamps: true,
 })
 export class Files extends Model<IFile> {
-    
+    // Unique file identifier, auto-generated as a UUIDv4
     @PrimaryKey
     @Column({
         type: DataType.UUID,
@@ -38,12 +38,14 @@ export class Files extends Model<IFile> {
     })
     declare type: string;
 
+    // File size in bytes
     @Column({
         type: DataType.INTEGER,
         allowNull: false,
     })
     declare sizeBytes: number;
 
+    // Original file name as uploaded
     @Column({
         type: DataType.STRING,
         allowNull: false,
@@ -63,13 +65,6 @@ export class Files extends Model<IFile> {
         allowNull: true,
     })
     declare updatedAt: Date;
-
-    // Time of deletion of the row
-    @Column({
-        type: DataType.DATE,
-        allowNull: true,
-    })
-    declare deletedAt: Date;
 }
 
 export default Files;

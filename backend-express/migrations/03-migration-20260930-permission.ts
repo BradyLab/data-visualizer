@@ -1,5 +1,5 @@
-// This is an empty template migration; copy it as a starting point for new migrations
-// Migration: up() applies schema changes, down() reverts them
+// Migration 03: creates the Permissions join table (per-user access to datasets)
+// up() applies schema changes, down() reverts them
 "use strict";
 
 import { DataTypes, type QueryInterface, type Sequelize } from "sequelize";
@@ -18,7 +18,9 @@ const migrationLogger = {
 export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
     try {
         // add schema changes
-        await queryInterface.createTable("Permissions", { 
+        await queryInterface.createTable("Permissions", {
+            // Composite primary key (user_id, dataset_id): one permission row per user per dataset
+            // user_id is a foreign key to Users.id; deleting/updating the user cascades
             user_id: {
                 type: DataTypes.UUID,
                 allowNull: false,
@@ -27,6 +29,7 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 onUpdate: "CASCADE",
                 onDelete: "CASCADE",
             },
+            // dataset_id is a foreign key to Datasets.id; deleting/updating the dataset cascades
             dataset_id: {
                 type: DataTypes.UUID,
                 allowNull: false,
@@ -35,11 +38,13 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 onUpdate: "CASCADE",
                 onDelete: "CASCADE",
             },
+            // Access level granted to the user; defaults to read-only (VIEW)
             perm: {
                 type: DataTypes.ENUM(...Object.values(PermissionOptions)),
                 allowNull: false,
                 defaultValue: PermissionOptions.VIEW,
             },
+            // Timestamps; deletedAt is set for soft deletes (paranoid models)
             createdAt: {
                 type: DataTypes.DATE,
                 allowNull: false,
@@ -52,7 +57,7 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 type: DataTypes.DATE,
                 allowNull: true,
             },
-        })
+        });
     } catch (error) {
         migrationLogger.error(error);
         throw error;
@@ -63,7 +68,7 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
 export async function down(queryInterface: QueryInterface, sequelize: Sequelize) {
     try {
         // revert schema changes
-        await queryInterface.dropTable("Permissions")
+        await queryInterface.dropTable("Permissions");
     } catch (error) {
         migrationLogger.error(error);
         throw error;
