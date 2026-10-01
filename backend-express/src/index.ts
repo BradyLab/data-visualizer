@@ -9,6 +9,7 @@ import userRouter from "./routers/user.ts";
 import datasetRouter from "./routers/dataset.ts";
 import permissionRouter from "./routers/permission.ts";
 import fileRouter from "./routers/file.ts";
+import activityRouter from "./routers/activity.ts";
 
 import { UniqueConstraintError, ValidationError, ForeignKeyConstraintError } from "sequelize";
 
@@ -35,7 +36,7 @@ export const get = () => {
     app.use("/datasets", datasetRouter);
     app.use("/permissions", permissionRouter);
     app.use("/files", fileRouter);
-    //TODO LOG TABLE
+    app.use("/activities", activityRouter);
 
     //centralized error handling
     app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
