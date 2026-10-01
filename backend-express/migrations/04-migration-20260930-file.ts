@@ -25,11 +25,19 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 allowNull: false,
                 primaryKey: true,
             },
-            // Foreign key to Datasets.id: the dataset this file belongs to
+            // Foreign key to Datasets.id: the dataset this file belongs to; deleting/updating the dataset cascades
             dataset_id: {
                 type: DataTypes.UUID,
                 allowNull: false,
                 references: { model: "Datasets", key: "id" },
+                onUpdate: "CASCADE",
+                onDelete: "CASCADE",
+            },
+            //Foreign key to Users.id: the user that uploaded this file
+            user_id: {
+                type: DataTypes.UUID,
+                allowNull: false,
+                references: { model: "Users", key: "id" },
             },
             // Kind of file (cover image, RDS, or raw data); values come from FileTypes
             type: {
@@ -46,7 +54,7 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 type: DataTypes.STRING,
                 allowNull: false,
             },
-            // Timestamps
+            // Timestamps (no deletedAt: files are hard-deleted so the unique (dataset_id, type) slot is freed)
             createdAt: {
                 type: DataTypes.DATE,
                 allowNull: false,
@@ -54,7 +62,7 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
             updatedAt: {
                 type: DataTypes.DATE,
                 allowNull: true,
-            }
+            },
         });
 
         // Each dataset can have at most one file of each type

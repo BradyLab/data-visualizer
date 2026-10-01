@@ -38,7 +38,7 @@ export class Permissions extends Model<IPermission> {
         allowNull: false,
         defaultValue: PermissionOptions.VIEW,
     })
-    declare perm: string[];
+    declare perm: PermissionOptions;
 
     // Row creation time
     @Column({

@@ -51,15 +51,17 @@ export class Users extends Model<IUserPass> {
     @Column({
         type: DataType.ENUM(...Object.values(UserRoles)),
         allowNull: false,
+        defaultValue: UserRoles.GUEST,
     })
-    declare role: string;
+    declare role: UserRoles;
 
     // User's status; values come from the UserStatus enum
     @Column({
         type: DataType.ENUM(...Object.values(UserStatus)),
         allowNull: false,
+        defaultValue: UserStatus.INVITED,
     })
-    declare status: string;
+    declare status: UserStatus;
 
     // Row creation time
     @Column({

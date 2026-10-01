@@ -36,14 +36,15 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 allowNull: false,
                 references: { model: "Users", key: "id" },
             },
-            // Link to the dataset's page or source
+            // Unique URL/slug for the dataset
             url: {
                 type: DataTypes.STRING,
                 allowNull: false,
+                unique: true,
             },
             // Free-text summary shown to users
             description: {
-                type: DataTypes.STRING,
+                type: DataTypes.TEXT,
                 allowNull: false,
             },
             // Optional publication DOI

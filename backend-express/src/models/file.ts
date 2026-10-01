@@ -1,8 +1,9 @@
 // Sequelize model for the Files table (columns must stay in sync with the file migration)
-import { Column, DataType, ForeignKey, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
+import { BelongsTo, Column, DataType, ForeignKey, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
 // Shared file interface and file types from the commons package
 import { IFile, FileTypes } from "@commons/file.ts";
 import { Datasets } from "./dataset.ts";
+import { Users } from "./user.ts";
 
 export type { IFile };
 
@@ -30,13 +31,21 @@ export class Files extends Model<IFile> {
     })
     declare dataset_id: string;
 
+    // User who uploaded the file
+    @ForeignKey(() => Users)
+    @Column({
+        type: DataType.UUID,
+        allowNull: false,
+    })
+    declare user_id: string;
+
     // Part of the composite unique constraint with dataset_id
     @Unique("Files_dataset_id_type_unique")
     @Column({
         type: DataType.ENUM(...Object.values(FileTypes)),
         allowNull: false,
     })
-    declare type: string;
+    declare type: FileTypes;
 
     // File size in bytes
     @Column({
@@ -65,6 +74,10 @@ export class Files extends Model<IFile> {
         allowNull: true,
     })
     declare updatedAt: Date;
+
+    // Deleting/updating the dataset cascades to its files (matches the Files migration)
+    @BelongsTo(() => Datasets, { foreignKey: "dataset_id", onDelete: "CASCADE", onUpdate: "CASCADE" })
+    declare dataset?: Datasets;
 }
 
 export default Files;

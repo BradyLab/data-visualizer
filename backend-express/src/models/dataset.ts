@@ -4,6 +4,7 @@ import { Column, DataType, ForeignKey, HasMany, Model, PrimaryKey, Table, Unique
 import { IDataset, DatasetPlots } from "@commons/dataset.ts";
 import { Users } from "./user.ts";
 import { Permissions } from "./permission.ts";
+import { Files } from "./file.ts";
 
 export type { IDataset };
 
@@ -14,7 +15,7 @@ export type { IDataset };
     timestamps: true,
 })
 export class Datasets extends Model<IDataset> {
-    // Unique user identifier, auto-generated as a UUIDv4
+    // Unique dataset identifier, auto-generated as a UUIDv4
     @PrimaryKey
     @Column({
         type: DataType.UUID,
@@ -48,7 +49,7 @@ export class Datasets extends Model<IDataset> {
 
     // Free-text description
     @Column({
-        type: DataType.STRING,
+        type: DataType.TEXT,
         allowNull: false,
     })
     declare description: string;
@@ -81,7 +82,7 @@ export class Datasets extends Model<IDataset> {
         type: DataType.ARRAY(DataType.ENUM(...Object.values(DatasetPlots))),
         allowNull: false,
     })
-    declare plots: string[];
+    declare plots: DatasetPlots[];
 
     // Row creation time
     @Column({
@@ -109,6 +110,10 @@ export class Datasets extends Model<IDataset> {
     // it does not apply to bulk deletes like Datasets.destroy({ where }) unless individualHooks: true is passed
     @HasMany(() => Permissions, { foreignKey: "dataset_id", onDelete: "CASCADE", onUpdate: "CASCADE", hooks: true })
     declare permissions?: Permissions[];
+
+    // Deleting a dataset also deletes its files (Files is not paranoid, so these rows are removed outright)
+    @HasMany(() => Files, { foreignKey: "dataset_id", onDelete: "CASCADE", onUpdate: "CASCADE", hooks: true })
+    declare files?: Files[];
 }
 
 export default Datasets;
