@@ -26,3 +26,15 @@ export interface IUser {
     updatedAt: Date;
     deletedAt: Date;
 }
+
+// Credentials sent to the login endpoint
+export interface ILoginRequest {
+    email: string;
+    password: string;
+}
+
+// Returned by a successful login: a signed JWT and the logged-in user
+export interface ILoginResponse {
+    token: string;
+    user: IUser;
+}

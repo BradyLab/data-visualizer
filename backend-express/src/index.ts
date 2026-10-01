@@ -5,11 +5,14 @@ import cors from "cors";
 import express, { Express, Request, Response, NextFunction } from "express";
 import { sequelize } from "./database.js";
 
+import { apis } from "@commons/general.ts";
+
 import userRouter from "./routers/user.ts";
 import datasetRouter from "./routers/dataset.ts";
 import permissionRouter from "./routers/permission.ts";
 import fileRouter from "./routers/file.ts";
 import activityRouter from "./routers/activity.ts";
+import authRouter from "./routers/auth.ts";
 
 import { UniqueConstraintError, ValidationError, ForeignKeyConstraintError } from "sequelize";
 
@@ -32,11 +35,12 @@ export const get = () => {
     });
 
     // Register routers here
-    app.use("/users", userRouter);
-    app.use("/datasets", datasetRouter);
-    app.use("/permissions", permissionRouter);
-    app.use("/files", fileRouter);
-    app.use("/activities", activityRouter);
+    app.use(`/api/${apis.USER}`, userRouter);
+    app.use(`/api/${apis.DATASET}`, datasetRouter);
+    app.use(`/api/${apis.PERMISSION}`, permissionRouter);
+    app.use(`/api/${apis.FILE}`, fileRouter);
+    app.use(`/api/${apis.ACTIVITY}`, activityRouter);
+    app.use(`/api/${apis.AUTH}`, authRouter);
 
     //centralized error handling
     app.use((err: Error, req: Request, res: Response, next: NextFunction) => {

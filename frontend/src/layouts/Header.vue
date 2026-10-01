@@ -5,13 +5,21 @@ import { useRouter } from "vue-router";
 import { datasets } from "../interfaces/datasetTest";
 import BradyLabLogo from "@src/components/BradyLabLogo.vue";
 import LayoutHelper from "@src/components/LayoutHelper.vue";
+import { useAuthStore } from "@src/stores/auth";
 
 // Router instance used for programmatic navigation
 const router = useRouter();
 
+const auth = useAuthStore();
+
 // Navigate to the given route path
 function navTo(route: string) {
     router.push(route);
+}
+
+function logout() {
+    auth.logout();
+    navTo('/home');
 }
 </script>
 
@@ -64,10 +72,9 @@ function navTo(route: string) {
 
                 <!--    TODO: add bradylab signin/signup -->
                 <v-list>
-                    <v-list-item @click="navTo('/login')"> LOG IN </v-list-item>
-                    <v-list-item @click="navTo('/settings')"> SETTINGS </v-list-item>
-                    <!-- TODO Log out is not implemented yet -->
-                    <v-list-item> LOG OUT </v-list-item>
+                    <v-list-item v-if="!auth.isLoggedIn" @click="navTo('/login')"> LOG IN </v-list-item>
+                    <v-list-item v-if="auth.isLoggedIn" @click="navTo('/settings')"> SETTINGS </v-list-item>
+                    <v-list-item v-if="auth.isLoggedIn" @click="logout()"> LOG OUT </v-list-item>
                 </v-list>
             </v-menu>
         </template>

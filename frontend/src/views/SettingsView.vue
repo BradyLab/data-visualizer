@@ -3,14 +3,22 @@
 // Placeholder dataset list (to be replaced by backend data)
 import { datasets } from "@src/interfaces/datasetTest";
 import { useRouter } from "vue-router";
+import { onMounted } from "vue";
+import { useAuthStore } from "@src/stores/auth";
 
 // Router instance used for programmatic navigation
 const router = useRouter();
+
+const auth = useAuthStore();
 
 // Navigate to the given route path
 function navTo(route: string) {
     router.push(route);
 }
+
+onMounted(() => {
+    if(!auth.isLoggedIn) navTo("/home");
+})
 </script>
 
 <template>
