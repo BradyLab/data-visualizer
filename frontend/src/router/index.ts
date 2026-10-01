@@ -1,3 +1,4 @@
+// Vue Router setup: defines the app's pages and their URLs
 import { createRouter, createWebHistory } from "vue-router";
 
 // Route table. Views are lazy-loaded so each page is only downloaded when visited.

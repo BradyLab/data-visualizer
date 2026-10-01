@@ -19,6 +19,7 @@ const PORT = process.env.API_PORT || 3001;
 export const get = () => {
     const app: Express = express();
     app.use(express.json()); // Parses incoming JSON payloads
+    // Parses URL-encoded form bodies
     app.use(express.urlencoded({ extended: true }));
 
     // Only allow cross-origin requests from the frontend

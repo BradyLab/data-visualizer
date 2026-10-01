@@ -4,6 +4,7 @@ import { Column, DataType, HasMany, Model, PrimaryKey, Table, Unique } from "seq
 import { IUser, UserRoles, UserStatus } from "@commons/user.ts";
 import { Permissions } from "./permission.ts";
 
+// User shape from commons plus the stored (hashed) password, which is never exposed to the frontend
 export interface IUserPass extends IUser {
     password: string;
 }

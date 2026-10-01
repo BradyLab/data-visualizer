@@ -1,20 +1,20 @@
-// Sequelize model for the Users table (columns must stay in sync with the user migration)
+// Sequelize model for the Permissions table (columns must stay in sync with the permission migration)
 import { BelongsTo, Column, DataType, ForeignKey, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
-// Shared role enum and user interface from the commons package
+// Shared permission interface and options from the commons package
 import { IPermission, PermissionOptions } from "@commons/permissions.ts";
-import { Users } from "./user.ts"
-import { Datasets } from "./dataset.ts"
+import { Users } from "./user.ts";
+import { Datasets } from "./dataset.ts";
 
-export type {IPermission}
+export type { IPermission };
 
-// Maps this class to the "Users" table and enables createdAt/updatedAt timestamps
+// Maps this class to the "Permissions" table and enables createdAt/updatedAt timestamps (paranoid: true = soft deletes via deletedAt)
 @Table({
     tableName: "Permissions",
     paranoid: true,
     timestamps: true,
 })
 export class Permissions extends Model<IPermission> {
-    
+    // Part of the composite primary key (user_id + dataset_id)
     @ForeignKey(() => Users)
     @PrimaryKey
     @Column({
@@ -23,6 +23,7 @@ export class Permissions extends Model<IPermission> {
     })
     declare user_id: string;
 
+    // Other half of the composite primary key
     @ForeignKey(() => Datasets)
     @PrimaryKey
     @Column({
@@ -31,6 +32,7 @@ export class Permissions extends Model<IPermission> {
     })
     declare dataset_id: string;
 
+    // Access level; values come from the PermissionOptions enum (defaults to VIEW)
     @Column({
         type: DataType.ENUM(...Object.values(PermissionOptions)),
         allowNull: false,

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// Login page view: email and password form (UI only; no authentication yet)
 import { ref } from "vue";
 
 // Whether the password is shown as plain text (toggled by the eye icon)

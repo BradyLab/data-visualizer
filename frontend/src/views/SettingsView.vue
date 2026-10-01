@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// Settings page view: new dataset / change password actions and per-dataset visibility controls (UI only for now)
 // Placeholder dataset list (to be replaced by backend data)
 import { datasets } from "@src/interfaces/datasetTest";
 import { useRouter } from "vue-router";

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// Home page view: lists all datasets as clickable cards
 // Placeholder dataset list (to be replaced by backend data)
 import { datasets } from "../interfaces/datasetTest";
 import { useRouter } from "vue-router";

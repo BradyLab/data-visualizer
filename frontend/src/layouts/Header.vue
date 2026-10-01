@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// Top app bar: logo, DATASETS menu, HELP/ABOUT/FEEDBACK links, and account menu
 import { useRouter } from "vue-router";
 // Placeholder dataset list that populates the DATASETS menu
 import { datasets } from "../interfaces/datasetTest";

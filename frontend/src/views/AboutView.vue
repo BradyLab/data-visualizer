@@ -1,4 +1,6 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+// About page view (no logic)
+</script>
 
 <!-- Placeholder about page from the Vue project template -->
 <template>

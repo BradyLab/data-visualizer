@@ -2,6 +2,7 @@
 import { Router } from "express";
 import * as controller from "../controllers/file.ts";
 
+// Express router for the file CRUD endpoints
 const router = Router();
 
 router.get("/", controller.list);

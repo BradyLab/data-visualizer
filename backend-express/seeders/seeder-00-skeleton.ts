@@ -1,4 +1,4 @@
-// Empty template seeder; copy it as a starting point for new seeders
+// Seeder 00: skeleton; empty template seeder, copy it as a starting point for new seeders
 import { DataTypes, type QueryInterface, type Sequelize } from "sequelize";
 
 // Insert seed data

@@ -1,6 +1,8 @@
+// Seeder 01: development seed data
 // Seeds the Users table with a sample user for development
 import { type QueryInterface, type Sequelize } from "sequelize";
 
+// Insert the sample user (currently commented out; its fields predate the current Users schema)
 export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
     // Insert a sample user with a fixed id so down() can remove exactly this row
     // await queryInterface.bulkInsert(
