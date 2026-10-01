@@ -40,11 +40,12 @@ export const get = () => {
 
     //centralized error handling
     app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+        console.log(`[ERROR HANDLER] ${err.name}: ${err.message}`);
         // Client-caused database errors map to 4xx instead of a generic 500
         if (err instanceof UniqueConstraintError) return res.status(409).json({ error: "Already exists" });
         if (err instanceof ValidationError || err instanceof ForeignKeyConstraintError)
             return res.status(400).json({ error: err.message });
-        console.error(err.stack);
+        console.error("[ERROR HANDLER] Unhandled error:", err.stack);
         res.status(500).json({ error: "Internal Server Error" });
     });
 
@@ -57,12 +58,12 @@ export const start = async () => {
 
     try {
         await sequelize.authenticate();
-        console.log("[database]: Connection has been established successfully.");
+        console.log("[DATABASE]: Connection has been established successfully.");
         // Create any tables for models that do not exist yet
         await sequelize.sync();
         // TODO A DB failure is logged but does not stop the server from starting
     } catch (err) {
-        console.error("[database]: Unable to connect to the database:", err);
+        console.error("[DATABASE]: Unable to connect to the database:", err);
         return;
     }
 
