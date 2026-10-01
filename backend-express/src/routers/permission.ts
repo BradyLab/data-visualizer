@@ -5,6 +5,8 @@ import * as controller from "../controllers/permission.ts";
 // Express router for the permission CRUD endpoints
 const router = Router();
 
+// Request flow: router -> controller (HTTP in/out) -> service (database). No requireAuth is applied to these routes
+
 router.get("/", controller.list);
 router.post("/", controller.create);
 router.get("/:userId/:datasetId", controller.get);

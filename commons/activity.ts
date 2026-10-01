@@ -1,3 +1,6 @@
+// Shared activity types used by both the frontend and backend
+
+// Kinds of event recorded in the activity log (also stored in the Activities.type DB enum)
 export enum ActivityType {
     INVITE_USER = "INVITE_USER",
     USER_JOINED = "USER_JOINED",
@@ -12,6 +15,7 @@ export enum ActivityType {
     FILE_DOWNLOADED = "FILE_DOWNLOADED",
 }
 
+// An activity record as stored in the Activities table
 export interface IActivity {
     id: string;
     user_id: string;

@@ -7,6 +7,7 @@ import { useAuthStore } from "@src/stores/auth";
 const auth = useAuthStore();
 const router = useRouter();
 
+// Form field values
 const email = ref("");
 const password = ref("");
 
@@ -18,8 +19,9 @@ const submit = async () => {
     if (await auth.login(email.value, password.value)) await router.push("/home");
 };
 
+// Already logged in: skip the login page
 onMounted(() => {
-    if(auth.isLoggedIn) router.push("/home")
+    if (auth.isLoggedIn) router.push("/home");
 });
 </script>
 
@@ -70,18 +72,11 @@ onMounted(() => {
                 <v-alert v-if="auth.error" type="error" variant="tonal" density="compact" class="mb-3">
                     {{ auth.error }}
                 </v-alert>
-                <v-btn
-                    type="submit"
-                    color="primary"
-                    block
-                    class="mb-3"
-                    :loading="auth.loading"
-                    :disabled="!email || !password"
-                >
+                <v-btn type="submit" color="primary" block class="mb-3" :loading="auth.loading" :disabled="!email || !password">
                     Log In
                 </v-btn>
             </v-form>
-            
+
             <v-row class="justify-center text-label-medium">Need an account? Reach out to the Brady Lab!</v-row>
         </v-card>
     </v-container>

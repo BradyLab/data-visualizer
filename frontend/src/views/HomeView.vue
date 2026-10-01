@@ -8,6 +8,7 @@ import { useAuthStore } from "@src/stores/auth";
 // Router instance used for programmatic navigation
 const router = useRouter();
 
+// Auth store (only referenced by the commented-out welcome message in the template)
 const auth = useAuthStore();
 
 // Navigate to the given route path

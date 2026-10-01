@@ -10,6 +10,7 @@ import "@mdi/font/css/materialdesignicons.css";
 export default (app: App) => {
     //themes
     const themes: Record<string, ThemeDefinition> = {
+        // Single light theme; "surface" and "primary" share the dark green, and "text" is white (used on green surfaces like the app bar)
         light: {
             dark: false,
             colors: {
@@ -61,6 +62,7 @@ export default (app: App) => {
     };
 
     //creation
+    // TODO: icon `aliases` is passed both at top level and under `icons`
     const vuetify = createVuetify({
         aliases,
         defaults,
@@ -77,5 +79,6 @@ export default (app: App) => {
         },
     });
 
+    // TODO main.ts also calls app.use(vuetify) with this function's default export (see oddities)
     app.use(vuetify);
 };

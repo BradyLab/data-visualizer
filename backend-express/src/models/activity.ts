@@ -37,6 +37,7 @@ export class Activities extends Model<IActivity> {
     })
     declare type: ActivityType;
 
+    // Free-form JSON payload describing the event; its shape depends on the activity type
     @Column({
         type: DataType.JSON,
         allowNull: false,

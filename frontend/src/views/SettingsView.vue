@@ -9,6 +9,7 @@ import { useAuthStore } from "@src/stores/auth";
 // Router instance used for programmatic navigation
 const router = useRouter();
 
+// Auth store, used to check login state
 const auth = useAuthStore();
 
 // Navigate to the given route path
@@ -16,9 +17,10 @@ function navTo(route: string) {
     router.push(route);
 }
 
+// Settings requires a login; guests are redirected home
 onMounted(() => {
-    if(!auth.isLoggedIn) navTo("/home");
-})
+    if (!auth.isLoggedIn) navTo("/home");
+});
 </script>
 
 <template>

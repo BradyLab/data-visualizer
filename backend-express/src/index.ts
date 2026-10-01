@@ -34,7 +34,7 @@ export const get = () => {
         res.status(200).json({ status: "OK", timestamp: new Date() });
     });
 
-    // Register routers here
+    // Register routers here; each mounts at /api/<name> (names come from @commons/general.ts so the frontend shares them)
     app.use(`/api/${apis.USER}`, userRouter);
     app.use(`/api/${apis.DATASET}`, datasetRouter);
     app.use(`/api/${apis.PERMISSION}`, permissionRouter);
@@ -42,7 +42,7 @@ export const get = () => {
     app.use(`/api/${apis.ACTIVITY}`, activityRouter);
     app.use(`/api/${apis.AUTH}`, authRouter);
 
-    //centralized error handling
+    // Centralized error handling: must be registered after the routers. Express 5 forwards rejected async handlers here
     app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
         console.log(`[ERROR HANDLER] ${err.name}: ${err.message}`);
         // Client-caused database errors map to 4xx instead of a generic 500
@@ -65,7 +65,6 @@ export const start = async () => {
         console.log("[DATABASE]: Connection has been established successfully.");
         // Create any tables for models that do not exist yet
         await sequelize.sync();
-        // TODO A DB failure is logged but does not stop the server from starting
     } catch (err) {
         console.error("[DATABASE]: Unable to connect to the database:", err);
         return;

@@ -11,6 +11,7 @@ export interface TokenPayload {
 
 // Checks a password against a stored "salt:hash" (hex) value produced by the user service
 const verifyPassword = (password: string, stored: string) => {
+    // Stored format is "salt:hash"; re-derive with the same salt and compare in constant time to avoid timing leaks
     const [salt, hash] = stored.split(":");
     if (!salt || !hash) return false;
     const expected = Buffer.from(hash, "hex");
@@ -18,7 +19,7 @@ const verifyPassword = (password: string, stored: string) => {
     return timingSafeEqual(expected, actual);
 };
 
-/** Signs a token for the user id */
+/** Signs a token for the user id; lifetime comes from JWT_EXPIRES_IN (default 8h), signed with JWT_SECRET */
 export const signToken = (id: string) => {
     const expiresIn = (process.env.JWT_EXPIRES_IN ?? "8h") as NonNullable<jwt.SignOptions["expiresIn"]>;
     return jwt.sign({ id } satisfies TokenPayload, process.env.JWT_SECRET, { expiresIn });
@@ -53,6 +54,7 @@ export const login = async (email: string, password: string) => {
         return null;
     }
     console.log("[AUTH SERVICE] Credentials verified, signing token");
+    // Strip the hash so it is never sent to the client
     const { password: _password, ...publicUser } = user.get({ plain: true });
     return { token: signToken(user.id), user: publicUser };
 };

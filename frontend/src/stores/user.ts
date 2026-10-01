@@ -16,7 +16,8 @@ export const useUserStore = defineStore("user", () => {
     }
 
     /** Returns the cached user with this id, or null if not loaded */
-    function getById (id: string) {
+    function getById(id: string) {
+        // TODO: missing `return`, so this always returns undefined
         users.value.find((u) => u.id === id) ?? null;
     }
 
@@ -31,6 +32,7 @@ export const useUserStore = defineStore("user", () => {
     async function editUser(id: string, payload: UpdateUserPayload) {
         const user = await userApi.updateUser(id, payload);
         const i = users.value.findIndex((u) => u.id === id);
+        // Replace in place if cached, otherwise add it
         if (i === -1) users.value.push(user);
         else users.value[i] = user;
         return user;
@@ -50,6 +52,6 @@ export const useUserStore = defineStore("user", () => {
         getById,
         addUser,
         editUser,
-        removeUser
+        removeUser,
     };
 });

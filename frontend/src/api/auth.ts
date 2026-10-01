@@ -3,6 +3,7 @@ import axios from "axios";
 import type { ILoginRequest, ILoginResponse, IUser } from "@commons/user";
 import { apis } from "@commons/general";
 
+// Backend origin plus optional API path prefix; both come from Vite env vars with a local-dev fallback
 const baseURL = `${import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3001"}${import.meta.env.VITE_API_PATH ?? ""}`;
 
 export const authApi = {
