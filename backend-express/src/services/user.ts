@@ -28,26 +28,43 @@ const toPublic = (user: Users) => {
 };
 
 /** Returns all non-deleted users without passwords */
-export const getAll = () => Users.findAll({ attributes: PUBLIC_ATTRIBUTES });
+export const getAll = () => {
+    console.log("[USER SERVICE] Fetching all users...");
+    return Users.findAll({ attributes: PUBLIC_ATTRIBUTES });
+};
 
 /** Finds a user by primary key without the password, or null */
-export const getById = (id: string) => Users.findByPk(id, { attributes: PUBLIC_ATTRIBUTES });
+export const getById = (id: string) => {
+    console.log("[USER SERVICE] Fetching user by id...");
+    return Users.findByPk(id, { attributes: PUBLIC_ATTRIBUTES });
+};
 
 /** Creates a user (password is hashed first) and returns it without the password */
-export const create = async (body: unknown) => toPublic(await Users.create(prepare(body) as IUserPass));
+export const create = async (body: unknown) => {
+    console.log("[USER SERVICE] Creating user...");
+    return toPublic(await Users.create(prepare(body) as IUserPass));
+};
 
 /** Updates a user (password is re-hashed if provided); returns null if not found */
 export const update = async (id: string, body: unknown) => {
+    console.log("[USER SERVICE] Updating user...");
     const user = await Users.findByPk(id);
-    if (!user) return null;
+    if (!user) {
+        console.log("[USER SERVICE] User to update not found");
+        return null;
+    }
     await user.update(prepare(body));
     return toPublic(user);
 };
 
 // Soft-deletes the user (and their permissions); returns false if not found
 export const remove = async (id: string) => {
+    console.log("[USER SERVICE] Deleting user...");
     const user = await Users.findByPk(id);
-    if (!user) return false;
+    if (!user) {
+        console.log("[USER SERVICE] User to delete not found");
+        return false;
+    }
     await user.destroy();
     return true;
 };

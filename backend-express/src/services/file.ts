@@ -6,25 +6,42 @@ import { pick } from "../utils/pick.ts";
 const FILE_FIELDS = ["dataset_id", "type", "sizeBytes", "ogName"] as const;
 
 // Optional dataset_id filter to list a dataset's files
-export const getAll = (dataset_id?: string) => Files.findAll(dataset_id ? { where: { dataset_id } } : {});
+export const getAll = (dataset_id?: string) => {
+    console.log("[FILE SERVICE] Fetching files...");
+    return Files.findAll(dataset_id ? { where: { dataset_id } } : {});
+};
 
 /** Finds a file record by primary key, or null */
-export const getById = (id: string) => Files.findByPk(id);
+export const getById = (id: string) => {
+    console.log("[FILE SERVICE] Fetching file by id...");
+    return Files.findByPk(id);
+};
 
 /** Creates a file record from the whitelisted body fields */
-export const create = (body: unknown) => Files.create(pick<IFile>(body, FILE_FIELDS) as IFile);
+export const create = (body: unknown) => {
+    console.log("[FILE SERVICE] Creating file record...");
+    return Files.create(pick<IFile>(body, FILE_FIELDS) as IFile);
+};
 
 /** Updates a file record with the whitelisted body fields; returns null if not found */
 export const update = async (id: string, body: unknown) => {
+    console.log("[FILE SERVICE] Updating file record...");
     const file = await Files.findByPk(id);
-    if (!file) return null;
+    if (!file) {
+        console.log("[FILE SERVICE] File to update not found");
+        return null;
+    }
     return file.update(pick<IFile>(body, FILE_FIELDS));
 };
 
 /** Deletes a file record; returns false if not found */
 export const remove = async (id: string) => {
+    console.log("[FILE SERVICE] Deleting file record...");
     const file = await Files.findByPk(id);
-    if (!file) return false;
+    if (!file) {
+        console.log("[FILE SERVICE] File to delete not found");
+        return false;
+    }
     await file.destroy();
     return true;
 };
