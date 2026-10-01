@@ -2,27 +2,27 @@
 
 // Roles that determine a user's level of access in the app
 export enum UserRoles {
-  ADMIN = "ADMIN",
-  LAB_MEMBER = "LAB_MEMBER",
-  EXTERNAL = "EXTERNAL",
-  GUEST = "GUEST",
+    ADMIN = "ADMIN",
+    LAB_MEMBER = "LAB_MEMBER",
+    EXTERNAL = "EXTERNAL",
+    GUEST = "GUEST",
 }
 
 // Account lifecycle states
 export enum UserStatus {
-  INVITED = "INVITED",
-  ACTIVE = "ACTIVE",
-  INACTIVE = "INACTIVE",
+    INVITED = "INVITED",
+    ACTIVE = "ACTIVE",
+    INACTIVE = "INACTIVE",
 }
 
 // A user account as stored in the Users table
 export interface IUser {
-  id: string;
-  email: string;
-  name: string;
-  role: UserRoles;
-  status: UserStatus;
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt: Date;
+    id: string;
+    email: string;
+    name: string;
+    role: UserRoles;
+    status: UserStatus;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt: Date;
 }

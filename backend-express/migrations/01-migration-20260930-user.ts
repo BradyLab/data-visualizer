@@ -32,6 +32,11 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 allowNull: false,
                 unique: true,
             },
+            // Hashed password; never exposed to the frontend
+            password: {
+                type: DataTypes.STRING,
+                allowNull: false,
+            },
             // Display name
             name: {
                 type: DataTypes.STRING,

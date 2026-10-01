@@ -62,6 +62,7 @@ export const start = async () => {
         // TODO A DB failure is logged but does not stop the server from starting
     } catch (err) {
         console.error("[database]: Unable to connect to the database:", err);
+        return;
     }
 
     try {
