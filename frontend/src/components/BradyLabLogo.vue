@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Brady Lab logo that returns the user to the home page when clicked
-import { useRouter, useRoute } from "vue-router";
+import { useRouter } from "vue-router";
 
 const router = useRouter();
 </script>

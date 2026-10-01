@@ -18,9 +18,8 @@ const loadToken = () => {
     }
 };
 
-const router = useRouter();
-
 export const useAuthStore = defineStore("auth", () => {
+    // State: login token, current user (a GUEST placeholder when logged out), and login request status
     const token = ref<string | null>(loadToken());
     const user = ref<IUser>({
         id: "",
@@ -30,11 +29,12 @@ export const useAuthStore = defineStore("auth", () => {
         status: UserStatus.ACTIVE,
         createdAt: new Date(),
         updatedAt: new Date(),
-        deletedAt: new Date()
+        deletedAt: new Date(),
     });
     const loading = ref(false);
     const error = ref<string | null>(null);
 
+    // Logged in whenever a token is present (the token is not validated client-side)
     const isLoggedIn = computed(() => !!token.value);
 
     // Saves the token, and makes every axios request send it
@@ -84,6 +84,7 @@ export const useAuthStore = defineStore("auth", () => {
     /** Clears the token and user */
     function logout() {
         setToken(null);
+        // Reset to the same guest placeholder used as the initial state
         user.value = {
             id: "",
             email: "",
@@ -92,7 +93,7 @@ export const useAuthStore = defineStore("auth", () => {
             status: UserStatus.ACTIVE,
             createdAt: new Date(),
             updatedAt: new Date(),
-            deletedAt: new Date()
+            deletedAt: new Date(),
         };
     }
 
@@ -104,6 +105,6 @@ export const useAuthStore = defineStore("auth", () => {
         isLoggedIn,
         login,
         restore,
-        logout
+        logout,
     };
 });

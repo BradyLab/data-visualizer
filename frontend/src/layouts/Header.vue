@@ -10,6 +10,7 @@ import { useAuthStore } from "@src/stores/auth";
 // Router instance used for programmatic navigation
 const router = useRouter();
 
+// Auth store, used to switch the account menu items between logged in / out
 const auth = useAuthStore();
 
 // Navigate to the given route path
@@ -17,9 +18,10 @@ function navTo(route: string) {
     router.push(route);
 }
 
+// Clears the session and sends the user back to the home page
 function logout() {
     auth.logout();
-    navTo('/home');
+    navTo("/home");
 }
 </script>
 
@@ -70,7 +72,6 @@ function logout() {
                     </div>
                 </template>
 
-                <!--    TODO: add bradylab signin/signup -->
                 <v-list>
                     <v-list-item v-if="!auth.isLoggedIn" @click="navTo('/login')"> LOG IN </v-list-item>
                     <v-list-item v-if="auth.isLoggedIn" @click="navTo('/settings')"> SETTINGS </v-list-item>
