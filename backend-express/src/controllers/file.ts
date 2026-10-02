@@ -1,6 +1,6 @@
 // Request handlers for Files; thin wrappers that call the file service and shape the HTTP response
 import { Request, Response } from "express";
-import * as service from "../services/file.ts";
+import * as service from "@src/services/file.ts";
 
 // GET /files?dataset_id=... lists files, optionally for one dataset
 export const list = async (req: Request, res: Response) => {

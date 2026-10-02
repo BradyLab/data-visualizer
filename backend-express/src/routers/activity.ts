@@ -1,6 +1,6 @@
 // Routes for Activities, mounted at /activities in index.ts
 import { Router } from "express";
-import * as controller from "../controllers/activity.ts";
+import * as controller from "@src/controllers/activity.ts";
 
 // Express router for the activity CRUD endpoints
 const router = Router();

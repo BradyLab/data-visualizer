@@ -1,6 +1,6 @@
 // Routes for Files, mounted at /files in index.ts
 import { Router } from "express";
-import * as controller from "../controllers/file.ts";
+import * as controller from "@src/controllers/file.ts";
 
 // Express router for the file CRUD endpoints
 const router = Router();

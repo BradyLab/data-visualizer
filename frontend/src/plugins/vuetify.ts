@@ -62,9 +62,7 @@ export default (app: App) => {
     };
 
     //creation
-    // TODO: icon `aliases` is passed both at top level and under `icons`
     const vuetify = createVuetify({
-        aliases,
         defaults,
         theme: {
             defaultTheme: "light",
@@ -79,6 +77,5 @@ export default (app: App) => {
         },
     });
 
-    // TODO main.ts also calls app.use(vuetify) with this function's default export (see oddities)
     app.use(vuetify);
 };

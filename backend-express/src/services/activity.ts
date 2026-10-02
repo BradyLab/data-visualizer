@@ -1,6 +1,6 @@
 // Database access for Activities (event log rows; soft-deleted since the Activities table is paranoid)
-import { Activities, IActivity } from "../models/activity.ts";
-import { pick } from "../utils/pick.ts";
+import { Activities, IActivity } from "@src/models/activity.ts";
+import { pick } from "@src/utils/pick.ts";
 
 // Whitelist of columns clients may set (see utils/pick.ts)
 const ACTIVITY_FIELDS = ["user_id", "type", "data"] as const;

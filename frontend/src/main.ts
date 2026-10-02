@@ -2,10 +2,10 @@
 import { createApp } from "vue";
 import { createPinia } from "pinia";
 
-import App from "./App.vue";
-import router from "./router";
-import vuetify from "./plugins/vuetify.ts";
-import { useAuthStore } from "./stores/auth";
+import App from "@src/App.vue";
+import router from "@src/router";
+import vuetify from "@src/plugins/vuetify.ts";
+import { useAuthStore } from "@src/stores/auth";
 
 // Root component
 const app = createApp(App);

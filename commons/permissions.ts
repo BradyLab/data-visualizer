@@ -12,6 +12,6 @@ export interface IPermission {
     dataset_id: string;
     perm: PermissionOptions;
     createdAt: Date;
-    updatedAt: Date;
-    deletedAt: Date;
+    updatedAt: Date | null;
+    deletedAt: Date | null;
 }

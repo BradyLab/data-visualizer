@@ -2,7 +2,7 @@
 // Top app bar: logo, DATASETS menu, HELP/ABOUT/FEEDBACK links, and account menu
 import { useRouter } from "vue-router";
 // Placeholder dataset list that populates the DATASETS menu
-import { datasets } from "../interfaces/datasetTest";
+import { datasets } from "@src/interfaces/datasetTest";
 import BradyLabLogo from "@src/components/BradyLabLogo.vue";
 import LayoutHelper from "@src/components/LayoutHelper.vue";
 import { useAuthStore } from "@src/stores/auth";
@@ -41,7 +41,7 @@ function logout() {
                     </template>
 
                     <v-list>
-                        <v-list-item v-for="dataset in datasets" @click="navTo('/dataset/' + dataset.url)">
+                        <v-list-item v-for="dataset in datasets" :key="dataset.url" @click="navTo('/dataset/' + dataset.url)">
                             {{ dataset.name }}
                         </v-list-item>
                     </v-list>

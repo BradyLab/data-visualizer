@@ -22,6 +22,6 @@ export interface IActivity {
     type: ActivityType;
     data: Record<string, unknown>;
     createdAt: Date;
-    updatedAt: Date;
-    deletedAt: Date;
+    updatedAt: Date | null;
+    deletedAt: Date | null;
 }

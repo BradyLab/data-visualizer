@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Home page view: lists all datasets as clickable cards
 // Placeholder dataset list (to be replaced by backend data)
-import { datasets } from "../interfaces/datasetTest";
+import { datasets } from "@src/interfaces/datasetTest";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@src/stores/auth";
 
@@ -24,7 +24,7 @@ function navTo(route: string) {
         <h1 class="text-h6 font-weight-bold mb-4">BRADY LAB DATASETS</h1>
         <v-row>
             <!-- One card per dataset; clicking opens the dataset page -->
-            <v-col v-for="dataset in datasets" cols="3">
+            <v-col v-for="dataset in datasets" :key="dataset.url" cols="3">
                 <v-card @click="navTo('/dataset/' + dataset.url)">
                     <!-- Placeholder for the dataset's cover image -->
                     <div class="dataset-thumb"></div>
@@ -38,8 +38,8 @@ function navTo(route: string) {
     </v-container>
 </template>
 
-/* Temporary thumbnail block filled with the theme's primary color */
 <style scoped>
+/* Temporary thumbnail block filled with the theme's primary color */
 .dataset-thumb {
     height: 110px;
     background-color: rgb(var(--v-theme-primary));

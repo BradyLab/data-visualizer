@@ -1,7 +1,7 @@
 // Routes for authentication, mounted at /auth in index.ts
 import { Router } from "express";
-import * as controller from "../controllers/auth.ts";
-import { requireAuth } from "../middleware/auth.ts";
+import * as controller from "@src/controllers/auth.ts";
+import { requireAuth } from "@src/middleware/auth.ts";
 
 const router = Router();
 

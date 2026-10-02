@@ -1,6 +1,6 @@
 // Database access for Datasets
-import { Datasets, IDataset } from "../models/dataset.ts";
-import { pick } from "../utils/pick.ts";
+import { Datasets, IDataset } from "@src/models/dataset.ts";
+import { pick } from "@src/utils/pick.ts";
 
 // Whitelist of columns clients may set (see utils/pick.ts)
 const DATASET_FIELDS = ["name", "owner", "url", "description", "doi", "rawDataLink", "treatments", "plots"] as const;

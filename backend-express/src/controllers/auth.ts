@@ -1,6 +1,6 @@
 // Request handlers for authentication
 import { Request, Response } from "express";
-import * as service from "../services/auth.ts";
+import * as service from "@src/services/auth.ts";
 
 /** POST /login : returns { token, user } (200), 400 if email/password are missing, or 401 for bad credentials */
 export const login = async (req: Request, res: Response) => {

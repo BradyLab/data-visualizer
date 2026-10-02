@@ -51,5 +51,5 @@
       "@src/*": ["./src/*"],
     }
   },
-  "include": ["src/**/*", "migrations/**/*", "../commons/**/*", "src/config.ts"]
+  "include": ["src/**/*", "migrations/**/*", "seeders/**/*", "../commons/**/*", "src/config.ts"]
 }

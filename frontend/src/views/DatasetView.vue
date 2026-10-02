@@ -73,8 +73,8 @@
     </v-container>
 </template>
 
-/* Shrink the checkboxes to make the option lists more compact (:deep is needed to style Vuetify's inner elements) */
 <style scoped>
+/* Shrink the checkboxes to make the option lists more compact (:deep is needed to style Vuetify's inner elements) */
 :deep(.v-checkbox .v-selection-control) {
     --v-input-control-height: 28px;
     --v-selection-control-size: 20px;

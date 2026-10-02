@@ -18,19 +18,21 @@ const loadToken = () => {
     }
 };
 
+const guestUser = {
+    id: "",
+    email: "",
+    name: "GUEST USER",
+    role: UserRoles.GUEST,
+    status: UserStatus.ACTIVE,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    deletedAt: new Date(),
+}
+
 export const useAuthStore = defineStore("auth", () => {
     // State: login token, current user (a GUEST placeholder when logged out), and login request status
     const token = ref<string | null>(loadToken());
-    const user = ref<IUser>({
-        id: "",
-        email: "",
-        name: "GUEST USER",
-        role: UserRoles.GUEST,
-        status: UserStatus.ACTIVE,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        deletedAt: new Date(),
-    });
+    const user = ref<IUser>(guestUser);
     const loading = ref(false);
     const error = ref<string | null>(null);
 
@@ -85,16 +87,7 @@ export const useAuthStore = defineStore("auth", () => {
     function logout() {
         setToken(null);
         // Reset to the same guest placeholder used as the initial state
-        user.value = {
-            id: "",
-            email: "",
-            name: "GUEST USER",
-            role: UserRoles.GUEST,
-            status: UserStatus.ACTIVE,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            deletedAt: new Date(),
-        };
+        user.value = guestUser;
     }
 
     return {

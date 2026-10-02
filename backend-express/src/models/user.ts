@@ -2,7 +2,7 @@
 import { Column, DataType, HasMany, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
 // Shared role enum and user interface from the commons package
 import { IUser, UserRoles, UserStatus } from "@commons/user.ts";
-import { Permissions } from "./permission.ts";
+import { Permissions } from "@src/models/permission.ts";
 
 // User shape from commons plus the stored (hashed) password, which is never exposed to the frontend
 export interface IUserPass extends IUser {
@@ -75,14 +75,14 @@ export class Users extends Model<IUserPass> {
         type: DataType.DATE,
         allowNull: true,
     })
-    declare updatedAt: Date;
+    declare updatedAt: Date | null;
 
     // Time of deletion of the row
     @Column({
         type: DataType.DATE,
         allowNull: true,
     })
-    declare deletedAt: Date;
+    declare deletedAt: Date | null;
 
     // Soft-deleting a user (user.destroy()) also soft-deletes their permissions.
     // hooks: true makes Sequelize load and destroy each child row individually, which honors paranoid mode;

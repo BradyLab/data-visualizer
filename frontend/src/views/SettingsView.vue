@@ -38,7 +38,7 @@ onMounted(() => {
         </v-row>
 
         <!-- One row per dataset: name (links to the dataset), private/public switch, and edit button -->
-        <v-row v-for="dataset in datasets" align="center" class="mx-4">
+        <v-row v-for="dataset in datasets" :key="dataset.url" align="center" class="mx-4">
             <v-col @click="navTo('/dataset/' + dataset.url)">{{ dataset.name }}</v-col>
             <v-col cols="auto" class="d-flex align-center">
                 <span class="mr-2">Private</span>
