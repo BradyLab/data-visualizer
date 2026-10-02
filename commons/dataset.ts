@@ -3,12 +3,11 @@
 // Plot types a dataset can offer; values are the display labels (also stored in the DB enum)
 export enum DatasetPlots {
     UMAP = "UMAP",
-    DOT = "Dot Plot",
-    TISSUE = "Tissue Plot",
+    DOT = "DotPlot",
+    TISSUE = "TissuePlot",
     PCA = "PCA",
-    VIOLIN = "Violin Plot",
+    VIOLIN = "ViolinPlot",
     HEATMAP = "Heatmap",
-    // CONCHIE?
 }
 
 // A dataset record as stored in the Datasets table
