@@ -16,6 +16,18 @@ export const list = async (req: Request, res: Response) => {
     res.status(200).json(await service.getAll(filters));
 };
 
+/** GET /byUser/:userId : lists all permissions of one user (200) */
+export const listByUser = async (req: Request, res: Response) => {
+    console.log("[PERMISSION CONTROLLER] Attempting to list permissions by user...");
+    res.status(200).json(await service.getAll({ user_id: req.params.userId as string }));
+};
+
+/** GET /byDataset/:datasetId : lists all permissions on one dataset (200) */
+export const listByDataset = async (req: Request, res: Response) => {
+    console.log("[PERMISSION CONTROLLER] Attempting to list permissions by dataset...");
+    res.status(200).json(await service.getAll({ dataset_id: req.params.datasetId as string }));
+};
+
 /** GET /:userId/:datasetId : returns one permission (200), or 404 if it does not exist */
 export const get = async (req: Request, res: Response) => {
     console.log("[PERMISSION CONTROLLER] Attempting to get permission...");
