@@ -53,6 +53,13 @@ const router = createRouter({
             component: () => import("@src/views/LoginView.vue"),
             meta: { hideFooter: true },
         },
+        //Admin User Management Page
+        {
+            path: "/admin/user-mgmt",
+            name: "user-mgmt",
+            component: () => import("@src/views/admin/UserManagement.vue"),
+            meta: { hideFooter: false},
+        },
     ],
 });
 
