@@ -18,11 +18,11 @@ export interface IDataset {
     owner: string;
     url: string;
     description: string;
-    doi?: string | undefined;
-    rawDataLink?: string | undefined;
+    doi: string;
+    rawDataLink: string;
     treatments: string[];
     plots: DatasetPlots[];
     createdAt: Date;
-    updatedAt: Date;
-    deletedAt: Date;
+    updatedAt: Date | null;
+    deletedAt: Date | null;
 }

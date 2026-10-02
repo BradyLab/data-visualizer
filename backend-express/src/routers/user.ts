@@ -1,6 +1,6 @@
 // Routes for Users, mounted at /users in index.ts
 import { Router } from "express";
-import * as controller from "../controllers/user.ts";
+import * as controller from "@src/controllers/user.ts";
 
 // Express router for the user CRUD endpoints
 const router = Router();

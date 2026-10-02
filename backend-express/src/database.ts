@@ -1,10 +1,10 @@
 // Sequelize instance used by the app to talk to Postgres
 import { Sequelize } from "sequelize-typescript";
-import { Users } from "./models/user.ts";
-import { Datasets } from "./models/dataset.ts";
-import { Permissions } from "./models/permission.ts";
-import { Files } from "./models/file.ts";
-import { Activities } from "./models/activity.ts";
+import { Users } from "@src/models/user.ts";
+import { Datasets } from "@src/models/dataset.ts";
+import { Permissions } from "@src/models/permission.ts";
+import { Files } from "@src/models/file.ts";
+import { Activities } from "@src/models/activity.ts";
 
 // Read connection details from environment variables (see env.d.ts)
 const dbName = process.env.DB_NAME as string;

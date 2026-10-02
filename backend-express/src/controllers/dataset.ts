@@ -1,6 +1,6 @@
 // Request handlers for Datasets; thin wrappers that call the dataset service and shape the HTTP response
 import { Request, Response } from "express";
-import * as service from "../services/dataset.ts";
+import * as service from "@src/services/dataset.ts";
 
 /** GET / : returns all datasets (200) */
 export const list = async (req: Request, res: Response) => {

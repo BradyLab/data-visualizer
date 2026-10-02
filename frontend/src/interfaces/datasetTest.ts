@@ -2,7 +2,7 @@
 // name: display name; url: slug used in the /dataset/:datasetTitle route
 export const datasets = [
     { name: "KM M82", url: "KMM82" },
-    { name: "ACP", url: "SCP" },
+    { name: "ACP", url: "ACP" },
     { name: "Dataset1", url: "d1" },
     { name: "Dataset2", url: "d2" },
 ];

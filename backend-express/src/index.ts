@@ -3,16 +3,16 @@ import "dotenv/config";
 import "reflect-metadata";
 import cors from "cors";
 import express, { Express, Request, Response, NextFunction } from "express";
-import { sequelize } from "./database.js";
+import { sequelize } from "@src/database.ts";
 
 import { apis } from "@commons/general.ts";
 
-import userRouter from "./routers/user.ts";
-import datasetRouter from "./routers/dataset.ts";
-import permissionRouter from "./routers/permission.ts";
-import fileRouter from "./routers/file.ts";
-import activityRouter from "./routers/activity.ts";
-import authRouter from "./routers/auth.ts";
+import userRouter from "@src/routers/user.ts";
+import datasetRouter from "@src/routers/dataset.ts";
+import permissionRouter from "@src/routers/permission.ts";
+import fileRouter from "@src/routers/file.ts";
+import activityRouter from "@src/routers/activity.ts";
+import authRouter from "@src/routers/auth.ts";
 
 import { UniqueConstraintError, ValidationError, ForeignKeyConstraintError } from "sequelize";
 
@@ -56,37 +56,36 @@ export const get = () => {
     return app;
 };
 
-// Connects to the database, syncs models, and starts the HTTP server
+// Connects to the database and starts the HTTP server (the schema is managed by migrations, not sequelize.sync())
 export const start = async () => {
     const app = get();
 
     try {
         await sequelize.authenticate();
         console.log("[DATABASE]: Connection has been established successfully.");
-        // Create any tables for models that do not exist yet
-        await sequelize.sync();
     } catch (err) {
         console.error("[DATABASE]: Unable to connect to the database:", err);
         return;
     }
 
-    try {
-        app.listen(PORT, () => {
-            // Startup banner printed once the server is listening
-            const box =
-                `=====================================================================================\n` +
-                `======================  SERVER IS NOW FULLY READY AND RUNNING  ======================\n` +
-                `=                                                                                   =\n` +
-                `=    Backend is live at: ${process.env.BACKEND_URL}                                      =\n` +
-                `=    Frontend is accessible at: ${process.env.FRONTEND_URL}                               =\n` +
-                `=                                                                                   =\n` +
-                `================================= Have a great day! =================================\n` +
-                `=====================================================================================`;
-            console.log(box);
-        });
-    } catch (error: any) {
+    // listen() reports failures (e.g. port in use) through the server's "error" event, not by throwing,
+    // so a try/catch around it would never fire
+    const server = app.listen(PORT, () => {
+        // Startup banner printed once the server is listening
+        const box =
+            `=====================================================================================\n` +
+            `======================  SERVER IS NOW FULLY READY AND RUNNING  ======================\n` +
+            `=                                                                                   =\n` +
+            `=    Backend is live at: ${process.env.BACKEND_URL}                                      =\n` +
+            `=    Frontend is accessible at: ${process.env.FRONTEND_URL}                               =\n` +
+            `=                                                                                   =\n` +
+            `================================= Have a great day! =================================\n` +
+            `=====================================================================================`;
+        console.log(box);
+    });
+    server.on("error", (error: Error) => {
         console.error("Error occurred: ", error.message);
-    }
+    });
 };
 
 // Start the server when this module is run

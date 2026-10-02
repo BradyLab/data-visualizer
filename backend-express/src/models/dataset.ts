@@ -2,9 +2,9 @@
 import { Column, DataType, ForeignKey, HasMany, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
 // Shared dataset interface and plot types from the commons package
 import { IDataset, DatasetPlots } from "@commons/dataset.ts";
-import { Users } from "./user.ts";
-import { Permissions } from "./permission.ts";
-import { Files } from "./file.ts";
+import { Users } from "@src/models/user.ts";
+import { Permissions } from "@src/models/permission.ts";
+import { Files } from "@src/models/file.ts";
 
 export type { IDataset };
 
@@ -96,14 +96,14 @@ export class Datasets extends Model<IDataset> {
         type: DataType.DATE,
         allowNull: true,
     })
-    declare updatedAt: Date;
+    declare updatedAt: Date | null;
 
     // Time of deletion of the row
     @Column({
         type: DataType.DATE,
         allowNull: true,
     })
-    declare deletedAt: Date;
+    declare deletedAt: Date | null;
 
     // Soft-deleting a dataset (dataset.destroy()) also soft-deletes its permissions.
     // hooks: true makes Sequelize load and destroy each child row individually, which honors paranoid mode;

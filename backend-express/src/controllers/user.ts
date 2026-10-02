@@ -1,6 +1,6 @@
 // Request handlers for Users; thin wrappers that call the user service and shape the HTTP response
 import { Request, Response } from "express";
-import * as service from "../services/user.ts";
+import * as service from "@src/services/user.ts";
 
 /** GET / : returns all users (200) */
 export const list = async (req: Request, res: Response) => {

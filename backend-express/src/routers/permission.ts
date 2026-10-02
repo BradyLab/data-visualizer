@@ -1,6 +1,6 @@
 // Routes for Permissions, mounted at /permissions in index.ts (identified by user id + dataset id)
 import { Router } from "express";
-import * as controller from "../controllers/permission.ts";
+import * as controller from "@src/controllers/permission.ts";
 
 // Express router for the permission CRUD endpoints
 const router = Router();

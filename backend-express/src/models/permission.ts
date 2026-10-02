@@ -2,8 +2,8 @@
 import { BelongsTo, Column, DataType, ForeignKey, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
 // Shared permission interface and options from the commons package
 import { IPermission, PermissionOptions } from "@commons/permissions.ts";
-import { Users } from "./user.ts";
-import { Datasets } from "./dataset.ts";
+import { Users } from "@src/models/user.ts";
+import { Datasets } from "@src/models/dataset.ts";
 
 export type { IPermission };
 
@@ -52,14 +52,14 @@ export class Permissions extends Model<IPermission> {
         type: DataType.DATE,
         allowNull: true,
     })
-    declare updatedAt: Date;
+    declare updatedAt: Date | null;
 
     // Time of deletion of the row
     @Column({
         type: DataType.DATE,
         allowNull: true,
     })
-    declare deletedAt: Date;
+    declare deletedAt: Date | null;
 
     // Foreign keys cascade on delete/update (matches the Permissions migration)
     @BelongsTo(() => Users, { foreignKey: "user_id", onDelete: "CASCADE", onUpdate: "CASCADE" })

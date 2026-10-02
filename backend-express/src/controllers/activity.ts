@@ -1,6 +1,6 @@
 // Request handlers for Activities; thin wrappers that call the activity service and shape the HTTP response
 import { Request, Response } from "express";
-import * as service from "../services/activity.ts";
+import * as service from "@src/services/activity.ts";
 
 // Reads a query param only if it was sent as a single string
 const str = (v: unknown) => (typeof v === "string" ? v : undefined);

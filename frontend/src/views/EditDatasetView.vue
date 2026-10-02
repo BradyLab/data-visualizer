@@ -17,7 +17,7 @@
         <v-row class="text-body-medium mb-1 mx-4">DOI</v-row>
         <v-text-field
             prepend-inner-icon="mdi-link"
-            placeholder="Add a DOI link here"
+            placeholder="Add DOI link here"
             density="compact"
             hide-details
             class="mb-4 mx-4"
@@ -25,7 +25,7 @@
 
         <!-- Link to raw data download (NCBI/SRA) -->
         <v-row class="text-body-medium mb-1 mx-4">Raw Data Download Link (NCBI/SRA)</v-row>
-        <v-text-field placeholder="Add a DOI link here" density="compact" hide-details class="mb-4 mx-4"></v-text-field>
+        <v-text-field placeholder="Add download link here" density="compact" hide-details class="mb-4 mx-4"></v-text-field>
 
         <!-- Raw data file upload -->
         <v-row class="mx-4">
@@ -79,8 +79,8 @@
     </v-container>
 </template>
 
-/* Make the file upload dropzones more compact (:deep is needed to style Vuetify's inner elements) */
 <style scoped>
+/* Make the file upload dropzones more compact (:deep is needed to style Vuetify's inner elements) */
 :deep(.v-file-upload-dropzone--density-compact) {
     padding: 10px 0;
     gap: 0.5rem;

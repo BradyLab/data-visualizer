@@ -1,6 +1,6 @@
 // Database access for Permissions (composite key: user_id + dataset_id)
-import { Permissions, IPermission } from "../models/permission.ts";
-import { pick } from "../utils/pick.ts";
+import { Permissions, IPermission } from "@src/models/permission.ts";
+import { pick } from "@src/utils/pick.ts";
 
 // Whitelist of columns clients may set (see utils/pick.ts)
 const PERMISSION_FIELDS = ["user_id", "dataset_id", "perm"] as const;
@@ -31,7 +31,7 @@ export const create = async (body: unknown) => {
     if (existing?.deletedAt) {
         console.log("[PERMISSION SERVICE] Restoring previously deleted permission");
         await existing.restore();
-        return existing.update({ perm: data.perm ?? "VIEW" } as Partial<IPermission>);
+        return existing.update({ perm: data.perm } as Partial<IPermission>);
     }
     return Permissions.create(data as IPermission);
 };

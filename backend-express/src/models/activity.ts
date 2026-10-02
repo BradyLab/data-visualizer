@@ -2,7 +2,7 @@
 import { Column, DataType, ForeignKey, Model, PrimaryKey, Table } from "sequelize-typescript";
 // Shared activity interface and activity types from the commons package
 import { IActivity, ActivityType } from "@commons/activity.ts";
-import { Users } from "./user.ts";
+import { Users } from "@src/models/user.ts";
 
 export type { IActivity };
 
@@ -56,14 +56,14 @@ export class Activities extends Model<IActivity> {
         type: DataType.DATE,
         allowNull: true,
     })
-    declare updatedAt: Date;
+    declare updatedAt: Date | null;
 
     // Time of deletion of the row
     @Column({
         type: DataType.DATE,
         allowNull: true,
     })
-    declare deletedAt: Date;
+    declare deletedAt: Date | null;
 }
 
 export default Activities;

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Root component: wraps the page layout in Vuetify's v-app
-import Default from "./layouts/Default.vue";
+import Default from "@src/layouts/Default.vue";
 </script>
 
 <template>

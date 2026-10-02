@@ -1,6 +1,6 @@
 // Database access for Files (metadata rows; hard-deleted since the Files table is not paranoid)
-import { Files, IFile } from "../models/file.ts";
-import { pick } from "../utils/pick.ts";
+import { Files, IFile } from "@src/models/file.ts";
+import { pick } from "@src/utils/pick.ts";
 
 // Whitelist of columns clients may set (see utils/pick.ts)
 const FILE_FIELDS = ["dataset_id", "type", "sizeBytes", "ogName"] as const;

@@ -1,6 +1,6 @@
 // Routes for Datasets, mounted at /datasets in index.ts
 import { Router } from "express";
-import * as controller from "../controllers/dataset.ts";
+import * as controller from "@src/controllers/dataset.ts";
 
 // Express router for the dataset CRUD endpoints
 const router = Router();

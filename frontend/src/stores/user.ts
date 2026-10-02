@@ -17,8 +17,7 @@ export const useUserStore = defineStore("user", () => {
 
     /** Returns the cached user with this id, or null if not loaded */
     function getById(id: string) {
-        // TODO: missing `return`, so this always returns undefined
-        users.value.find((u) => u.id === id) ?? null;
+        return users.value.find((u) => u.id === id) ?? null;
     }
 
     /** Creates a user and adds it to the store */

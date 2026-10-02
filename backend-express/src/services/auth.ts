@@ -1,7 +1,7 @@
 // Login logic: checks credentials and issues/verifies JWTs
 import { scryptSync, timingSafeEqual } from "node:crypto";
 import jwt from "jsonwebtoken";
-import { Users } from "../models/user.ts";
+import { Users } from "@src/models/user.ts";
 import { UserStatus } from "@commons/user.ts";
 
 // Payload stored in the token

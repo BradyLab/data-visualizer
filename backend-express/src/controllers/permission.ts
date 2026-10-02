@@ -1,6 +1,6 @@
 // Request handlers for Permissions; thin wrappers that call the permission service and shape the HTTP response
 import { Request, Response } from "express";
-import * as service from "../services/permission.ts";
+import * as service from "@src/services/permission.ts";
 
 // Returns the value only if it is a string (query params can also be arrays/objects)
 const str = (value: unknown) => (typeof value === "string" ? value : undefined);

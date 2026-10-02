@@ -1,6 +1,6 @@
 // Database access for Users; the password hash is never returned to callers
-import { Users, IUserPass } from "../models/user.ts";
-import { pick } from "../utils/pick.ts";
+import { Users, IUserPass } from "@src/models/user.ts";
+import { pick } from "@src/utils/pick.ts";
 import { hashPassword } from "@src/utils/password.ts";
 
 // Whitelist of columns clients may set (see utils/pick.ts)

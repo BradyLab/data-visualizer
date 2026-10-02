@@ -16,5 +16,5 @@ export interface IFile {
     sizeBytes: number;
     ogName: string;
     createdAt: Date;
-    updatedAt: Date;
+    updatedAt: Date | null;
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Main page layout: header on top, routed view in the middle, footer at the bottom
-import Header from "./Header.vue";
-import Footer from "./Footer.vue";
+import Header from "@src/layouts/Header.vue";
+import Footer from "@src/layouts/Footer.vue";
 </script>
 
 <template>

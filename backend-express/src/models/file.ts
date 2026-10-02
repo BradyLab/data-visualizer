@@ -2,8 +2,8 @@
 import { BelongsTo, Column, DataType, ForeignKey, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
 // Shared file interface and file types from the commons package
 import { IFile, FileTypes } from "@commons/file.ts";
-import { Datasets } from "./dataset.ts";
-import { Users } from "./user.ts";
+import { Datasets } from "@src/models/dataset.ts";
+import { Users } from "@src/models/user.ts";
 
 export type { IFile };
 
@@ -73,7 +73,7 @@ export class Files extends Model<IFile> {
         type: DataType.DATE,
         allowNull: true,
     })
-    declare updatedAt: Date;
+    declare updatedAt: Date | null;
 
     // Deleting/updating the dataset cascades to its files (matches the Files migration)
     @BelongsTo(() => Datasets, { foreignKey: "dataset_id", onDelete: "CASCADE", onUpdate: "CASCADE" })

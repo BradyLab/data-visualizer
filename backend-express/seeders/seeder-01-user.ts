@@ -39,8 +39,7 @@ export async function down(queryInterface: QueryInterface, sequelize: Sequelize)
     await queryInterface.bulkDelete(
         "Users",
         {
-            id: ["a63324c7-73a6-4093-9475-c271173a481d"],
-            id: ["f81d4fae-7dec-11d0-a765-00a0c91e6bf6"],
+            id: ["a63324c7-73a6-4093-9475-c271173a481d", "f81d4fae-7dec-11d0-a765-00a0c91e6bf6"],
         },
         {}
     );

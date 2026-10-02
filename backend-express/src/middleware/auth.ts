@@ -1,7 +1,7 @@
 // Express middleware that requires a valid "Authorization: Bearer <token>" header
 import { NextFunction, Request, Response } from "express";
-import { verifyToken } from "../services/auth.ts";
-import { Users } from "../models/user.ts";
+import { verifyToken } from "@src/services/auth.ts";
+import { Users } from "@src/models/user.ts";
 
 /** Rejects with 401 unless the token is valid and the user still exists; sets res.locals.user */
 export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
