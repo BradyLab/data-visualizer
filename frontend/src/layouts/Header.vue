@@ -35,7 +35,7 @@ async function logout() {
         <v-row class="align-center ml-2">
             <v-col cols="auto">
                 <!-- Dropdown of datasets that opens on hover; each item links to its dataset page -->
-                <v-menu open-on-hover>
+                <v-menu open-on-hover open-on-click>
                     <template v-slot:activator="{ props }">
                         <div v-bind="props">DATASETS <v-icon>mdi-chevron-down</v-icon></div>
                     </template>

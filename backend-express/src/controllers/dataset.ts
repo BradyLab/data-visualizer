@@ -1,7 +1,11 @@
 // Request handlers for Datasets; thin wrappers that call the dataset service and shape the HTTP response
 import { Request, Response } from "express";
 import * as service from "@src/services/dataset.ts";
+import { IDataset } from "@src/models/dataset.ts";
+import { pick } from "@src/utils/pick.ts";
 
+// Whitelist of columns clients may set (see utils/pick.ts)
+const DATASET_FIELDS = ["name", "owner", "url", "description", "doi", "rawDataLink", "treatments", "plots"] as const;
 /** GET / : returns all datasets (200) */
 export const list = async (req: Request, res: Response) => {
     console.log("[DATASET CONTROLLER] Attempting to list datasets...");
@@ -22,13 +26,13 @@ export const get = async (req: Request, res: Response) => {
 /** POST / : creates a dataset from the request body (201) */
 export const create = async (req: Request, res: Response) => {
     console.log("[DATASET CONTROLLER] Attempting to create dataset...");
-    res.status(201).json(await service.create(req.body));
+    res.status(201).json(await service.create(pick<IDataset>(req.body, DATASET_FIELDS)));
 };
 
 /** PUT /:id : updates an existing dataset (200), or 404 if it does not exist */
 export const update = async (req: Request, res: Response) => {
     console.log("[DATASET CONTROLLER] Attempting to update dataset...");
-    const item = await service.update(req.params.id as string, req.body);
+    const item = await service.update(req.params.id as string, pick<IDataset>(req.body, DATASET_FIELDS));
     if (!item) {
         console.log("[DATASET CONTROLLER] Dataset not found");
         return res.status(404).json({ error: "Dataset not found" });

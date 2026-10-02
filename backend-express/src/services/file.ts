@@ -1,9 +1,5 @@
 // Database access for Files (metadata rows; hard-deleted since the Files table is not paranoid)
 import { Files, IFile } from "@src/models/file.ts";
-import { pick } from "@src/utils/pick.ts";
-
-// Whitelist of columns clients may set (see utils/pick.ts)
-const FILE_FIELDS = ["dataset_id", "type", "sizeBytes", "ogName"] as const;
 
 // Optional dataset_id filter to list a dataset's files
 export const getAll = (dataset_id?: string) => {
@@ -18,20 +14,20 @@ export const getById = (id: string) => {
 };
 
 /** Creates a file record from the whitelisted body fields */
-export const create = (body: unknown) => {
+export const create = (body: Partial<IFile>) => {
     console.log("[FILE SERVICE] Creating file record...");
-    return Files.create(pick<IFile>(body, FILE_FIELDS) as IFile);
+    return Files.create(body as IFile);
 };
 
 /** Updates a file record with the whitelisted body fields; returns null if not found */
-export const update = async (id: string, body: unknown) => {
+export const update = async (id: string, body: Partial<IFile>) => {
     console.log("[FILE SERVICE] Updating file record...");
     const file = await Files.findByPk(id);
     if (!file) {
         console.log("[FILE SERVICE] File to update not found");
         return null;
     }
-    return file.update(pick<IFile>(body, FILE_FIELDS));
+    return file.update(body);
 };
 
 /** Deletes a file record; returns false if not found */

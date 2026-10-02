@@ -1,7 +1,11 @@
 // Request handlers for Files; thin wrappers that call the file service and shape the HTTP response
 import { Request, Response } from "express";
 import * as service from "@src/services/file.ts";
+import { IFile } from "@src/models/file.ts";
+import { pick } from "@src/utils/pick.ts";
 
+// Whitelist of columns clients may set (see utils/pick.ts)
+const FILE_FIELDS = ["dataset_id", "type", "sizeBytes", "ogName"] as const;
 // GET /files?dataset_id=... lists files, optionally for one dataset
 export const list = async (req: Request, res: Response) => {
     console.log("[FILE CONTROLLER] Attempting to list files...");
@@ -29,13 +33,13 @@ export const get = async (req: Request, res: Response) => {
 /** POST / : creates a file from the request body (201) */
 export const create = async (req: Request, res: Response) => {
     console.log("[FILE CONTROLLER] Attempting to create file...");
-    res.status(201).json(await service.create(req.body));
+    res.status(201).json(await service.create(pick<IFile>(req.body, FILE_FIELDS)));
 };
 
 /** PUT /:id : updates an existing file (200), or 404 if it does not exist */
 export const update = async (req: Request, res: Response) => {
     console.log("[FILE CONTROLLER] Attempting to update file...");
-    const item = await service.update(req.params.id as string, req.body);
+    const item = await service.update(req.params.id as string, pick<IFile>(req.body, FILE_FIELDS));
     if (!item) {
         console.log("[FILE CONTROLLER] File not found");
         return res.status(404).json({ error: "File not found" });

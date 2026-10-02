@@ -50,13 +50,13 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
             // Optional publication DOI
             doi: {
                 type: DataTypes.STRING,
-                allowNull: true,
+                allowNull: false,
                 defaultValue: "",
             },
             // Optional link to the raw data download
             rawDataLink: {
                 type: DataTypes.STRING,
-                allowNull: true,
+                allowNull: false,
                 defaultValue: "",
             },
             // Experimental treatments/conditions in the dataset

@@ -43,7 +43,7 @@ watch(
         name.value = auth.user.name;
         permissionStore.fetchEditable(id);
     },
-    { immediate: true },
+    { immediate: true }
 );
 
 const required = (label: string) => (v: string) => !!v?.trim() || `${label} is required`;
@@ -77,7 +77,7 @@ watch(
     (status) => {
         if (status === UserStatus.INVITED) passwordDialogOpen.value = true;
     },
-    { immediate: true },
+    { immediate: true }
 );
 </script>
 
@@ -90,11 +90,10 @@ watch(
         <v-form ref="nameForm" @submit.prevent="saveName">
             <v-row class="mb-6 mx-4">
                 <v-col cols="12" md="6">
-                    <v-text-field v-model="name" label="Name" :rules="[required('Name')]"/>
+                    <v-text-field v-model="name" label="Name" :rules="[required('Name')]" />
                     <v-alert v-if="nameMessage" :type="nameMessage.type" variant="tonal" density="compact" class="mb-3">
                         {{ nameMessage.text }}
                     </v-alert>
-                                
                 </v-col>
                 <v-col>
                     <v-btn class="mt-3" :loading="nameSaving" @click="saveName">Save Name</v-btn>
@@ -111,7 +110,7 @@ watch(
         <!-- Admin section: dataset setup (placeholder) and links to the management pages -->
         <h2 v-if="isAdmin" class="text-subtitle-1 font-weight-bold mb-2">ADMIN</h2>
         <v-row v-if="isAdmin" class="mb-6 mx-4">
-            <v-col  cols="auto">
+            <v-col cols="auto">
                 <v-btn prepend-icon="mdi-account-multiple-outline" @click="router.push({ name: 'user-mgmt' })">
                     User Management
                 </v-btn>

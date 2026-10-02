@@ -1,9 +1,5 @@
 // Database access for Permissions (composite key: user_id + dataset_id)
 import { Permissions, IPermission } from "@src/models/permission.ts";
-import { pick } from "@src/utils/pick.ts";
-
-// Whitelist of columns clients may set (see utils/pick.ts)
-const PERMISSION_FIELDS = ["user_id", "dataset_id", "perm"] as const;
 
 // Optional filters so clients can list by user and/or dataset
 export const getAll = (filters: { user_id?: string; dataset_id?: string }) => {
@@ -21,9 +17,8 @@ export const getById = (user_id: string, dataset_id: string) => {
 };
 
 // Re-activates a previously soft-deleted permission instead of violating the composite primary key
-export const create = async (body: unknown) => {
+export const create = async (data: Partial<IPermission>) => {
     console.log("[PERMISSION SERVICE] Creating permission...");
-    const data = pick<IPermission>(body, PERMISSION_FIELDS);
     const existing = await Permissions.findOne({
         where: { user_id: data.user_id, dataset_id: data.dataset_id } as Partial<IPermission>,
         paranoid: false,
@@ -32,19 +27,22 @@ export const create = async (body: unknown) => {
         console.log("[PERMISSION SERVICE] Restoring previously deleted permission");
         await existing.restore();
         return existing.update({ perm: data.perm } as Partial<IPermission>);
+    } else if (existing) {
+        console.log("[PERMISSION SERVICE] Updating already existing permission");
+        return existing?.update({perm: data.perm} as Partial<IPermission>);
     }
     return Permissions.create(data as IPermission);
 };
 
 // Only the permission level can change; the user/dataset pair is the identity
-export const update = async (user_id: string, dataset_id: string, body: unknown) => {
+export const update = async (user_id: string, dataset_id: string, body: Partial<IPermission>) => {
     console.log("[PERMISSION SERVICE] Updating permission...");
     const permission = await getById(user_id, dataset_id);
     if (!permission) {
         console.log("[PERMISSION SERVICE] Permission to update not found");
         return null;
     }
-    return permission.update(pick<IPermission>(body, ["perm"]));
+    return permission.update(body);
 };
 
 /** Soft-deletes a permission; returns false if not found */

@@ -24,7 +24,7 @@ function navTo(route: string) {
         <h1 class="text-h6 font-weight-bold mb-4">BRADY LAB DATASETS</h1>
         <v-row>
             <!-- One card per dataset; clicking opens the dataset page -->
-            <v-col v-for="dataset in datasets" :key="dataset.url" cols="3">
+            <v-col v-for="dataset in datasets" :key="dataset.url">
                 <v-card @click="navTo('/dataset/' + dataset.url)">
                     <!-- Placeholder for the dataset's cover image -->
                     <div class="dataset-thumb"></div>

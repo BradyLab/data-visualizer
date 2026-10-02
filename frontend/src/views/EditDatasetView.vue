@@ -29,7 +29,7 @@
 
         <!-- Raw data file upload -->
         <v-row class="mx-4">
-            <v-file-upload density="compact" title="Upload Raw Data File" clearable !multiple hide-details></v-file-upload>
+            <v-file-upload density="compact" title="Upload Raw Data File" clearable :multiple="false" hide-details></v-file-upload>
             <!-- <v-btn color="primary" prepend-icon="mdi-upload">Upload raw data file</v-btn> -->
         </v-row>
 
@@ -61,18 +61,18 @@
 
         <!-- Cover photo and .rds file uploads -->
         <v-row class="mx-4">
-            <v-file-upload density="compact" title="Upload Cover Photo" clearable !multiple hide-details></v-file-upload>
+            <v-file-upload density="compact" title="Upload Cover Photo" clearable :multiple="false" hide-details></v-file-upload>
             <!-- <v-btn color="primary" prepend-icon="mdi-upload">Upload cover photo</v-btn> -->
         </v-row>
         <v-row class="mx-4">
-            <v-file-upload density="compact" title="Upload .rds File" clearable !multiple hide-details></v-file-upload>
+            <v-file-upload density="compact" title="Upload .rds File" clearable :multiple="false" hide-details></v-file-upload>
             <!-- <v-btn color="primary" prepend-icon="mdi-upload">Upload .rds file</v-btn> -->
         </v-row>
 
         <!-- Submit button -->
-        <v-row class="justify-right mx-4">
+        <v-row class="justify-end mx-4">
             <v-spacer />
-            <v-col class="justify-right" cols="auto">
+            <v-col class="justify-end" cols="auto">
                 <v-btn>Create New Dataset</v-btn>
             </v-col>
         </v-row>

@@ -17,7 +17,7 @@ const headers = [
     { title: "NAME", key: "name" },
     { title: "EMAIL", key: "email" },
     { title: "ROLE", key: "role" },
-    { title: "STATUS", key: "status"},
+    { title: "STATUS", key: "status" },
     { title: "", key: "actions", sortable: false, align: "end" as const },
 ];
 
@@ -27,13 +27,13 @@ const statusFilter = ref<UserStatus[]>([]);
 const roleOptions = Object.values(UserRoles);
 const statusOptions = Object.values(UserStatus);
 
-// Users matching any selected status and any selected role, where set, the selected role
+// Users matching any selected status and any selected role
 const filteredUsers = computed(() =>
     userStore.users.filter(
         (u) =>
             (!statusFilter.value.length || statusFilter.value.includes(u.status)) &&
-            (!roleFilter.value.length || roleFilter.value.includes(u.role)),
-    ),
+            (!roleFilter.value.length || roleFilter.value.includes(u.role))
+    )
 );
 
 const isAdmin = computed(() => auth.user.role === UserRoles.ADMIN);
@@ -98,7 +98,9 @@ function inviteUser() {
                             <v-list v-model:selected="statusFilter" select-strategy="leaf">
                                 <v-list-item v-for="status in statusOptions" :key="status" :title="status" :value="status">
                                     <template #prepend="{ isSelected }">
-                                        <v-icon :icon="isSelected ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'"></v-icon>
+                                        <v-icon
+                                            :icon="isSelected ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'"
+                                        ></v-icon>
                                     </template>
                                 </v-list-item>
                             </v-list>
@@ -110,7 +112,9 @@ function inviteUser() {
                             <v-list v-model:selected="roleFilter" select-strategy="leaf">
                                 <v-list-item v-for="role in roleOptions" :key="role" :title="role" :value="role">
                                     <template #prepend="{ isSelected }">
-                                        <v-icon :icon="isSelected ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'"></v-icon>
+                                        <v-icon
+                                            :icon="isSelected ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'"
+                                        ></v-icon>
                                     </template>
                                 </v-list-item>
                             </v-list>
@@ -119,10 +123,8 @@ function inviteUser() {
                 </v-list>
             </v-menu>
             <v-spacer></v-spacer>
-            <v-btn prepend-icon="mdi-account-plus-outline"  @click="inviteUser">Invite User</v-btn>
+            <v-btn prepend-icon="mdi-account-plus-outline" @click="inviteUser">Invite User</v-btn>
         </v-row>
-
-        
 
         <!-- Active filters (only shown when there are any); closing a chip removes that value -->
         <div v-if="statusFilter.length || roleFilter.length" class="d-flex flex-wrap ga-2 mb-3">
@@ -148,12 +150,8 @@ function inviteUser() {
 
         <v-data-table :headers="headers" :items="filteredUsers" item-value="id">
             <template #item.actions="{ item }">
-                <v-btn class="mr-2" prepend-icon="mdi-pencil" @click="edit(item)">
-                    Edit
-                </v-btn>
-                <v-btn class="mr-2" prepend-icon="mdi-shield-key-outline" @click="viewPermissions(item.id)">
-                    Permissions
-                </v-btn>
+                <v-btn class="mr-2" prepend-icon="mdi-pencil" @click="edit(item)"> Edit </v-btn>
+                <v-btn class="mr-2" prepend-icon="mdi-shield-key-outline" @click="viewPermissions(item.id)"> Permissions </v-btn>
                 <v-btn prepend-icon="mdi-history" @click="viewActivityLogs(item.id)">Activity Logs</v-btn>
             </template>
         </v-data-table>

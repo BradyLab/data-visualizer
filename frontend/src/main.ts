@@ -13,7 +13,7 @@ const app = createApp(App);
 // Pinia: global state management
 app.use(createPinia());
 // Restore a saved login session (re-attaches the token and reloads the user)
-useAuthStore().restore();
+await useAuthStore().restore();
 // Vuetify: UI component library and theme
 app.use(vuetify);
 // Vue Router: page navigation

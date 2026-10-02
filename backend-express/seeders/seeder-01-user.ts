@@ -14,7 +14,7 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
             {
                 id: "a63324c7-73a6-4093-9475-c271173a481d",
                 email: "lizwright@ucdavis.edu",
-                password: hashPassword("l!zIs@w3s0m3"),
+                password: hashPassword(process.env.DEFAULT_PASSWORD),
                 name: "Liz Wright",
                 role: UserRoles.LAB_MEMBER,
                 status: UserStatus.ACTIVE,
@@ -23,7 +23,7 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
             {
                 id: "f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
                 email: "sbrady@ucdavis.edu",
-                password: hashPassword("l!zIs@w3s0m3"),
+                password: hashPassword(process.env.DEFAULT_PASSWORD),
                 name: "Siobhan Brady",
                 role: UserRoles.ADMIN,
                 status: UserStatus.ACTIVE,

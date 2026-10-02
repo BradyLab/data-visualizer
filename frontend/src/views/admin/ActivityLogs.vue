@@ -36,9 +36,9 @@ const filteredActivities = computed(() =>
         .filter(
             (a) =>
                 (!typeFilter.value.length || typeFilter.value.includes(a.type)) &&
-                (!userFilter.value.length || userFilter.value.includes(a.user_id)),
+                (!userFilter.value.length || userFilter.value.includes(a.user_id))
         )
-        .map((a) => ({ ...a, userName: userName(a.user_id) })),
+        .map((a) => ({ ...a, userName: userName(a.user_id) }))
 );
 
 // Ids of activities whose JSON data is expanded past the preview
@@ -88,7 +88,9 @@ onMounted(async () => {
                             <v-list v-model:selected="typeFilter" select-strategy="leaf">
                                 <v-list-item v-for="type in typeOptions" :key="type" :title="type" :value="type">
                                     <template #prepend="{ isSelected }">
-                                        <v-icon :icon="isSelected ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'"></v-icon>
+                                        <v-icon
+                                            :icon="isSelected ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'"
+                                        ></v-icon>
                                     </template>
                                 </v-list-item>
                             </v-list>
@@ -98,14 +100,11 @@ onMounted(async () => {
                         <v-list-item-title>User</v-list-item-title>
                         <v-menu activator="parent" submenu open-on-hover :close-on-content-click="false" location="end">
                             <v-list v-model:selected="userFilter" select-strategy="leaf">
-                                <v-list-item
-                                    v-for="user in userStore.users"
-                                    :key="user.id"
-                                    :title="user.name"
-                                    :value="user.id"
-                                >
+                                <v-list-item v-for="user in userStore.users" :key="user.id" :title="user.name" :value="user.id">
                                     <template #prepend="{ isSelected }">
-                                        <v-icon :icon="isSelected ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'"></v-icon>
+                                        <v-icon
+                                            :icon="isSelected ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'"
+                                        ></v-icon>
                                     </template>
                                 </v-list-item>
                             </v-list>
@@ -155,7 +154,7 @@ onMounted(async () => {
                     }"
                     :title="lineCount(item.data) > PREVIEW_LINES ? 'Click to expand or collapse' : undefined"
                     @click="lineCount(item.data) > PREVIEW_LINES && toggleExpanded(item.id)"
-                >{{ formatData(item.data) }}</pre>
+                    >{{ formatData(item.data) }}</pre>
             </template>
         </v-data-table>
     </v-container>

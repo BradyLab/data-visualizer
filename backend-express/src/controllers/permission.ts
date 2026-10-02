@@ -1,7 +1,11 @@
 // Request handlers for Permissions; thin wrappers that call the permission service and shape the HTTP response
 import { Request, Response } from "express";
 import * as service from "@src/services/permission.ts";
+import { IPermission } from "@src/models/permission.ts";
+import { pick } from "@src/utils/pick.ts";
 
+// Whitelist of columns clients may set (see utils/pick.ts)
+const PERMISSION_FIELDS = ["user_id", "dataset_id", "perm"] as const;
 // Returns the value only if it is a string (query params can also be arrays/objects)
 const str = (value: unknown) => (typeof value === "string" ? value : undefined);
 
@@ -42,13 +46,13 @@ export const get = async (req: Request, res: Response) => {
 /** POST / : creates a permission from the request body (201) */
 export const create = async (req: Request, res: Response) => {
     console.log("[PERMISSION CONTROLLER] Attempting to create permission...");
-    res.status(201).json(await service.create(req.body));
+    res.status(201).json(await service.create(pick<IPermission>(req.body, PERMISSION_FIELDS)));
 };
 
 /** PUT /:userId/:datasetId : updates an existing permission (200), or 404 if it does not exist */
 export const update = async (req: Request, res: Response) => {
     console.log("[PERMISSION CONTROLLER] Attempting to update permission...");
-    const item = await service.update(req.params.userId as string, req.params.datasetId as string, req.body);
+    const item = await service.update(req.params.userId as string, req.params.datasetId as string, pick<IPermission>(req.body, ["perm"]));
     if (!item) {
         console.log("[PERMISSION CONTROLLER] Permission not found");
         return res.status(404).json({ error: "Permission not found" });

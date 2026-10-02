@@ -53,7 +53,6 @@ export default (app: App) => {
         },
         VTextField: {
             variant: "outlined",
-            border: "2px solid",
             clearable: true,
         },
         VFileUpload: {
@@ -65,8 +64,8 @@ export default (app: App) => {
         VDataTable: {
             style: "background-color: rgba(var(--v-theme-primary), 0.12); color: rgb(var(--v-theme-primary)); --v-theme-on-surface: var(--v-theme-primary);",
             VBtn: {
-                color: "primary"
-            }
+                color: "primary",
+            },
         },
     };
 

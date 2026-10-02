@@ -1,28 +1,20 @@
 // Database access for Users; the password hash is never returned to callers
 import { Users, IUserPass } from "@src/models/user.ts";
-import { pick } from "@src/utils/pick.ts";
 import { hashPassword } from "@src/utils/password.ts";
 import { UserStatus } from "@commons/user.ts";
 
-// Whitelist of columns clients may set (see utils/pick.ts)
-const USER_FIELDS = ["email", "password", "name", "role", "status"] as const;
 // Query option that keeps the password hash out of query results
 const PUBLIC_ATTRIBUTES = { exclude: ["password"] };
 
-// Columns clients may change on an existing user; the password is deliberately absent so it can only be
-// changed through POST /auth/change-password (which checks the old password)
-const UPDATE_FIELDS = ["email", "name", "role", "status"] as const;
-
 // Hashes the password field (if present) before it is stored
-const prepare = (body: unknown) => {
-    const data = pick<IUserPass>(body, USER_FIELDS);
+const prepare = (data: Partial<IUserPass>) => {
     if (data.password) data.password = hashPassword(data.password);
     return data;
 };
 
 // Removes the password from a model instance before returning it
 const toPublic = (user: Users) => {
-    const { password, ...rest } = user.get({ plain: true });
+    const { password: _password, ...rest } = user.get({ plain: true });
     return rest;
 };
 
@@ -39,7 +31,7 @@ export const getById = (id: string) => {
 };
 
 /** Creates a user (password is hashed first) and returns it without the password */
-export const create = async (body: unknown) => {
+export const create = async (body: Partial<IUserPass>) => {
     console.log("[USER SERVICE] Creating user...");
     return toPublic(await Users.create(prepare(body) as IUserPass));
 };
@@ -48,25 +40,24 @@ export const create = async (body: unknown) => {
  * Invites a user: creates them with INVITED status and the default password from the DEFAULT_PASSWORD env var.
  * Returns the user without the password. Throws if DEFAULT_PASSWORD is not configured.
  */
-export const invite = async (body: unknown) => {
+export const invite = async (data: Partial<IUserPass>) => {
     console.log("[USER SERVICE] Inviting user...");
     const defaultPassword = process.env.DEFAULT_PASSWORD;
     if (!defaultPassword) throw new Error("DEFAULT_PASSWORD is not set");
-    const data = pick<IUserPass>(body, ["email", "name", "role"] as const);
     return toPublic(
-        await Users.create({ ...data, status: UserStatus.INVITED, password: hashPassword(defaultPassword) } as IUserPass),
+        await Users.create({ ...data, status: UserStatus.INVITED, password: hashPassword(defaultPassword) } as IUserPass)
     );
 };
 
 /** Updates a user's email, name, role or status (any password in the body is ignored); returns null if not found */
-export const update = async (id: string, body: unknown) => {
+export const update = async (id: string, body: Partial<IUserPass>) => {
     console.log("[USER SERVICE] Updating user...");
     const user = await Users.findByPk(id);
     if (!user) {
         console.log("[USER SERVICE] User to update not found");
         return null;
     }
-    await user.update(pick<IUserPass>(body, UPDATE_FIELDS));
+    await user.update(body);
     return toPublic(user);
 };
 

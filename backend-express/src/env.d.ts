@@ -14,7 +14,7 @@ declare global {
             DB_NAME: string;
             DB_USERNAME: string;
             DB_PASSWORD: string;
-            // Password given to newly invited users until they change it
+            // Password given to newly invited users until they change it (forced on first login)
             DEFAULT_PASSWORD: string;
             // Secret used to sign login tokens, and how long they last (e.g. "8h")
             JWT_SECRET: string;

@@ -4,7 +4,6 @@ import { defineStore } from "pinia";
 import axios from "axios";
 import { UserRoles, UserStatus, type IUser } from "@commons/user";
 import { authApi } from "@src/api/auth";
-import { useRouter } from "vue-router";
 
 // localStorage key for the token so the session survives a page reload
 const TOKEN_KEY = "token";
@@ -25,9 +24,7 @@ const guestUser = {
     role: UserRoles.GUEST,
     status: UserStatus.ACTIVE,
     createdAt: new Date(),
-    updatedAt: new Date(),
-    deletedAt: new Date(),
-}
+};
 
 export const useAuthStore = defineStore("auth", () => {
     // State: login token, current user (a GUEST placeholder when logged out), and login request status

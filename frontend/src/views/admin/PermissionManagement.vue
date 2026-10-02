@@ -34,9 +34,7 @@ const datasetFilter = ref<string[]>([]);
 
 // Datasets the viewer may see: all for admins, otherwise only those they can edit
 const visibleDatasets = computed(() =>
-    isAdmin.value
-        ? datasetStore.datasets
-        : datasetStore.datasets.filter((d) => permissionStore.editableDatasetIds.includes(d.id)),
+    isAdmin.value ? datasetStore.datasets : datasetStore.datasets.filter((d) => permissionStore.editableDatasetIds.includes(d.id))
 );
 
 // Permission rows joined with user and dataset details, limited to the selected filters.
@@ -48,7 +46,7 @@ const rows = computed(() => {
             (p) =>
                 (isAdmin.value || visibleIds.has(p.dataset_id)) &&
                 (!userFilter.value.length || userFilter.value.includes(p.user_id)) &&
-                (!datasetFilter.value.length || datasetFilter.value.includes(p.dataset_id)),
+                (!datasetFilter.value.length || datasetFilter.value.includes(p.dataset_id))
         )
         .map((p) => ({
             key: `${p.user_id}:${p.dataset_id}`,
@@ -83,7 +81,7 @@ watch(
         // Non-admins without edit access to any dataset have nothing to manage here
         if (!isAdmin.value && !permissionStore.editableDatasetIds.length) router.replace("/home");
     },
-    { immediate: true },
+    { immediate: true }
 );
 
 // TODO: open a new-permission flow and call the backend
@@ -105,37 +103,46 @@ function edit(userId: string, datasetId: string) {
 
         <!-- Filter menu: each item opens a submenu of values; picking one sets the filter and shows a chip -->
         <v-row class="align-center mb-2">
-        <v-menu>
-            <template #activator="{ props }">
-                <v-btn v-bind="props" prepend-icon="mdi-filter-variant">Filter</v-btn>
-            </template>
-            <v-list>
-                <v-list-item append-icon="mdi-chevron-right">
-                    <v-list-item-title>User</v-list-item-title>
-                    <v-menu activator="parent" submenu open-on-hover :close-on-content-click="false" location="end">
-                        <v-list v-model:selected="userFilter" select-strategy="leaf">
-                            <v-list-item v-for="user in userStore.users" :key="user.id" :title="user.name" :value="user.id">
-                                <template #prepend="{ isSelected }">
-                                    <v-icon :icon="isSelected ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'"></v-icon>
-                                </template>
-                            </v-list-item>
-                        </v-list>
-                    </v-menu>
-                </v-list-item>
-                <v-list-item append-icon="mdi-chevron-right">
-                    <v-list-item-title>Dataset</v-list-item-title>
-                    <v-menu activator="parent" submenu open-on-hover :close-on-content-click="false" location="end">
-                        <v-list v-model:selected="datasetFilter" select-strategy="leaf">
-                            <v-list-item v-for="dataset in visibleDatasets" :key="dataset.id" :title="dataset.name" :value="dataset.id">
-                                <template #prepend="{ isSelected }">
-                                    <v-icon :icon="isSelected ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'"></v-icon>
-                                </template>
-                            </v-list-item>
-                        </v-list>
-                    </v-menu>
-                </v-list-item>
-            </v-list>
-        </v-menu>
+            <v-menu>
+                <template #activator="{ props }">
+                    <v-btn v-bind="props" prepend-icon="mdi-filter-variant">Filter</v-btn>
+                </template>
+                <v-list>
+                    <v-list-item append-icon="mdi-chevron-right">
+                        <v-list-item-title>User</v-list-item-title>
+                        <v-menu activator="parent" submenu open-on-hover :close-on-content-click="false" location="end">
+                            <v-list v-model:selected="userFilter" select-strategy="leaf">
+                                <v-list-item v-for="user in userStore.users" :key="user.id" :title="user.name" :value="user.id">
+                                    <template #prepend="{ isSelected }">
+                                        <v-icon
+                                            :icon="isSelected ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'"
+                                        ></v-icon>
+                                    </template>
+                                </v-list-item>
+                            </v-list>
+                        </v-menu>
+                    </v-list-item>
+                    <v-list-item append-icon="mdi-chevron-right">
+                        <v-list-item-title>Dataset</v-list-item-title>
+                        <v-menu activator="parent" submenu open-on-hover :close-on-content-click="false" location="end">
+                            <v-list v-model:selected="datasetFilter" select-strategy="leaf">
+                                <v-list-item
+                                    v-for="dataset in visibleDatasets"
+                                    :key="dataset.id"
+                                    :title="dataset.name"
+                                    :value="dataset.id"
+                                >
+                                    <template #prepend="{ isSelected }">
+                                        <v-icon
+                                            :icon="isSelected ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'"
+                                        ></v-icon>
+                                    </template>
+                                </v-list-item>
+                            </v-list>
+                        </v-menu>
+                    </v-list-item>
+                </v-list>
+            </v-menu>
             <v-spacer></v-spacer>
             <!-- TODO: wire up to the new permission flow -->
             <v-btn prepend-icon="mdi-plus" @click="newPermission">New Permission</v-btn>

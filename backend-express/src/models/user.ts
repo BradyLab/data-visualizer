@@ -33,7 +33,7 @@ export class Users extends Model<IUserPass> {
     })
     declare email: string;
 
-    // Hashed password
+    // Hashed password, stripped by the service
     @Column({
         type: DataType.STRING,
         allowNull: false,
