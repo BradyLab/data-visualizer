@@ -1,9 +1,5 @@
 // Database access for Datasets
 import { Datasets, IDataset } from "@src/models/dataset.ts";
-import { pick } from "@src/utils/pick.ts";
-
-// Whitelist of columns clients may set (see utils/pick.ts)
-const DATASET_FIELDS = ["name", "owner", "url", "description", "doi", "rawDataLink", "treatments", "plots"] as const;
 
 /** Returns all non-deleted datasets */
 export const getAll = () => {
@@ -18,20 +14,20 @@ export const getById = (id: string) => {
 };
 
 /** Creates a dataset from the whitelisted body fields */
-export const create = (body: unknown) => {
+export const create = (body: Partial<IDataset>) => {
     console.log("[DATASET SERVICE] Creating dataset...");
-    return Datasets.create(pick<IDataset>(body, DATASET_FIELDS) as IDataset);
+    return Datasets.create(body as IDataset);
 };
 
 /** Updates a dataset with the whitelisted body fields; returns null if not found */
-export const update = async (id: string, body: unknown) => {
+export const update = async (id: string, body: Partial<IDataset>) => {
     console.log("[DATASET SERVICE] Updating dataset...");
     const dataset = await Datasets.findByPk(id);
     if (!dataset) {
         console.log("[DATASET SERVICE] Dataset to update not found");
         return null;
     }
-    return dataset.update(pick<IDataset>(body, DATASET_FIELDS));
+    return dataset.update(body);
 };
 
 // Soft-deletes the dataset (and its permissions); returns false if not found

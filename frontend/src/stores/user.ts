@@ -7,8 +7,6 @@ import { userApi, type CreateUserPayload, type InviteUserPayload, type UpdateUse
 export const useUserStore = defineStore("user", () => {
     // Reactive state
     const users = ref<IUser[]>([]);
-    const loading = ref(false);
-    const error = ref<string | null>(null);
 
     /** Loads all users from the backend into the store */
     async function fetchUsers() {
@@ -52,8 +50,6 @@ export const useUserStore = defineStore("user", () => {
 
     return {
         users,
-        loading,
-        error,
         fetchUsers,
         getById,
         addUser,

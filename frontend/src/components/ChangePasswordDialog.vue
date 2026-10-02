@@ -89,7 +89,9 @@ async function submit() {
             </v-card-text>
             <v-card-actions>
                 <v-spacer></v-spacer>
-                <v-btn v-if="!mustChange" :disabled="saving" color="white" @click="open = false">{{ success ? "Close" : "Cancel" }}</v-btn>
+                <v-btn v-if="!mustChange" :disabled="saving" color="white" @click="open = false">{{
+                    success ? "Close" : "Cancel"
+                }}</v-btn>
                 <v-btn v-if="!success" :loading="saving" color="white" variant="tonal" @click="submit">Change</v-btn>
             </v-card-actions>
         </v-card>

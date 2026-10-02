@@ -80,6 +80,8 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
 export async function down(queryInterface: QueryInterface, sequelize: Sequelize) {
     try {
         await queryInterface.dropTable("Users");
+        await (queryInterface as any).dropEnum('enum_Users_role');
+        await (queryInterface as any).dropEnum('enum_Users_status');
     } catch (error) {
         migrationLogger.error(error);
         throw error;

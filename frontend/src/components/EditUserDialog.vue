@@ -50,7 +50,7 @@ async function save() {
             <v-card-subtitle></v-card-subtitle>
             <v-card-text class="px-4 pb-0">
                 <v-select v-model="role" :items="roleOptions" label="Role" :clearable="false"></v-select>
-                <v-select v-model="status" :items="statusOptions" label="Status" :clearable="false"></v-select>
+                <v-select v-if="status !== UserStatus.INVITED" v-model="status" :items="statusOptions" label="Status" :clearable="false"></v-select>
                 <v-alert v-if="error" type="error" variant="tonal" density="compact">{{ error }}</v-alert>
             </v-card-text>
             <v-card-actions>

@@ -49,7 +49,7 @@ export class Files extends Model<IFile> {
 
     // File size in bytes
     @Column({
-        type: DataType.INTEGER,
+        type: DataType.BIGINT,
         allowNull: false,
     })
     declare sizeBytes: number;

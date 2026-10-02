@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { Users } from "@src/models/user.ts";
 import { UserStatus } from "@commons/user.ts";
 import { hashPassword } from "@src/utils/password.ts";
+import e from "cors";
 
 // Payload stored in the token
 export interface TokenPayload {
@@ -23,7 +24,8 @@ const verifyPassword = (password: string, stored: string) => {
 /** Signs a token for the user id; lifetime comes from JWT_EXPIRES_IN (default 8h), signed with JWT_SECRET */
 export const signToken = (id: string) => {
     const expiresIn = (process.env.JWT_EXPIRES_IN ?? "8h") as NonNullable<jwt.SignOptions["expiresIn"]>;
-    return jwt.sign({ id } satisfies TokenPayload, process.env.JWT_SECRET, { expiresIn });
+    if(process.env.JWT_SECRET) return jwt.sign({ id } satisfies TokenPayload, process.env.JWT_SECRET, { expiresIn });
+    else console.log("[AUTH SERVICE] JWT_SECRET not set");
 };
 
 /** Returns the id in a valid token, or null if the token is invalid or expired */

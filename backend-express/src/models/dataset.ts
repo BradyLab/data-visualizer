@@ -57,7 +57,7 @@ export class Datasets extends Model<IDataset> {
     // Optional DOI of the associated publication
     @Column({
         type: DataType.STRING,
-        allowNull: true,
+        allowNull: false,
         defaultValue: "",
     })
     declare doi: string;
@@ -65,7 +65,7 @@ export class Datasets extends Model<IDataset> {
     // Optional link to the raw data
     @Column({
         type: DataType.STRING,
-        allowNull: true,
+        allowNull: false,
         defaultValue: "",
     })
     declare rawDataLink: string;

@@ -2,6 +2,7 @@
 import { NextFunction, Request, Response } from "express";
 import { verifyToken } from "@src/services/auth.ts";
 import { Users } from "@src/models/user.ts";
+import { UserStatus } from "@commons/user.ts";
 
 /** Rejects with 401 unless the token is valid and the user still exists; sets res.locals.user */
 export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
@@ -13,6 +14,10 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     const user = id ? await Users.findByPk(id, { attributes: { exclude: ["password"] } }) : null;
     if (!user) {
         console.log("[AUTH MIDDLEWARE] Unauthorized: missing or invalid token");
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+    if (user && user.status == UserStatus.INACTIVE) {
+        console.log("[AUTH MIDDLEWARE] Unauthorized: user is inactive");
         return res.status(401).json({ error: "Unauthorized" });
     }
     console.log("[AUTH MIDDLEWARE] Authorized");
