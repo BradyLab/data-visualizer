@@ -9,6 +9,12 @@ export const usePermissionStore = defineStore("permission", () => {
     // Ids of the datasets the viewer holds EDIT permission on (not used for admins, who see everything)
     const editableDatasetIds = ref<string[]>([]);
 
+    /** Loads just the ids of the datasets a user holds EDIT permission on (used to decide which pages to link to) */
+    async function fetchEditable(userId: string) {
+        const mine = await permissionApi.getByUser(userId);
+        editableDatasetIds.value = mine.filter((p) => p.perm === PermissionOptions.EDIT).map((p) => p.dataset_id);
+    }
+
     /**
      * Loads the permissions visible to a user. Admins get every permission; anyone else gets only the
      * permissions on datasets they hold EDIT permission on.
@@ -23,5 +29,5 @@ export const usePermissionStore = defineStore("permission", () => {
         permissions.value = (await Promise.all(editableDatasetIds.value.map(permissionApi.getByDataset))).flat();
     }
 
-    return { permissions, editableDatasetIds, fetchVisible };
+    return { permissions, editableDatasetIds, fetchEditable, fetchVisible };
 });

@@ -25,6 +25,19 @@ export const logout = (_req: Request, res: Response) => {
     res.status(204).send();
 };
 
+/** POST /change-password : changes the logged-in user's password (204), 400 if a field is missing, or 403 if the old password is wrong */
+export const changePassword = async (req: Request, res: Response) => {
+    console.log("[AUTH CONTROLLER] Attempting to change password...");
+    const { oldPassword, newPassword } = req.body ?? {};
+    if (typeof oldPassword !== "string" || typeof newPassword !== "string" || !newPassword) {
+        return res.status(400).json({ error: "Old and new passwords are required" });
+    }
+    if (!(await service.changePassword(res.locals.user.id, oldPassword, newPassword))) {
+        return res.status(403).json({ error: "Old password is incorrect" });
+    }
+    res.status(204).send();
+};
+
 /** GET /me : returns the logged-in user (set by requireAuth) */
 export const me = (req: Request, res: Response) => {
     console.log("[AUTH CONTROLLER] Fetching the logged-in user...");

@@ -3,6 +3,7 @@ import { scryptSync, timingSafeEqual } from "node:crypto";
 import jwt from "jsonwebtoken";
 import { Users } from "@src/models/user.ts";
 import { UserStatus } from "@commons/user.ts";
+import { hashPassword } from "@src/utils/password.ts";
 
 // Payload stored in the token
 export interface TokenPayload {
@@ -33,6 +34,22 @@ export const verifyToken = (token: string) => {
         console.log("[AUTH SERVICE] Token is invalid or expired");
         return null;
     }
+};
+
+/** Changes a user's password (activating them if invited) if the old one is correct; returns false (and changes nothing) if it is not */
+export const changePassword = async (id: string, oldPassword: string, newPassword: string) => {
+    console.log("[AUTH SERVICE] Changing password...");
+    const user = await Users.findByPk(id);
+    if (!user || !verifyPassword(oldPassword, user.password)) {
+        console.log("[AUTH SERVICE] Old password did not match");
+        return false;
+    }
+    // An invited user becomes active once they replace the default password
+    await user.update({
+        password: hashPassword(newPassword),
+        status: user.status === UserStatus.INVITED ? UserStatus.ACTIVE : user.status,
+    });
+    return true;
 };
 
 /** Returns a token and the user (without password) for valid credentials of an active user, otherwise null */
