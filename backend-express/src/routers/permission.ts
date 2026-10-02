@@ -9,6 +9,9 @@ const router = Router();
 
 router.get("/", controller.list);
 router.post("/", controller.create);
+// Must be registered before "/:userId/:datasetId", which would otherwise match "/byUser/<id>" and "/byDataset/<id>"
+router.get("/byUser/:userId", controller.listByUser);
+router.get("/byDataset/:datasetId", controller.listByDataset);
 router.get("/:userId/:datasetId", controller.get);
 router.put("/:userId/:datasetId", controller.update);
 router.delete("/:userId/:datasetId", controller.remove);
