@@ -60,6 +60,13 @@ const router = createRouter({
             component: () => import("@src/views/admin/UserManagement.vue"),
             meta: { hideFooter: false},
         },
+        // Admin Activity Logs Page
+        {
+            path: "/admin/activity-logs",
+            name: "activity-logs",
+            component: () => import("@src/views/admin/ActivityLogs.vue"),
+            meta: { hideFooter: false },
+        },
         // Permission management page (admins see all datasets, other users only datasets they can edit)
         {
             path: "/admin/permissions",
