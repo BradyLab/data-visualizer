@@ -11,6 +11,12 @@ export const list = async (req: Request, res: Response) => {
     res.status(200).json(await service.getAll({ user_id: str(req.query.user_id), type: str(req.query.type) }));
 };
 
+/** GET /byUser/:userId : lists one user's activities, newest first (200) */
+export const listByUser = async (req: Request, res: Response) => {
+    console.log("[ACTIVITY CONTROLLER] Attempting to list activities by user...");
+    res.status(200).json(await service.getAll({ user_id: req.params.userId as string }));
+};
+
 /** GET /:id : returns one activity (200), or 404 if it does not exist */
 export const get = async (req: Request, res: Response) => {
     console.log("[ACTIVITY CONTROLLER] Attempting to get activity...");

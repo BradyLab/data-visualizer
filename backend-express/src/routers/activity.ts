@@ -9,6 +9,7 @@ const router = Router();
 
 router.get("/", controller.list);
 router.post("/", controller.create);
+router.get("/byUser/:userId", controller.listByUser);
 router.get("/:id", controller.get);
 
 export default router;
