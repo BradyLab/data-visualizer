@@ -34,6 +34,7 @@ export const useAuthStore = defineStore("auth", () => {
     const error = ref<string | null>(null);
 
     // Logged in whenever a token is present (the token is not validated client-side)
+    // TODOC06: true as soon as a token exists, so after a page reload the app is "logged in" with the GUEST user until restore() finishes (and stays so if it is never awaited)
     const isLoggedIn = computed(() => !!token.value);
 
     // Saves the token, and makes every axios request send it

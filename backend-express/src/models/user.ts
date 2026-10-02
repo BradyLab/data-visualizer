@@ -25,6 +25,7 @@ export class Users extends Model<IUserPass> {
     })
     declare id: string;
 
+    // TODOB05: email is unique but the table is paranoid, so a soft-deleted user's email cannot be reused
     // Login/contact email; must be unique
     @Unique
     @Column({

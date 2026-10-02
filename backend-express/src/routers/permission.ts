@@ -8,6 +8,7 @@ const router = Router();
 // Request flow: router -> controller (HTTP in/out) -> service (database). No requireAuth is applied to these routes
 
 router.get("/", controller.list);
+// TODOB12: permission routes have no requireAuth or role check, so anyone can grant themselves access to any dataset
 router.post("/", controller.create);
 // Must be registered before "/:userId/:datasetId", which would otherwise match "/byUser/<id>" and "/byDataset/<id>"
 router.get("/byUser/:userId", controller.listByUser);

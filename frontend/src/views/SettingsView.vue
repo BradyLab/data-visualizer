@@ -25,6 +25,7 @@ function navTo(route: string) {
 }
 
 // Settings requires a login; guests are redirected login
+// TODOD11: on a page reload the session is restored after mount, so this likely redirects a logged-in user to /login before auth.isLoggedIn is true
 onMounted(() => {
     if (!auth.isLoggedIn) navTo("/login");
 });
@@ -115,6 +116,7 @@ watch(
                     User Management
                 </v-btn>
             </v-col>
+            <!-- TODOD12: this is inside the isAdmin-only row, and canManagePermissions is always true for admins, so the v-if is redundant and non-admins with edit access never see this link despite the comment above -->
             <v-col v-if="canManagePermissions" cols="auto">
                 <v-btn prepend-icon="mdi-shield-key-outline" @click="router.push({ name: 'permissions' })">
                     Permission Management
@@ -127,6 +129,7 @@ watch(
         </v-row>
 
         <!-- One row per dataset: name (links to the dataset), private/public switch, and edit button -->
+        <!-- TODOD13: v-if and v-for on the same element is discouraged (v-if is evaluated first in Vue 3); wrap in a <template v-if> instead -->
         <v-row v-if="isAdmin" v-for="dataset in datasets" :key="dataset.url" align="center" class="mx-4">
             <v-col @click="navTo('/dataset/' + dataset.url)">{{ dataset.name }}</v-col>
             <v-col cols="auto" class="d-flex align-center">

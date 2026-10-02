@@ -26,6 +26,7 @@ export const usePermissionStore = defineStore("permission", () => {
         }
         const mine = await permissionApi.getByUser(userId);
         editableDatasetIds.value = mine.filter((p) => p.perm === PermissionOptions.EDIT).map((p) => p.dataset_id);
+        // TODOC08: passing permissionApi.getByDataset directly to map also passes (index, array) as extra args (harmless today, fragile if the API gains parameters); this block also duplicates fetchEditable and mutates editableDatasetIds as a side effect
         permissions.value = (await Promise.all(editableDatasetIds.value.map(permissionApi.getByDataset))).flat();
     }
 

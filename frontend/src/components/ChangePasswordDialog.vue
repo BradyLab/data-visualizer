@@ -69,6 +69,7 @@ async function submit() {
                         :clearable="false"
                         :rules="[required('Old password')]"
                     ></v-text-field>
+                    <!-- TODOD01: new password has no minimum length/strength rule and may equal the old password -->
                     <v-text-field
                         v-model="newPassword"
                         label="New password"
