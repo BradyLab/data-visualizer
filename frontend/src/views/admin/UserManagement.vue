@@ -2,7 +2,9 @@
 // Admin-only user management page: table of users with their role and buttons for permissions / activity logs
 import { computed, onMounted, ref, watchEffect } from "vue";
 import { useRouter } from "vue-router";
-import { UserRoles, UserStatus } from "@commons/user";
+import { UserRoles, UserStatus, type IUser } from "@commons/user";
+import EditUserDialog from "@src/components/EditUserDialog.vue";
+import InviteUserDialog from "@src/components/InviteUserDialog.vue";
 import { useAuthStore } from "@src/stores/auth";
 import { useUserStore } from "@src/stores/user";
 
@@ -48,9 +50,14 @@ onMounted(async () => {
     if (isAdmin.value) await userStore.fetchUsers();
 });
 
-// TODO: edit for this user
-function edit(userId: string) {
-    console.log("TODO: edit for", userId);
+// User currently being edited in the popup
+const editingUser = ref<IUser | null>(null);
+const editDialogOpen = ref(false);
+
+// Opens the edit popup for this user
+function edit(user: IUser) {
+    editingUser.value = user;
+    editDialogOpen.value = true;
 }
 
 // Opens the permission management page filtered to this user
@@ -63,9 +70,11 @@ function viewActivityLogs(userId: string) {
     router.push({ name: "activity-logs", query: { user: userId } });
 }
 
-// TODO: open an invite-user flow and call the backend
+const inviteDialogOpen = ref(false);
+
+// Opens the invite popup
 function inviteUser() {
-    console.log("TODO: invite user");
+    inviteDialogOpen.value = true;
 }
 </script>
 
@@ -110,7 +119,6 @@ function inviteUser() {
                 </v-list>
             </v-menu>
             <v-spacer></v-spacer>
-            <!-- TODO: wire up to the invite user flow -->
             <v-btn prepend-icon="mdi-account-plus-outline"  @click="inviteUser">Invite User</v-btn>
         </v-row>
 
@@ -140,8 +148,7 @@ function inviteUser() {
 
         <v-data-table :headers="headers" :items="filteredUsers" item-value="id">
             <template #item.actions="{ item }">
-                <!-- TODO: wire up to a popup -->
-                <v-btn class="mr-2" prepend-icon="mdi-pencil" @click="edit(item.id)">
+                <v-btn class="mr-2" prepend-icon="mdi-pencil" @click="edit(item)">
                     Edit
                 </v-btn>
                 <v-btn class="mr-2" prepend-icon="mdi-shield-key-outline" @click="viewPermissions(item.id)">
@@ -150,5 +157,8 @@ function inviteUser() {
                 <v-btn prepend-icon="mdi-history" @click="viewActivityLogs(item.id)">Activity Logs</v-btn>
             </template>
         </v-data-table>
+
+        <EditUserDialog v-model="editDialogOpen" :user="editingUser" />
+        <InviteUserDialog v-model="inviteDialogOpen" />
     </v-container>
 </template>
