@@ -27,6 +27,7 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 primaryKey: true,
             },
             // Login identity; unique across all users
+            // TODOA01: the unique constraint ignores deletedAt, so a soft-deleted user keeps its email reserved and it cannot be re-used
             email: {
                 type: DataTypes.STRING,
                 allowNull: false,

@@ -37,6 +37,7 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 references: { model: "Users", key: "id" },
             },
             // Unique URL/slug for the dataset
+            // TODOA03: unique ignores soft deletes (deletedAt), so the slug of a deleted dataset can never be re-used
             url: {
                 type: DataTypes.STRING,
                 allowNull: false,

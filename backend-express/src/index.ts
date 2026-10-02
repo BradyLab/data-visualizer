@@ -88,5 +88,6 @@ export const start = async () => {
     });
 };
 
+// TODOA08: start() runs on import, so importing get() (e.g. in tests) also connects to the DB and listens on the port
 // Start the server when this module is run
 start();

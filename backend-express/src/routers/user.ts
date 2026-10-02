@@ -7,6 +7,7 @@ const router = Router();
 
 // Request flow: router -> controller (HTTP in/out) -> service (database). No requireAuth is applied to these routes
 
+// TODOB13: user routes have no requireAuth or role check, so anyone can list, create, invite, edit, or delete users (including changing roles)
 router.get("/", controller.list);
 router.post("/", controller.create);
 router.post("/invite", controller.invite);
