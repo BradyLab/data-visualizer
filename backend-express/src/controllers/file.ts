@@ -9,6 +9,12 @@ export const list = async (req: Request, res: Response) => {
     res.status(200).json(await service.getAll(datasetId));
 };
 
+/** GET /byDataset/:datasetId : lists the files of one dataset (200) */
+export const listByDataset = async (req: Request, res: Response) => {
+    console.log("[FILE CONTROLLER] Attempting to list files by dataset...");
+    res.status(200).json(await service.getAll(req.params.datasetId as string));
+};
+
 /** GET /:id : returns one file (200), or 404 if it does not exist */
 export const get = async (req: Request, res: Response) => {
     console.log("[FILE CONTROLLER] Attempting to get file...");

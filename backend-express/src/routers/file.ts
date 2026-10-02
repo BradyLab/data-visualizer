@@ -9,6 +9,7 @@ const router = Router();
 
 router.get("/", controller.list);
 router.post("/", controller.create);
+router.get("/byDataset/:datasetId", controller.listByDataset);
 router.get("/:id", controller.get);
 router.put("/:id", controller.update);
 router.delete("/:id", controller.remove);
