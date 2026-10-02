@@ -10,8 +10,8 @@ export enum UserRoles {
 
 // Account lifecycle states
 export enum UserStatus {
-    INVITED = "INVITED",
     ACTIVE = "ACTIVE",
+    INVITED = "INVITED",
     INACTIVE = "INACTIVE",
 }
 

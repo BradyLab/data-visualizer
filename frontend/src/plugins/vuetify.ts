@@ -19,6 +19,8 @@ export default (app: App) => {
                 "on-surface": "#FFFFFF",
                 primary: "#103819",
                 "on-primary": "#FFFFFF",
+                secondary: "#55ab3d",
+                "on-secondary": "#000000",
                 //error
                 //info
                 //success
@@ -58,6 +60,13 @@ export default (app: App) => {
             VBtn: {
                 color: "#FFFFFF",
             },
+        },
+        // Tables match a tonal chip: translucent primary background with primary text (VDataTable has no color prop, so use theme variables)
+        VDataTable: {
+            style: "background-color: rgba(var(--v-theme-primary), 0.12); color: rgb(var(--v-theme-primary)); --v-theme-on-surface: var(--v-theme-primary);",
+            VBtn: {
+                color: "primary"
+            }
         },
     };
 
