@@ -3,7 +3,7 @@
 // Admins (implicit edit access) see every dataset and permission; other users only see datasets they hold EDIT permission on,
 // and are redirected home if they have none.
 import { computed, ref, watch, watchEffect } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { UserRoles } from "@commons/user";
 import { useAuthStore } from "@src/stores/auth";
 import { useUserStore } from "@src/stores/user";
@@ -11,6 +11,7 @@ import { useDatasetStore } from "@src/stores/dataset";
 import { usePermissionStore } from "@src/stores/permission";
 
 const router = useRouter();
+const route = useRoute();
 const auth = useAuthStore();
 const userStore = useUserStore();
 const datasetStore = useDatasetStore();
@@ -27,7 +28,8 @@ const headers = [
 const isAdmin = computed(() => auth.user.role === UserRoles.ADMIN);
 
 // Selected filter values (user ids and dataset ids); an empty list means no filter on that field
-const userFilter = ref<string[]>([]);
+// The user filter can be preset with a ?user=<id> query param (e.g. from the User Management page)
+const userFilter = ref<string[]>(typeof route.query.user === "string" ? [route.query.user] : []);
 const datasetFilter = ref<string[]>([]);
 
 // Datasets the viewer may see: all for admins, otherwise only those they can edit
