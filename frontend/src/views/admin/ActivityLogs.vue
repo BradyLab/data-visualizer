@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Admin-only activity log page: table of recorded events with their type, user id and JSON data
 import { computed, onMounted, ref, watchEffect } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { ActivityType } from "@commons/activity";
 import { UserRoles } from "@commons/user";
 import { useAuthStore } from "@src/stores/auth";
@@ -9,32 +9,37 @@ import { useUserStore } from "@src/stores/user";
 import { useActivityStore } from "@src/stores/activity";
 
 const router = useRouter();
+const route = useRoute();
 const auth = useAuthStore();
 const userStore = useUserStore();
 const activityStore = useActivityStore();
 
-// Table columns: activity type, user id, and the JSON data
+// Table columns: activity type, user name, and the JSON data
 const headers = [
     { title: "ACTIVITY TYPE", key: "type" },
-    { title: "USER ID", key: "user_id" },
+    { title: "USER", key: "userName" },
     { title: "DATA", key: "data", sortable: false },
 ];
 
 // Selected filter values; an empty list means no filter on that field
 const typeFilter = ref<ActivityType[]>([]);
-const userFilter = ref<string[]>([]);
+// The user filter can be preset with a ?user=<id> query param (e.g. from the User Management page)
+const userFilter = ref<string[]>(typeof route.query.user === "string" ? [route.query.user] : []);
 const typeOptions = Object.values(ActivityType);
 
-// Activities matching any selected type and any selected user, where set
-const filteredActivities = computed(() =>
-    activityStore.activities.filter(
-        (a) =>
-            (!typeFilter.value.length || typeFilter.value.includes(a.type)) &&
-            (!userFilter.value.length || userFilter.value.includes(a.user_id)),
-    ),
-);
-
+// Shows the user's name, falling back to the id if the user isn't loaded
 const userName = (id: string) => userStore.getById(id)?.name ?? id;
+
+// Activities matching any selected type and any selected user, where set, with the user's name added for display and sorting
+const filteredActivities = computed(() =>
+    activityStore.activities
+        .filter(
+            (a) =>
+                (!typeFilter.value.length || typeFilter.value.includes(a.type)) &&
+                (!userFilter.value.length || userFilter.value.includes(a.user_id)),
+        )
+        .map((a) => ({ ...a, userName: userName(a.user_id) })),
+);
 
 // Ids of activities whose JSON data is expanded past the preview
 const expanded = ref<string[]>([]);
@@ -97,7 +102,6 @@ onMounted(async () => {
                                     v-for="user in userStore.users"
                                     :key="user.id"
                                     :title="user.name"
-                                    :subtitle="user.id"
                                     :value="user.id"
                                 >
                                     <template #prepend="{ isSelected }">

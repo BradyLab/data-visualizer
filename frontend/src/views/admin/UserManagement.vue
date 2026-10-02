@@ -53,14 +53,14 @@ function edit(userId: string) {
     console.log("TODO: edit for", userId);
 }
 
-// TODO: show the permissions for this user
+// Opens the permission management page filtered to this user
 function viewPermissions(userId: string) {
-    console.log("TODO: view permissions for", userId);
+    router.push({ name: "permissions", query: { user: userId } });
 }
 
-// TODO: show the activity logs for this user
+// Opens the activity logs page filtered to this user
 function viewActivityLogs(userId: string) {
-    console.log("TODO: view activity logs for", userId);
+    router.push({ name: "activity-logs", query: { user: userId } });
 }
 
 // TODO: open an invite-user flow and call the backend
@@ -144,11 +144,9 @@ function inviteUser() {
                 <v-btn class="mr-2" prepend-icon="mdi-pencil" @click="edit(item.id)">
                     Edit
                 </v-btn>
-                <!-- TODO: wire up to the permissions view -->
                 <v-btn class="mr-2" prepend-icon="mdi-shield-key-outline" @click="viewPermissions(item.id)">
                     Permissions
                 </v-btn>
-                <!-- TODO: wire up to the activity logs view -->
                 <v-btn prepend-icon="mdi-history" @click="viewActivityLogs(item.id)">Activity Logs</v-btn>
             </template>
         </v-data-table>
