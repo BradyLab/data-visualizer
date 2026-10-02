@@ -19,8 +19,8 @@ function navTo(route: string) {
 }
 
 // Clears the session and sends the user back to the home page
-function logout() {
-    auth.logout();
+async function logout() {
+    await auth.logout();
     navTo("/home");
 }
 </script>

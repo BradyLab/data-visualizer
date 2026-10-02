@@ -13,6 +13,11 @@ export const authApi = {
         return response.data;
     },
 
+    /** POST /auth/logout : tells the backend the user is logging out (the token is sent via the axios Authorization header) */
+    async logout(): Promise<void> {
+        await axios.post(`${baseURL}/${apis.AUTH}/logout`);
+    },
+
     /** GET /auth/me : returns the user for the current token (sent via the axios Authorization header) */
     async me(): Promise<IUser> {
         const response = await axios.get<IUser>(`${baseURL}/${apis.AUTH}/me`);

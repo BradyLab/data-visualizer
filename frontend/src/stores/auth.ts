@@ -79,15 +79,25 @@ export const useAuthStore = defineStore("auth", () => {
         try {
             user.value = await authApi.me();
         } catch {
-            logout();
+            clearSession();
         }
     }
 
-    /** Clears the token and user */
-    function logout() {
+    // Clears the token and resets the user to the same guest placeholder used as the initial state
+    function clearSession() {
         setToken(null);
-        // Reset to the same guest placeholder used as the initial state
         user.value = guestUser;
+    }
+
+    /** Notifies the backend, then clears the token and user; the local session is cleared even if the request fails */
+    async function logout() {
+        try {
+            await authApi.logout();
+        } catch {
+            // Backend unreachable or token already invalid; the user is logged out locally either way
+        } finally {
+            clearSession();
+        }
     }
 
     return {

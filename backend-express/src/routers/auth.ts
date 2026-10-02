@@ -9,5 +9,7 @@ const router = Router();
 router.post("/login", controller.login);
 // Protected: requireAuth validates the Bearer token and loads the user before the controller runs
 router.get("/me", requireAuth, controller.me);
+// Protected: acknowledges the logout; the client is responsible for discarding the token
+router.post("/logout", requireAuth, controller.logout);
 
 export default router;

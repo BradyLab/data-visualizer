@@ -19,6 +19,12 @@ export const login = async (req: Request, res: Response) => {
     res.status(200).json(result);
 };
 
+/** POST /logout : returns 204; tokens are stateless JWTs, so the client discards its token (set by requireAuth) */
+export const logout = (_req: Request, res: Response) => {
+    console.log("[AUTH CONTROLLER] Logging out user", res.locals.user?.id);
+    res.status(204).send();
+};
+
 /** GET /me : returns the logged-in user (set by requireAuth) */
 export const me = (req: Request, res: Response) => {
     console.log("[AUTH CONTROLLER] Fetching the logged-in user...");
