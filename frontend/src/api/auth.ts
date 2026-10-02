@@ -18,6 +18,11 @@ export const authApi = {
         await axios.post(`${baseURL}/${apis.AUTH}/logout`);
     },
 
+    /** POST /auth/change-password : changes the logged-in user's password; rejects with a 403 error if the old password is wrong */
+    async changePassword(oldPassword: string, newPassword: string): Promise<void> {
+        await axios.post(`${baseURL}/${apis.AUTH}/change-password`, { oldPassword, newPassword });
+    },
+
     /** GET /auth/me : returns the user for the current token (sent via the axios Authorization header) */
     async me(): Promise<IUser> {
         const response = await axios.get<IUser>(`${baseURL}/${apis.AUTH}/me`);

@@ -1,44 +1,134 @@
 <script setup lang="ts">
-// Settings page view: new dataset / change password actions and per-dataset visibility controls (UI only for now)
+// Settings page view: user settings (name, plus a change password popup) and an admin section with dataset controls
+// (placeholder, UI only) plus links to the management pages the user is allowed to see
 // Placeholder dataset list (to be replaced by backend data)
 import { datasets } from "@src/interfaces/datasetTest";
 import { useRouter } from "vue-router";
-import { onMounted } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
+import { UserRoles, UserStatus } from "@commons/user";
 import { useAuthStore } from "@src/stores/auth";
+import { useUserStore } from "@src/stores/user";
+import { usePermissionStore } from "@src/stores/permission";
+import ChangePasswordDialog from "@src/components/ChangePasswordDialog.vue";
 
 // Router instance used for programmatic navigation
 const router = useRouter();
 
-// Auth store, used to check login state
+// Auth store (login state and current user), user store (saving changes), permission store (edit access)
 const auth = useAuthStore();
+const userStore = useUserStore();
+const permissionStore = usePermissionStore();
 
 // Navigate to the given route path
 function navTo(route: string) {
     router.push(route);
 }
 
-// Settings requires a login; guests are redirected home
+// Settings requires a login; guests are redirected login
 onMounted(() => {
-    if (!auth.isLoggedIn) navTo("/home");
+    if (!auth.isLoggedIn) navTo("/login");
 });
+
+const isAdmin = computed(() => auth.user.role === UserRoles.ADMIN);
+// Admins see every management page; others only see Permissions, and only if they can edit some dataset
+const canManagePermissions = computed(() => isAdmin.value || permissionStore.editableDatasetIds.length > 0);
+
+// Load the user's edit access and fill the name field once the real user is known
+// (the id is empty until login / session restore finishes)
+const name = ref("");
+watch(
+    () => auth.user.id,
+    (id) => {
+        if (!id) return;
+        name.value = auth.user.name;
+        permissionStore.fetchEditable(id);
+    },
+    { immediate: true },
+);
+
+const required = (label: string) => (v: string) => !!v?.trim() || `${label} is required`;
+
+// --- Name ---
+const nameForm = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
+const nameSaving = ref(false);
+const nameMessage = ref<{ type: "success" | "error"; text: string } | null>(null);
+
+// Saves the new name and updates the logged-in user
+async function saveName() {
+    if (!(await nameForm.value?.validate())?.valid) return;
+    nameSaving.value = true;
+    nameMessage.value = null;
+    try {
+        auth.user = await userStore.editUser(auth.user.id, { name: name.value.trim() });
+        nameMessage.value = { type: "success", text: "Name updated." };
+    } catch {
+        nameMessage.value = { type: "error", text: "Unable to update your name. Please try again." };
+    } finally {
+        nameSaving.value = false;
+    }
+}
+
+// --- Password ---
+const passwordDialogOpen = ref(false);
+// Invited users must replace their default password, so the popup opens as soon as the real user is known
+// (also covers a page reload, where the user is restored after the page mounts)
+watch(
+    () => auth.user.status,
+    (status) => {
+        if (status === UserStatus.INVITED) passwordDialogOpen.value = true;
+    },
+    { immediate: true },
+);
 </script>
 
 <template>
     <v-container class="px-12">
         <h1 class="text-h6 font-weight-bold mb-4">SETTINGS</h1>
 
-        <!-- Account-level actions -->
+        <!-- User settings: change name and password -->
+        <h2 v-if="isAdmin" class="text-subtitle-1 font-weight-bold mb-2">USER SETTINGS</h2>
+        <v-form ref="nameForm" @submit.prevent="saveName">
+            <v-row class="mb-6 mx-4">
+                <v-col cols="12" md="6">
+                    <v-text-field v-model="name" label="Name" :rules="[required('Name')]"/>
+                    <v-alert v-if="nameMessage" :type="nameMessage.type" variant="tonal" density="compact" class="mb-3">
+                        {{ nameMessage.text }}
+                    </v-alert>
+                                
+                </v-col>
+                <v-col>
+                    <v-btn class="mt-3" :loading="nameSaving" @click="saveName">Save Name</v-btn>
+                </v-col>
+            </v-row>
+        </v-form>
+
         <v-row class="mb-6 mx-4">
-            <v-col cols="auto">
-                <v-btn color="primary" prepend-icon="mdi-plus" @click="navTo('/new')">New Dataset</v-btn>
-            </v-col>
-            <v-col cols="auto">
-                <v-btn color="primary">Change Password</v-btn>
+            <v-col cols="12" md="6">
+                <v-btn @click="passwordDialogOpen = true">Change Password</v-btn>
             </v-col>
         </v-row>
 
+        <!-- Admin section: dataset setup (placeholder) and links to the management pages -->
+        <h2 v-if="isAdmin" class="text-subtitle-1 font-weight-bold mb-2">ADMIN</h2>
+        <v-row v-if="isAdmin" class="mb-6 mx-4">
+            <v-col  cols="auto">
+                <v-btn prepend-icon="mdi-account-multiple-outline" @click="router.push({ name: 'user-mgmt' })">
+                    User Management
+                </v-btn>
+            </v-col>
+            <v-col v-if="canManagePermissions" cols="auto">
+                <v-btn prepend-icon="mdi-shield-key-outline" @click="router.push({ name: 'permissions' })">
+                    Permission Management
+                </v-btn>
+            </v-col>
+            <v-col cols="auto">
+                <v-btn prepend-icon="mdi-history" @click="router.push({ name: 'activity-logs' })">Activity Logs</v-btn>
+            </v-col>
+            <!-- //TODO DATABASE EDITS -->
+        </v-row>
+
         <!-- One row per dataset: name (links to the dataset), private/public switch, and edit button -->
-        <v-row v-for="dataset in datasets" :key="dataset.url" align="center" class="mx-4">
+        <v-row v-if="isAdmin" v-for="dataset in datasets" :key="dataset.url" align="center" class="mx-4">
             <v-col @click="navTo('/dataset/' + dataset.url)">{{ dataset.name }}</v-col>
             <v-col cols="auto" class="d-flex align-center">
                 <span class="mr-2">Private</span>
@@ -49,5 +139,7 @@ onMounted(() => {
                 <v-btn prepend-icon="mdi-pencil-outline">Edit Dataset</v-btn>
             </v-col>
         </v-row>
+
+        <ChangePasswordDialog v-model="passwordDialogOpen" />
     </v-container>
 </template>

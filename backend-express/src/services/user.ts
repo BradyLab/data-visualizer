@@ -9,6 +9,10 @@ const USER_FIELDS = ["email", "password", "name", "role", "status"] as const;
 // Query option that keeps the password hash out of query results
 const PUBLIC_ATTRIBUTES = { exclude: ["password"] };
 
+// Columns clients may change on an existing user; the password is deliberately absent so it can only be
+// changed through POST /auth/change-password (which checks the old password)
+const UPDATE_FIELDS = ["email", "name", "role", "status"] as const;
+
 // Hashes the password field (if present) before it is stored
 const prepare = (body: unknown) => {
     const data = pick<IUserPass>(body, USER_FIELDS);
@@ -54,7 +58,7 @@ export const invite = async (body: unknown) => {
     );
 };
 
-/** Updates a user (password is re-hashed if provided); returns null if not found */
+/** Updates a user's email, name, role or status (any password in the body is ignored); returns null if not found */
 export const update = async (id: string, body: unknown) => {
     console.log("[USER SERVICE] Updating user...");
     const user = await Users.findByPk(id);
@@ -62,7 +66,7 @@ export const update = async (id: string, body: unknown) => {
         console.log("[USER SERVICE] User to update not found");
         return null;
     }
-    await user.update(prepare(body));
+    await user.update(pick<IUserPass>(body, UPDATE_FIELDS));
     return toPublic(user);
 };
 

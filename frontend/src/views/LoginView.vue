@@ -3,6 +3,7 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@src/stores/auth";
+import { UserStatus } from "@commons/user";
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -14,14 +15,15 @@ const password = ref("");
 // Whether the password is shown as plain text (toggled by the eye icon)
 const showPass = ref(false);
 
-// Submits the credentials; on success goes to the home page, otherwise the store's error is shown
+// Submits the credentials; on success goes to the home page (invited users go to settings to set a password), otherwise the store's error is shown
 const submit = async () => {
-    if (await auth.login(email.value, password.value)) await router.push("/home");
+    if (!(await auth.login(email.value, password.value))) return;
+    await router.push(auth.user.status === UserStatus.INVITED ? "/settings" : "/home");
 };
 
 // Already logged in: skip the login page
 onMounted(() => {
-    if (auth.isLoggedIn) router.push("/home");
+    if (auth.isLoggedIn) router.push(auth.user.status === UserStatus.INVITED ? "/settings" : "/home");
 });
 </script>
 
