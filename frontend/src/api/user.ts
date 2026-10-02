@@ -15,6 +15,9 @@ export type CreateUserPayload = Omit<IUser, ServerFields>;
 /** Payload for updating a user; any subset of the editable fields */
 export type UpdateUserPayload = Partial<CreateUserPayload>;
 
+/** Payload for inviting a user */
+export type InviteUserPayload = Pick<IUser, "name" | "email" | "role">;
+
 export const userApi = {
     /** GET /users : returns all users */
     async getUsers(): Promise<IUser[]> {
@@ -31,6 +34,12 @@ export const userApi = {
     /** POST /users : creates a user and returns it */
     async createUser(payload: CreateUserPayload): Promise<IUser> {
         const response = await axios.post<IUser>(`${baseURL}/${apis.USER}`, payload);
+        return response.data;
+    },
+
+    /** POST /users/invite : invites a user (the backend sets INVITED status and the default password) and returns it */
+    async inviteUser(payload: InviteUserPayload): Promise<IUser> {
+        const response = await axios.post<IUser>(`${baseURL}/${apis.USER}/invite`, payload);
         return response.data;
     },
 

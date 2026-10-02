@@ -2,6 +2,7 @@
 import { Users, IUserPass } from "@src/models/user.ts";
 import { pick } from "@src/utils/pick.ts";
 import { hashPassword } from "@src/utils/password.ts";
+import { UserStatus } from "@commons/user.ts";
 
 // Whitelist of columns clients may set (see utils/pick.ts)
 const USER_FIELDS = ["email", "password", "name", "role", "status"] as const;
@@ -37,6 +38,20 @@ export const getById = (id: string) => {
 export const create = async (body: unknown) => {
     console.log("[USER SERVICE] Creating user...");
     return toPublic(await Users.create(prepare(body) as IUserPass));
+};
+
+/**
+ * Invites a user: creates them with INVITED status and the default password from the DEFAULT_PASSWORD env var.
+ * Returns the user without the password. Throws if DEFAULT_PASSWORD is not configured.
+ */
+export const invite = async (body: unknown) => {
+    console.log("[USER SERVICE] Inviting user...");
+    const defaultPassword = process.env.DEFAULT_PASSWORD;
+    if (!defaultPassword) throw new Error("DEFAULT_PASSWORD is not set");
+    const data = pick<IUserPass>(body, ["email", "name", "role"] as const);
+    return toPublic(
+        await Users.create({ ...data, status: UserStatus.INVITED, password: hashPassword(defaultPassword) } as IUserPass),
+    );
 };
 
 /** Updates a user (password is re-hashed if provided); returns null if not found */

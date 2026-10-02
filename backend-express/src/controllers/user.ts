@@ -1,6 +1,7 @@
 // Request handlers for Users; thin wrappers that call the user service and shape the HTTP response
 import { Request, Response } from "express";
 import * as service from "@src/services/user.ts";
+import { UserRoles } from "@commons/user.ts";
 
 /** GET / : returns all users (200) */
 export const list = async (req: Request, res: Response) => {
@@ -23,6 +24,17 @@ export const get = async (req: Request, res: Response) => {
 export const create = async (req: Request, res: Response) => {
     console.log("[USER CONTROLLER] Attempting to create user...");
     res.status(201).json(await service.create(req.body));
+};
+
+/** POST /invite : invites a user from {name, email, role} with INVITED status and the default password (201), or 400 if a field is missing or invalid */
+export const invite = async (req: Request, res: Response) => {
+    console.log("[USER CONTROLLER] Attempting to invite user...");
+    const { name, email, role } = req.body ?? {};
+    if (typeof name !== "string" || !name.trim() || typeof email !== "string" || !email.trim())
+        return res.status(400).json({ error: "Name and email are required" });
+    if (!Object.values(UserRoles).includes(role) || role === UserRoles.GUEST)
+        return res.status(400).json({ error: "A valid role is required" });
+    res.status(201).json(await service.invite({ name: name.trim(), email: email.trim(), role }));
 };
 
 /** PUT /:id : updates an existing user (200), or 404 if it does not exist */

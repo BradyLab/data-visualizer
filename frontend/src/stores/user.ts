@@ -2,7 +2,7 @@
 import { ref } from "vue";
 import { defineStore } from "pinia";
 import type { IUser } from "@commons/user";
-import { userApi, type CreateUserPayload, type UpdateUserPayload } from "@src/api/user";
+import { userApi, type CreateUserPayload, type InviteUserPayload, type UpdateUserPayload } from "@src/api/user";
 
 export const useUserStore = defineStore("user", () => {
     // Reactive state
@@ -23,6 +23,13 @@ export const useUserStore = defineStore("user", () => {
     /** Creates a user and adds it to the store */
     async function addUser(payload: CreateUserPayload) {
         const user = await userApi.createUser(payload);
+        users.value.push(user);
+        return user;
+    }
+
+    /** Invites a user and adds it to the store */
+    async function inviteUser(payload: InviteUserPayload) {
+        const user = await userApi.inviteUser(payload);
         users.value.push(user);
         return user;
     }
@@ -50,6 +57,7 @@ export const useUserStore = defineStore("user", () => {
         fetchUsers,
         getById,
         addUser,
+        inviteUser,
         editUser,
         removeUser,
     };
