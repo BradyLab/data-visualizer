@@ -12,7 +12,6 @@ export interface IUserPass extends IUser {
 // Maps this class to the "Users" table and enables createdAt/updatedAt timestamps
 @Table({
     tableName: "Users",
-    paranoid: true,
     timestamps: true,
 })
 export class Users extends Model<IUserPass> {
@@ -25,7 +24,6 @@ export class Users extends Model<IUserPass> {
     })
     declare id: string;
 
-    // TODOB05: email is unique but the table is paranoid, so a soft-deleted user's email cannot be reused
     // Login/contact email; must be unique
     @Unique
     @Column({

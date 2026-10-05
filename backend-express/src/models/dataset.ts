@@ -11,7 +11,6 @@ export type { IDataset };
 // Maps this class to the "Datasets" table and enables createdAt/updatedAt timestamps (paranoid: true = soft deletes via deletedAt)
 @Table({
     tableName: "Datasets",
-    paranoid: true,
     timestamps: true,
 })
 export class Datasets extends Model<IDataset> {
@@ -40,7 +39,6 @@ export class Datasets extends Model<IDataset> {
     declare owner: string;
 
     // Unique URL/slug for the dataset
-    // TODOB01: url is unique but the table is paranoid, so a soft-deleted dataset still occupies its url and blocks reuse
     @Unique
     @Column({
         type: DataType.STRING,
@@ -113,8 +111,7 @@ export class Datasets extends Model<IDataset> {
     declare permissions?: Permissions[];
 
     // Deleting a dataset also deletes its files (Files is not paranoid, so these rows are removed outright)
-    // TODOB02: soft-deleting a dataset cascades to a hard delete of its files (Files is not paranoid), so restoring the dataset cannot bring files back
-    @HasMany(() => Files, { foreignKey: "dataset_id", onDelete: "CASCADE", onUpdate: "CASCADE", hooks: true })
+     @HasMany(() => Files, { foreignKey: "dataset_id", onDelete: "CASCADE", onUpdate: "CASCADE", hooks: true })
     declare files?: Files[];
 }
 

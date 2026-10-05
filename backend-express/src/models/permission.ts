@@ -10,7 +10,6 @@ export type { IPermission };
 // Maps this class to the "Permissions" table and enables createdAt/updatedAt timestamps (paranoid: true = soft deletes via deletedAt)
 @Table({
     tableName: "Permissions",
-    paranoid: true,
     timestamps: true,
 })
 export class Permissions extends Model<IPermission> {

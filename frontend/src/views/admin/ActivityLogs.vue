@@ -24,7 +24,6 @@ const headers = [
 // Selected filter values; an empty list means no filter on that field
 const typeFilter = ref<ActivityType[]>([]);
 // The user filter can be preset with a ?user=<id> query param (e.g. from the User Management page)
-// TODOE01: the preset is read only once at setup, so a later change of ?user= on the same mounted component is ignored
 const userFilter = ref<string[]>(typeof route.query.user === "string" ? [route.query.user] : []);
 const typeOptions = Object.values(ActivityType);
 
@@ -63,8 +62,6 @@ watchEffect(() => {
 });
 
 // Load the log (and users, for the filter names) once we know the viewer is an admin
-// TODOE02: if the session is still being restored on mount (role is GUEST), isAdmin is false here and nothing is fetched
-// again once the user becomes admin, so the table stays empty after a page reload
 onMounted(async () => {
     if (auth.isAdmin) await Promise.all([activityStore.fetchActivities(), userStore.fetchUsers()]);
 });

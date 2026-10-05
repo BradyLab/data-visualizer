@@ -25,7 +25,6 @@ function navTo(route: string) {
 }
 
 // Settings requires a login; guests are redirected login
-// TODOD11: on a page reload the session is restored after mount, so this likely redirects a logged-in user to /login before auth.isLoggedIn is true
 onMounted(() => {
     if (!auth.isLoggedIn) navTo("/login");
 });
@@ -123,7 +122,6 @@ watch(
             <v-col v-if="auth.isAdmin" cols="auto">
                 <v-btn prepend-icon="mdi-history" @click="router.push({ name: 'activity-logs' })">Activity Logs</v-btn>
             </v-col>
-            <!-- //TODO DATABASE EDITS -->
         </v-row>
 
         <!-- One row per dataset: name (links to the dataset), private/public switch, and edit button -->

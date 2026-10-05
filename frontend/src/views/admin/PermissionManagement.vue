@@ -65,7 +65,6 @@ watchEffect(() => {
 });
 
 // Load the data once the real user is known (the id is empty until login / session restore finishes)
-// TODOE03: isAdmin is read when the id changes; if the role is set separately from the id, a restored admin may be fetched as a non-admin and redirected home
 watch(
     () => auth.user.id,
     async (id) => {

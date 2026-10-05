@@ -44,7 +44,6 @@ watchEffect(() => {
 });
 
 // Load the users once we know the viewer is an admin
-// TODOE05: same as ActivityLogs: if the session is still restoring on mount, users are never fetched once the viewer turns out to be admin
 onMounted(async () => {
     if (auth.isAdmin) await userStore.fetchUsers();
 });
