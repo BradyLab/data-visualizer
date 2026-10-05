@@ -1,17 +1,24 @@
 <script setup lang="ts">
 // Top app bar: logo, DATASETS menu, HELP/ABOUT/FEEDBACK links, and account menu
+import { onMounted } from "vue";
 import { useRouter } from "vue-router";
-// Placeholder dataset list that populates the DATASETS menu
-import { datasets } from "@src/interfaces/datasetTest";
 import BradyLabLogo from "@src/components/BradyLabLogo.vue";
 import LayoutHelper from "@src/components/LayoutHelper.vue";
 import { useAuthStore } from "@src/stores/auth";
+import { useDatasetStore } from "@src/stores/dataset";
 
 // Router instance used for programmatic navigation
 const router = useRouter();
 
 // Auth store, used to switch the account menu items between logged in / out
 const auth = useAuthStore();
+
+// Dataset store, which populates the DATASETS menu
+const datasetStore = useDatasetStore();
+onMounted(() => {
+    // If the request fails the menu is simply empty
+    datasetStore.fetchDatasets().catch(() => {});
+});
 
 // Navigate to the given route path
 function navTo(route: string) {
@@ -41,7 +48,7 @@ async function logout() {
                     </template>
 
                     <v-list>
-                        <v-list-item v-for="dataset in datasets" :key="dataset.url" @click="navTo('/dataset/' + dataset.url)">
+                        <v-list-item v-for="dataset in datasetStore.datasets" :key="dataset.url" @click="navTo('/dataset/' + dataset.url)">
                             {{ dataset.name }}
                         </v-list-item>
                     </v-list>

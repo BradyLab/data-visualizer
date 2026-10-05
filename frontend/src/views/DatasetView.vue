@@ -1,24 +1,103 @@
 <script setup lang="ts">
-// Dataset page view: choose genes, cell types, treatments and plots for a dataset (static mockup, no logic yet)
+// Dataset page view: shows a dataset from the backend (found by the url slug in the route) and lets viewers pick treatments and plots.
+// Gene and cell type selection and plot generation are still static placeholders.
+import { computed, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import type { IDataset } from "@commons/dataset";
+import { useAuthStore } from "@src/stores/auth";
+import { useDatasetStore } from "@src/stores/dataset";
+import { usePermissionStore } from "@src/stores/permission";
+
+const route = useRoute();
+const router = useRouter();
+const auth = useAuthStore();
+const datasetStore = useDatasetStore();
+const permissionStore = usePermissionStore();
+
+// The dataset for the current url (null until loaded or when no dataset has that url)
+const dataset = ref<IDataset | null>(null);
+const loading = ref(true);
+const error = ref<string | null>(null);
+
+// Treatments and plots the viewer has ticked (nothing starts selected)
+const selectedTreatments = ref<string[]>([]);
+const selectedPlots = ref<string[]>([]);
+
+// Edit is offered to admins, the dataset's owner, and users with EDIT permission on the dataset
+const canEdit = computed(
+    () =>
+        !!dataset.value &&
+        auth.isLoggedIn &&
+        (auth.isAdmin ||
+            dataset.value.owner === auth.user.id ||
+            permissionStore.editableDatasetIds.includes(dataset.value.id))
+);
+
+// DOI as a link: bare DOIs (10.xxxx/...) are resolved through doi.org
+const doiHref = computed(() => {
+    const doi = dataset.value?.doi;
+    if (!doi) return null;
+    return /^https?:\/\//i.test(doi) ? doi : `https://doi.org/${doi}`;
+});
+
+// Loads the dataset (and, for logged-in users, their permissions) whenever the url slug changes
+watch(
+    () => route.params.datasetURL as string,
+    async (url) => {
+        loading.value = true;
+        error.value = null;
+        dataset.value = null;
+        try {
+            await Promise.all([
+                datasetStore.fetchDatasets(),
+                auth.isLoggedIn ? permissionStore.fetchEditable(auth.user.id, auth.isAdmin) : Promise.resolve(),
+            ]);
+            const found = datasetStore.datasets.find((d) => d.url === url) ?? null;
+            dataset.value = found;
+            selectedTreatments.value = [];
+            selectedPlots.value = [];
+            if (!found) error.value = "Dataset not found";
+        } catch {
+            error.value = "Unable to load the dataset. Please try again.";
+        } finally {
+            loading.value = false;
+        }
+    },
+    { immediate: true }
+);
 </script>
 
-<!-- Dataset page UI mockup. Currently shows static placeholder data; selections are not yet wired to state -->
+<!-- Dataset page: name, description, treatments and plots come from the backend; genes and cell types are still placeholders -->
 <template>
-    <v-container class="px-12">
+    <v-container v-if="!dataset" class="px-12">
+        <v-progress-circular v-if="loading" indeterminate></v-progress-circular>
+        <v-alert v-else type="error" variant="tonal">{{ error }}</v-alert>
+    </v-container>
+    <v-container v-else class="px-12">
         <!-- Title, DOI, and action buttons -->
         <v-row class="mb-4">
             <v-col>
-                <h1 class="text-h6 my-0 font-weight-bold">DATASET NAME</h1>
-                <div class="text-body-small">DOI: [doi link here]</div>
+                <h1 class="text-h6 my-0 font-weight-bold">{{ dataset.name }}</h1>
+                <div v-if="doiHref" class="text-body-small">
+                    DOI: <a :href="doiHref" target="_blank" rel="noopener noreferrer">{{ dataset.doi }}</a>
+                </div>
             </v-col>
             <v-col cols="auto" class="d-flex align-center ga-2">
-                <v-btn color="primary" prepend-icon="mdi-pencil">Edit</v-btn>
-                <v-btn color="primary" prepend-icon="mdi-download">Raw Data</v-btn>
+                <v-btn v-if="canEdit" color="primary" prepend-icon="mdi-pencil" @click="router.push(`/dataset/${dataset.url}/edit`)">Edit</v-btn>
+                <v-btn
+                    color="primary"
+                    prepend-icon="mdi-download"
+                    :href="dataset.rawDataLink || undefined"
+                    :disabled="!dataset.rawDataLink"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >Raw Data</v-btn
+                >
             </v-col>
         </v-row>
 
         <!-- Dataset description -->
-        <v-row class="text-body-large">DESCRIPTION HERE</v-row>
+        <v-row class="text-body-large">{{ dataset.description }}</v-row>
 
         <!-- Gene selector (multi-select with removable chips) -->
         <v-row class="text-body-medium mx-4">Pick Your Genes</v-row>
@@ -52,17 +131,29 @@
         <v-row class="mx-4">
             <v-col cols="12" md="6">
                 <div class="text-body-medium mb-1">Pick Your Treatments</div>
-                <v-checkbox :model-value="true" label="Control" color="primary" density="compact" hide-details></v-checkbox>
-                <v-checkbox :model-value="false" label="Treatment 1" color="primary" density="compact" hide-details></v-checkbox>
-                <v-checkbox :model-value="true" label="Treatment 2" color="primary" density="compact" hide-details></v-checkbox>
-                <v-checkbox :model-value="false" label="Treatment 3" color="primary" density="compact" hide-details></v-checkbox>
+                <v-checkbox
+                    v-for="treatment in dataset.treatments"
+                    :key="treatment"
+                    v-model="selectedTreatments"
+                    :value="treatment"
+                    :label="treatment"
+                    color="primary"
+                    density="compact"
+                    hide-details
+                ></v-checkbox>
             </v-col>
             <v-col cols="12" md="6">
                 <div class="text-body-medium mb-1">Pick Your Plots</div>
-                <v-checkbox :model-value="true" label="UMAP DimPlot" color="primary" density="compact" hide-details></v-checkbox>
-                <v-checkbox :model-value="false" label="Dot Plot" color="primary" density="compact" hide-details></v-checkbox>
-                <v-checkbox :model-value="false" label="Tissue Plot" color="primary" density="compact" hide-details></v-checkbox>
-                <v-checkbox :model-value="false" label="Plot 4" color="primary" density="compact" hide-details></v-checkbox>
+                <v-checkbox
+                    v-for="plot in dataset.plots"
+                    :key="plot"
+                    v-model="selectedPlots"
+                    :value="plot"
+                    :label="plot"
+                    color="primary"
+                    density="compact"
+                    hide-details
+                ></v-checkbox>
             </v-col>
         </v-row>
 

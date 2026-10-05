@@ -44,14 +44,21 @@ const router = createRouter({
         },
         // Shows the dataset with the URL slug in :datasetTitle
         {
-            path: "/dataset/:datasetTitle",
+            path: "/dataset/:datasetURL",
             name: "dataset",
             component: () => import("@src/views/DatasetView.vue"),
             meta: { hideFooter: false },
         },
+        // Page for editing the dataset with the URL slug in :datasetTitle (same form as /new)
+        {
+            path: "/dataset/:datasetURL/edit",
+            name: "edit-dataset",
+            component: () => import("@src/views/EditDatasetView.vue"),
+            meta: { hideFooter: false, requiresAuth: true },
+        },
         // Page for creating a new dataset
         {
-            path: "/new",
+            path: "/dataset/new",
             name: "new",
             component: () => import("@src/views/EditDatasetView.vue"),
             meta: { hideFooter: false, requiresAuth: true },

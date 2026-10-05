@@ -1,7 +1,7 @@
 // Sequelize model for the Datasets table (columns must stay in sync with the dataset migration)
 import { Column, DataType, ForeignKey, HasMany, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
 // Shared dataset interface and plot types from the commons package
-import { IDataset, DatasetPlots } from "@commons/dataset.ts";
+import { IDataset, DatasetPlots, DatasetVisibility } from "@commons/dataset.ts";
 import { Users } from "@src/models/user.ts";
 import { Permissions } from "@src/models/permission.ts";
 import { Files } from "@src/models/file.ts";
@@ -82,6 +82,13 @@ export class Datasets extends Model<IDataset> {
         allowNull: false,
     })
     declare plots: DatasetPlots[];
+
+    @Column({
+        type: DataType.ENUM(...Object.values(DatasetVisibility)),
+        allowNull: false,
+        defaultValue: DatasetVisibility.PRIVATE,
+    })
+    declare visibility: DatasetVisibility;
 
     // Row creation time
     @Column({

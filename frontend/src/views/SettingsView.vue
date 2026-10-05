@@ -1,14 +1,14 @@
 <script setup lang="ts">
 // Settings page view: user settings (name, plus a change password popup) and an admin section with dataset controls
 // (placeholder, UI only) plus links to the management pages the user is allowed to see
-// Placeholder dataset list (to be replaced by backend data)
-import { datasets } from "@src/interfaces/datasetTest";
 import { useRouter } from "vue-router";
 import { computed, onMounted, ref, watch } from "vue";
 import { UserRoles, UserStatus } from "@commons/user";
+import { DatasetVisibility, type IDataset } from "@commons/dataset";
 import { useAuthStore } from "@src/stores/auth";
 import { useUserStore } from "@src/stores/user";
 import { usePermissionStore } from "@src/stores/permission";
+import { useDatasetStore } from "@src/stores/dataset";
 import ChangePasswordDialog from "@src/components/ChangePasswordDialog.vue";
 
 // Router instance used for programmatic navigation
@@ -18,6 +18,20 @@ const router = useRouter();
 const auth = useAuthStore();
 const userStore = useUserStore();
 const permissionStore = usePermissionStore();
+const datasetStore = useDatasetStore();
+
+// Sets a dataset public or private; the switch follows the store, so a failed save leaves it unchanged
+const visibilityError = ref<string | null>(null);
+async function setVisibility(dataset: IDataset, isPublic: boolean | null) {
+    visibilityError.value = null;
+    try {
+        await datasetStore.editDataset(dataset.id, {
+            visibility: isPublic ? DatasetVisibility.PUBLIC : DatasetVisibility.PRIVATE,
+        });
+    } catch {
+        visibilityError.value = `Unable to change the visibility of ${dataset.name}. Please try again.`;
+    }
+}
 
 // Navigate to the given route path
 function navTo(route: string) {
@@ -27,6 +41,8 @@ function navTo(route: string) {
 // Settings requires a login; guests are redirected login
 onMounted(() => {
     if (!auth.isLoggedIn) navTo("/login");
+    // Dataset list for the admin section; if the request fails the list is simply empty
+    datasetStore.fetchDatasets().catch(() => {});
 });
 
 // Admins see every management page; others only see Permissions, and only if they can edit some dataset
@@ -126,15 +142,21 @@ watch(
 
         <!-- One row per dataset: name (links to the dataset), private/public switch, and edit button -->
         <!-- TODO: v-if and v-for on the same element is discouraged (v-if is evaluated first in Vue 3); wrap in a <template v-if> instead -->
-        <v-row v-if="auth.isAdmin" v-for="dataset in datasets" :key="dataset.url" align="center" class="mx-4">
+        <v-alert v-if="auth.isAdmin && visibilityError" type="error" variant="tonal" closable class="mb-4 mx-4" @click:close="visibilityError = null">
+            {{ visibilityError }}
+        </v-alert>
+        <v-row v-if="auth.isAdmin" v-for="dataset in datasetStore.datasets" :key="dataset.url" align="center" class="mx-4">
             <v-col @click="navTo('/dataset/' + dataset.url)">{{ dataset.name }}</v-col>
             <v-col cols="auto" class="d-flex align-center">
                 <span class="mr-2">Private</span>
-                <v-switch :model-value="false" color="primary" density="compact" inset hide-details></v-switch>
+                <v-switch
+                    :model-value="dataset.visibility === DatasetVisibility.PUBLIC"
+                    @update:model-value="(value) => setVisibility(dataset, value)"
+                    color="primary" density="compact" inset hide-details></v-switch>
                 <span class="ml-2">Public</span>
             </v-col>
             <v-col cols="auto">
-                <v-btn prepend-icon="mdi-pencil-outline">Edit Dataset</v-btn>
+                <v-btn prepend-icon="mdi-pencil-outline" @click="router.push(`/dataset/${dataset.url}/edit`)">Edit Dataset</v-btn>
             </v-col>
         </v-row>
 

@@ -10,6 +10,11 @@ export enum DatasetPlots {
     HEATMAP = "Heatmap",
 }
 
+export enum DatasetVisibility {
+    PUBLIC = "PUBLIC",
+    PRIVATE = "PRIVATE",
+}
+
 // A dataset record as stored in the Datasets table
 export interface IDataset {
     id: string;
@@ -21,6 +26,7 @@ export interface IDataset {
     rawDataLink: string;
     treatments: string[];
     plots: DatasetPlots[];
+    visibility: DatasetVisibility;
     createdAt: Date;
     updatedAt: Date | null;
 }

@@ -2,6 +2,7 @@
 
 // Access levels a user can hold on a dataset
 export enum PermissionOptions {
+    OWNER = "OWNER",
     VIEW = "VIEW",
     EDIT = "EDIT",
 }

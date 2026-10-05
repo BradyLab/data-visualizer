@@ -1,15 +1,22 @@
 <script setup lang="ts">
 // Home page view: lists all datasets as clickable cards
-// Placeholder dataset list (to be replaced by backend data)
-import { datasets } from "@src/interfaces/datasetTest";
+import { onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@src/stores/auth";
+import { useDatasetStore } from "@src/stores/dataset";
 
 // Router instance used for programmatic navigation
 const router = useRouter();
 
 // Auth store (only referenced by the commented-out welcome message in the template)
 const auth = useAuthStore();
+
+// Dataset store, loaded when the page opens so new or edited datasets show up
+const datasetStore = useDatasetStore();
+onMounted(() => {
+    // If the request fails the grid is simply empty
+    datasetStore.fetchDatasets().catch(() => {});
+});
 
 // Navigate to the given route path
 function navTo(route: string) {
@@ -24,13 +31,13 @@ function navTo(route: string) {
         <h1 class="text-h6 font-weight-bold mb-4">BRADY LAB DATASETS</h1>
         <v-row>
             <!-- One card per dataset; clicking opens the dataset page -->
-            <v-col v-for="dataset in datasets" :key="dataset.url">
+            <v-col v-for="dataset in datasetStore.datasets" :key="dataset.url">
                 <v-card @click="navTo('/dataset/' + dataset.url)">
                     <!-- Placeholder for the dataset's cover image -->
                     <div class="dataset-thumb"></div>
                     <v-card-item>
                         <v-card-title class="text-body-2 font-weight-bold">{{ dataset.name }}</v-card-title>
-                        <v-card-subtitle>[description here]</v-card-subtitle>
+                        <v-card-subtitle>{{ dataset.description }}</v-card-subtitle>
                     </v-card-item>
                 </v-card>
             </v-col>

@@ -3,7 +3,7 @@
 "use strict";
 
 import { DataTypes, type QueryInterface, type Sequelize } from "sequelize";
-import { DatasetPlots } from "@commons/dataset.ts";
+import { DatasetPlots, DatasetVisibility } from "@commons/dataset.ts";
 // Minimal logger so migration errors/info are easy to spot in console output
 const migrationLogger = {
     error: (e: unknown) => {
@@ -68,6 +68,11 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
             plots: {
                 type: DataTypes.ARRAY(DataTypes.ENUM(...Object.values(DatasetPlots))),
                 allowNull: false,
+            },
+            visibility: {
+                type: DataTypes.ENUM(...Object.values(DatasetVisibility)),
+                allowNull: false,
+                defaultValue: DatasetVisibility.PRIVATE,
             },
             // Timestamps; deletedAt is set for soft deletes (paranoid models)
             createdAt: {
