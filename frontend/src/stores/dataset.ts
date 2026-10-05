@@ -2,7 +2,7 @@
 import { ref } from "vue";
 import { defineStore } from "pinia";
 import type { IDataset } from "@commons/dataset";
-import { datasetApi } from "@src/api/dataset";
+import { datasetApi, type CreateDatasetPayload, type UpdateDatasetPayload } from "@src/api/dataset";
 
 export const useDatasetStore = defineStore("dataset", () => {
     const datasets = ref<IDataset[]>([]);
@@ -12,5 +12,33 @@ export const useDatasetStore = defineStore("dataset", () => {
         datasets.value = await datasetApi.getDatasets();
     }
 
-    return { datasets, fetchDatasets };
+    /** Returns the cached dataset with this id, or null if not loaded */
+    function getById(id: string) {
+        return datasets.value.find((d) => d.id === id) ?? null;
+    }
+
+    /** Creates a dataset and adds it to the store */
+    async function addDataset(payload: CreateDatasetPayload) {
+        const dataset = await datasetApi.createDataset(payload);
+        datasets.value.push(dataset);
+        return dataset;
+    }
+
+    /** Updates a dataset and replaces it in the store */
+    async function editDataset(id: string, payload: UpdateDatasetPayload) {
+        const dataset = await datasetApi.updateDataset(id, payload);
+        const i = datasets.value.findIndex((d) => d.id === id);
+        // Replace in place if cached, otherwise add it
+        if (i === -1) datasets.value.push(dataset);
+        else datasets.value[i] = dataset;
+        return dataset;
+    }
+
+    /** Deletes a dataset and removes it from the store */
+    async function removeDataset(id: string) {
+        await datasetApi.deleteDataset(id);
+        datasets.value = datasets.value.filter((d) => d.id !== id);
+    }
+
+    return { datasets, fetchDatasets, getById, addDataset, editDataset, removeDataset };
 });

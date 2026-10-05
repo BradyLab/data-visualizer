@@ -2,7 +2,7 @@
 import { ref } from "vue";
 import { defineStore } from "pinia";
 import { PermissionOptions, type IPermission } from "@commons/permissions";
-import { permissionApi } from "@src/api/permission";
+import { permissionApi, type CreatePermissionPayload } from "@src/api/permission";
 
 export const usePermissionStore = defineStore("permission", () => {
     const permissions = ref<IPermission[]>([]);
@@ -30,5 +30,42 @@ export const usePermissionStore = defineStore("permission", () => {
         permissions.value = (await Promise.all(editableDatasetIds.value.map(permissionApi.getByDataset))).flat();
     }
 
-    return { permissions, editableDatasetIds, fetchEditable, fetchVisible };
+    /** Grants a permission (or re-grants/updates an existing one) and puts it in the store */
+    async function addPermission(payload: CreatePermissionPayload) {
+        const permission = await permissionApi.createPermission(payload);
+        upsert(permission);
+        return permission;
+    }
+
+    /** Changes the access level of a permission and replaces it in the store */
+    async function editPermission(userId: string, datasetId: string, perm: PermissionOptions) {
+        const permission = await permissionApi.updatePermission(userId, datasetId, perm);
+        upsert(permission);
+        return permission;
+    }
+
+    /** Revokes a permission and removes it from the store */
+    async function removePermission(userId: string, datasetId: string) {
+        await permissionApi.deletePermission(userId, datasetId);
+        permissions.value = permissions.value.filter((p) => !(p.user_id === userId && p.dataset_id === datasetId));
+    }
+
+    // Replaces the cached permission for the same user + dataset, or adds it
+    function upsert(permission: IPermission) {
+        const i = permissions.value.findIndex(
+            (p) => p.user_id === permission.user_id && p.dataset_id === permission.dataset_id,
+        );
+        if (i === -1) permissions.value.push(permission);
+        else permissions.value[i] = permission;
+    }
+
+    return {
+        permissions,
+        editableDatasetIds,
+        fetchEditable,
+        fetchVisible,
+        addPermission,
+        editPermission,
+        removePermission,
+    };
 });
