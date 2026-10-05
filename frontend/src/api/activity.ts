@@ -2,7 +2,6 @@
 import axios from "axios";
 import type { IActivity } from "@commons/activity";
 import { apis } from "@commons/general";
-import { type CreateActivityPayload } from "@src/interfaces/activity";
 
 // Backend origin plus optional API path prefix; both come from Vite env vars with a local-dev fallback
 const baseURL = `${import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3001"}${import.meta.env.VITE_API_PATH ?? ""}`;
@@ -25,12 +24,6 @@ export const activityApi = {
     /** GET /activities/:id : returns one activity (rejects with a 404 error if it does not exist) */
     async getActivity(id: string): Promise<IActivity> {
         const response = await axios.get<IActivity>(`${baseURL}/${apis.ACTIVITY}/${id}`);
-        return response.data;
-    },
-
-    /** POST /activities : creates an activity and returns it */
-    async createActivity(payload: CreateActivityPayload): Promise<IActivity> {
-        const response = await axios.post<IActivity>(`${baseURL}/${apis.ACTIVITY}`, payload);
         return response.data;
     },
 };

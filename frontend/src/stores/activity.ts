@@ -3,7 +3,6 @@ import { ref } from "vue";
 import { defineStore } from "pinia";
 import type { IActivity } from "@commons/activity";
 import { activityApi } from "@src/api/activity";
-import { type CreateActivityPayload } from "@src/interfaces/activity";
 
 export const useActivityStore = defineStore("activity", () => {
     const activities = ref<IActivity[]>([]);
@@ -23,12 +22,5 @@ export const useActivityStore = defineStore("activity", () => {
         return activities.value.find((a) => a.id === id) ?? null;
     }
 
-    /** Records an activity and adds it to the front of the store (the log is newest first) */
-    async function addActivity(payload: CreateActivityPayload) {
-        const activity = await activityApi.createActivity(payload);
-        activities.value.unshift(activity);
-        return activity;
-    }
-
-    return { activities, fetchActivities, fetchByUser, getById, addActivity };
+    return { activities, fetchActivities, fetchByUser, getById };
 });
