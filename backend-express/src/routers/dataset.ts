@@ -7,7 +7,7 @@ const router = Router();
 
 // Request flow: router -> controller (HTTP in/out) -> service (database). No requireAuth is applied to these routes
 
-// TODOB11: write routes (POST/PUT/DELETE) have no requireAuth or role check, so anyone can create, modify, or delete datasets
+// TODO: write routes (POST/PUT/DELETE) have no requireAuth or role check, so anyone can create, modify, or delete datasets
 router.get("/", controller.list);
 router.post("/", controller.create);
 router.get("/:id", controller.get);
