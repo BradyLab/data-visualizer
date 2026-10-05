@@ -2,12 +2,10 @@
 import axios from "axios";
 import type { IPermission, PermissionOptions } from "@commons/permissions";
 import { apis } from "@commons/general";
+import { type CreatePermissionPayload } from "@src/interfaces/permission";
 
 // Backend origin plus optional API path prefix; both come from Vite env vars with a local-dev fallback
 const baseURL = `${import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3001"}${import.meta.env.VITE_API_PATH ?? ""}`;
-
-/** Payload for granting a permission */
-export type CreatePermissionPayload = Pick<IPermission, "user_id" | "dataset_id" | "perm">;
 
 export const permissionApi = {
     /** GET /permissions : returns all permissions */

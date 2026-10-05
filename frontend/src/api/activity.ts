@@ -2,15 +2,12 @@
 import axios from "axios";
 import type { IActivity } from "@commons/activity";
 import { apis } from "@commons/general";
+import { type CreateActivityPayload } from "@src/interfaces/activity";
 
 // Backend origin plus optional API path prefix; both come from Vite env vars with a local-dev fallback
 const baseURL = `${import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3001"}${import.meta.env.VITE_API_PATH ?? ""}`;
 
-// Fields the server generates itself and the client never sends
-type ServerFields = "id" | "createdAt" | "updatedAt" | "deletedAt";
 
-/** Payload for creating an activity */
-export type CreateActivityPayload = Omit<IActivity, ServerFields>;
 
 export const activityApi = {
     /** GET /activities : returns all activities */

@@ -2,7 +2,8 @@
 import { ref } from "vue";
 import { defineStore } from "pinia";
 import type { IDataset } from "@commons/dataset";
-import { datasetApi, type CreateDatasetPayload, type UpdateDatasetPayload } from "@src/api/dataset";
+import { datasetApi } from "@src/api/dataset";
+import { type CreateDatasetPayload, type UpdateDatasetPayload } from "@src/interfaces/dataset";
 
 export const useDatasetStore = defineStore("dataset", () => {
     const datasets = ref<IDataset[]>([]);

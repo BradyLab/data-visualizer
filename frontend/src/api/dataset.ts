@@ -2,18 +2,10 @@
 import axios from "axios";
 import type { IDataset } from "@commons/dataset";
 import { apis } from "@commons/general";
+import { type CreateDatasetPayload, type UpdateDatasetPayload } from "@src/interfaces/dataset";
 
 // Backend origin plus optional API path prefix; both come from Vite env vars with a local-dev fallback
 const baseURL = `${import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3001"}${import.meta.env.VITE_API_PATH ?? ""}`;
-
-// Fields the server generates itself and the client never sends
-type ServerFields = "id" | "createdAt" | "updatedAt" | "deletedAt";
-
-/** Payload for creating a dataset */
-export type CreateDatasetPayload = Omit<IDataset, ServerFields>;
-
-/** Payload for updating a dataset; any subset of the editable fields */
-export type UpdateDatasetPayload = Partial<CreateDatasetPayload>;
 
 export const datasetApi = {
     /** GET /datasets : returns all datasets */

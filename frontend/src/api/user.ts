@@ -2,21 +2,10 @@
 import axios from "axios";
 import type { IUser } from "@commons/user";
 import { apis } from "@commons/general";
+import { type CreateUserPayload, type UpdateUserPayload, type InviteUserPayload } from "@src/interfaces/user";
 
 // Backend origin plus optional API path prefix; both come from Vite env vars with a local-dev fallback
 const baseURL = `${import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3001"}${import.meta.env.VITE_API_PATH ?? ""}`;
-
-// Fields the server generates itself and the client never sends
-type ServerFields = "id" | "createdAt" | "updatedAt" | "deletedAt";
-
-/** Payload for creating a user */
-export type CreateUserPayload = Omit<IUser, ServerFields>;
-
-/** Payload for updating a user; any subset of the editable fields */
-export type UpdateUserPayload = Partial<CreateUserPayload>;
-
-/** Payload for inviting a user */
-export type InviteUserPayload = Pick<IUser, "name" | "email" | "role">;
 
 export const userApi = {
     /** GET /users : returns all users */

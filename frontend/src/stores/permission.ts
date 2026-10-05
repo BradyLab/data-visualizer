@@ -2,7 +2,8 @@
 import { ref } from "vue";
 import { defineStore } from "pinia";
 import { PermissionOptions, type IPermission } from "@commons/permissions";
-import { permissionApi, type CreatePermissionPayload } from "@src/api/permission";
+import { permissionApi } from "@src/api/permission";
+import { type CreatePermissionPayload } from "@src/interfaces/permission";
 
 export const usePermissionStore = defineStore("permission", () => {
     const permissions = ref<IPermission[]>([]);

@@ -2,7 +2,8 @@
 import { ref } from "vue";
 import { defineStore } from "pinia";
 import type { IUser } from "@commons/user";
-import { userApi, type CreateUserPayload, type InviteUserPayload, type UpdateUserPayload } from "@src/api/user";
+import { userApi } from "@src/api/user";
+import { type CreateUserPayload, type UpdateUserPayload, type InviteUserPayload } from "@src/interfaces/user";
 
 export const useUserStore = defineStore("user", () => {
     // Reactive state

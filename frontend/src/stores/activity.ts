@@ -2,7 +2,8 @@
 import { ref } from "vue";
 import { defineStore } from "pinia";
 import type { IActivity } from "@commons/activity";
-import { activityApi, type CreateActivityPayload } from "@src/api/activity";
+import { activityApi } from "@src/api/activity";
+import { type CreateActivityPayload } from "@src/interfaces/activity";
 
 export const useActivityStore = defineStore("activity", () => {
     const activities = ref<IActivity[]>([]);
