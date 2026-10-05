@@ -17,7 +17,7 @@ const loadToken = () => {
     }
 };
 
-const guestUser = {
+const guestUser: IUser = {
     id: "",
     email: "",
     name: "GUEST USER",
@@ -36,6 +36,9 @@ export const useAuthStore = defineStore("auth", () => {
     // Logged in whenever a token is present (the token is not validated client-side)
     // TODOC06: true as soon as a token exists, so after a page reload the app is "logged in" with the GUEST user until restore() finishes (and stays so if it is never awaited)
     const isLoggedIn = computed(() => !!token.value);
+
+    //misc information to avoid recalculations
+    const isAdmin = computed(() => user.value.role === UserRoles.ADMIN);
 
     // Saves the token, and makes every axios request send it
     function setToken(value: string | null) {
@@ -104,6 +107,7 @@ export const useAuthStore = defineStore("auth", () => {
         loading,
         error,
         isLoggedIn,
+        isAdmin,
         login,
         restore,
         logout,

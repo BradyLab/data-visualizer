@@ -15,7 +15,14 @@ export const useDatasetStore = defineStore("dataset", () => {
 
     /** Returns the cached dataset with this id, or null if not loaded */
     function getById(id: string) {
-        return datasets.value.find((d) => d.id === id) ?? null;
+        const data = datasets.value.find((d) => d.id === id);
+
+        if(!data) {
+            fetchDatasets();
+            return datasets.value.find((d) => d.id === id)
+        }
+
+        return data;
     }
 
     /** Creates a dataset and adds it to the store */

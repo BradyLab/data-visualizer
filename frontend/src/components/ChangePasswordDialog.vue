@@ -24,6 +24,7 @@ const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 
 const required = (label: string) => (v: string) => !!v || `${label} is required`;
 const matchesNew = (v: string) => v === newPassword.value || "Passwords do not match";
+const notSameAsOld = (v: string) => v !== oldPassword.value || "New password must not equal old password";
 
 // Start with an empty form each time the popup opens
 watch(open, (isOpen) => {
@@ -69,13 +70,12 @@ async function submit() {
                         :clearable="false"
                         :rules="[required('Old password')]"
                     ></v-text-field>
-                    <!-- TODOD01: new password has no minimum length/strength rule and may equal the old password -->
                     <v-text-field
                         v-model="newPassword"
                         label="New password"
                         type="password"
                         :clearable="false"
-                        :rules="[required('New password')]"
+                        :rules="[required('New password'), notSameAsOld]"
                     ></v-text-field>
                     <v-text-field
                         v-model="confirmPassword"

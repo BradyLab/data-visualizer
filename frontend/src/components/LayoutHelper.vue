@@ -1,14 +1,4 @@
-<script setup lang="ts">
-// Shared navigation items (ABOUT, FEEDBACK) used in both the header and the footer
-import { useRouter } from "vue-router";
-
-const router = useRouter();
-
-// Navigate to the given route path
-function navTo(route: string) {
-    router.push(route);
-}
-</script>
+<script setup lang="ts"></script>
 
 <!-- Renders columns so it can be dropped inside a v-row; separators are plain text pipes -->
 <template>

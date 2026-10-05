@@ -12,7 +12,6 @@ const userStore = useUserStore();
 
 // GUEST is the logged-out placeholder role, so it isn't offered for real users
 const roleOptions: UserRoles[] = Object.values(UserRoles).filter((r) => r !== UserRoles.GUEST);
-// TODOD02: INVITED is not an option, so for an invited user the select shows a value that is not in its items; an admin can also edit their own role/status here
 const statusOptions: UserStatus[] = Object.values(UserStatus).filter((s) => s !== UserStatus.INVITED);
 
 const role = ref<UserRoles>(UserRoles.EXTERNAL);
@@ -48,8 +47,6 @@ async function save() {
     <v-dialog v-model="open" max-width="480" :persistent="saving">
         <v-card v-if="user" class="pa-4">
             <v-card-title>{{ user.name }} ({{ user.email }})</v-card-title>
-            <!-- TODOD03: empty v-card-subtitle renders nothing useful; likely leftover -->
-            <v-card-subtitle></v-card-subtitle>
             <v-card-text class="px-4 pb-0">
                 <v-select v-model="role" :items="roleOptions" label="Role" :clearable="false"></v-select>
                 <v-select v-if="status !== UserStatus.INVITED" v-model="status" :items="statusOptions" label="Status" :clearable="false"></v-select>
