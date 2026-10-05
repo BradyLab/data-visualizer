@@ -53,13 +53,6 @@ export class Permissions extends Model<IPermission> {
     })
     declare updatedAt: Date | null;
 
-    // Time of deletion of the row
-    @Column({
-        type: DataType.DATE,
-        allowNull: true,
-    })
-    declare deletedAt: Date | null;
-
     // Foreign keys cascade on delete/update (matches the Permissions migration)
     @BelongsTo(() => Users, { foreignKey: "user_id", onDelete: "CASCADE", onUpdate: "CASCADE" })
     declare user?: Users;

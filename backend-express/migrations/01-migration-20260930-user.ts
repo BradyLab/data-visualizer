@@ -65,10 +65,6 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 type: DataTypes.DATE,
                 allowNull: true,
             },
-            deletedAt: {
-                type: DataTypes.DATE,
-                allowNull: true,
-            },
         });
     } catch (error) {
         migrationLogger.error(error);

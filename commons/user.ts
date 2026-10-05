@@ -24,7 +24,6 @@ export interface IUser {
     status: UserStatus;
     createdAt: Date;
     updatedAt?: Date | null;
-    deletedAt?: Date | null;
 }
 
 // Credentials sent to the login endpoint

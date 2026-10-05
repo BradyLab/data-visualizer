@@ -23,5 +23,4 @@ export interface IDataset {
     plots: DatasetPlots[];
     createdAt: Date;
     updatedAt: Date | null;
-    deletedAt: Date | null;
 }

@@ -97,13 +97,6 @@ export class Datasets extends Model<IDataset> {
     })
     declare updatedAt: Date | null;
 
-    // Time of deletion of the row
-    @Column({
-        type: DataType.DATE,
-        allowNull: true,
-    })
-    declare deletedAt: Date | null;
-
     // Soft-deleting a dataset (dataset.destroy()) also soft-deletes its permissions.
     // hooks: true makes Sequelize load and destroy each child row individually, which honors paranoid mode;
     // it does not apply to bulk deletes like Datasets.destroy({ where }) unless individualHooks: true is passed

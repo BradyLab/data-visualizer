@@ -76,13 +76,6 @@ export class Users extends Model<IUserPass> {
     })
     declare updatedAt: Date | null;
 
-    // Time of deletion of the row
-    @Column({
-        type: DataType.DATE,
-        allowNull: true,
-    })
-    declare deletedAt: Date | null;
-
     // Soft-deleting a user (user.destroy()) also soft-deletes their permissions.
     // hooks: true makes Sequelize load and destroy each child row individually, which honors paranoid mode;
     // it does not apply to bulk deletes like Users.destroy({ where }) unless individualHooks: true is passed
