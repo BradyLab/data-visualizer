@@ -4,7 +4,6 @@
 // and are redirected home if they have none.
 import { computed, ref, watch, watchEffect } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { UserRoles } from "@commons/user";
 import { useAuthStore } from "@src/stores/auth";
 import { useUserStore } from "@src/stores/user";
 import { useDatasetStore } from "@src/stores/dataset";
@@ -25,8 +24,6 @@ const headers = [
     { title: "", key: "actions", sortable: false, align: "end" as const },
 ];
 
-const isAdmin = computed(() => auth.user.role === UserRoles.ADMIN);
-
 // Selected filter values (user ids and dataset ids); an empty list means no filter on that field
 // The user filter can be preset with a ?user=<id> query param (e.g. from the User Management page)
 const userFilter = ref<string[]>(typeof route.query.user === "string" ? [route.query.user] : []);
@@ -34,17 +31,16 @@ const datasetFilter = ref<string[]>([]);
 
 // Datasets the viewer may see: all for admins, otherwise only those they can edit
 const visibleDatasets = computed(() =>
-    isAdmin.value ? datasetStore.datasets : datasetStore.datasets.filter((d) => permissionStore.editableDatasetIds.includes(d.id))
+    auth.isAdmin ? datasetStore.datasets : datasetStore.datasets.filter((d) => permissionStore.editableDatasetIds.includes(d.id))
 );
 
 // Permission rows joined with user and dataset details, limited to the selected filters.
 // Admins have implicit edit access everywhere, so they see every permission; others only see permissions on visible datasets.
 const rows = computed(() => {
     const visibleIds = new Set(visibleDatasets.value.map((d) => d.id));
-    return permissionStore.permissions
+    return permissionStore.adminPermissions
         .filter(
             (p) =>
-                (isAdmin.value || visibleIds.has(p.dataset_id)) &&
                 (!userFilter.value.length || userFilter.value.includes(p.user_id)) &&
                 (!datasetFilter.value.length || datasetFilter.value.includes(p.dataset_id))
         )
@@ -77,10 +73,10 @@ watch(
         await Promise.all([
             userStore.fetchUsers(),
             datasetStore.fetchDatasets(),
-            permissionStore.fetchVisible(id, isAdmin.value),
+            permissionStore.fetchEditable(id, auth.isAdmin),
         ]);
         // Non-admins without edit access to any dataset have nothing to manage here
-        if (!isAdmin.value && !permissionStore.editableDatasetIds.length) router.replace("/home");
+        if (!auth.isAdmin && !permissionStore.editableDatasetIds.length) router.replace("/home");
     },
     { immediate: true }
 );
@@ -98,9 +94,7 @@ function edit(userId: string, datasetId: string) {
 
 <template>
     <v-container v-if="auth.user.id">
-        <div class="d-flex align-center mb-4">
-            <h1 class="text-h6 font-weight-bold">PERMISSION MANAGEMENT</h1>
-        </div>
+        <h1 class="text-h6 font-weight-bold">PERMISSIONS MANAGEMENT</h1>
 
         <!-- Filter menu: each item opens a submenu of values; picking one sets the filter and shows a chip -->
         <v-row class="align-center mb-2">

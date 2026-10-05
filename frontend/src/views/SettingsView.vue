@@ -30,9 +30,8 @@ onMounted(() => {
     if (!auth.isLoggedIn) navTo("/login");
 });
 
-const isAdmin = computed(() => auth.user.role === UserRoles.ADMIN);
 // Admins see every management page; others only see Permissions, and only if they can edit some dataset
-const canManagePermissions = computed(() => isAdmin.value || permissionStore.editableDatasetIds.length > 0);
+const canManagePermissions = computed(() => auth.isAdmin || permissionStore.editableDatasetIds.length > 0);
 
 // Load the user's edit access and fill the name field once the real user is known
 // (the id is empty until login / session restore finishes)
@@ -42,7 +41,7 @@ watch(
     (id) => {
         if (!id) return;
         name.value = auth.user.name;
-        permissionStore.fetchEditable(id);
+        permissionStore.fetchEditable(id, auth.isAdmin);
     },
     { immediate: true }
 );
@@ -87,7 +86,7 @@ watch(
         <h1 class="text-h6 font-weight-bold mb-4">SETTINGS</h1>
 
         <!-- User settings: change name and password -->
-        <h2 v-if="isAdmin" class="text-subtitle-1 font-weight-bold mb-2">USER SETTINGS</h2>
+        <h2 v-if="auth.isAdmin" class="text-subtitle-1 font-weight-bold mb-2">USER SETTINGS</h2>
         <v-form ref="nameForm" @submit.prevent="saveName">
             <v-row class="mb-6 mx-4">
                 <v-col cols="12" md="6">
@@ -109,20 +108,19 @@ watch(
         </v-row>
 
         <!-- Admin section: dataset setup (placeholder) and links to the management pages -->
-        <h2 v-if="isAdmin" class="text-subtitle-1 font-weight-bold mb-2">ADMIN</h2>
-        <v-row v-if="isAdmin" class="mb-6 mx-4">
-            <v-col cols="auto">
-                <v-btn prepend-icon="mdi-account-multiple-outline" @click="router.push({ name: 'user-mgmt' })">
+        <h2 v-if="canManagePermissions" class="text-subtitle-1 font-weight-bold mb-2">ADMIN</h2>
+        <v-row v-if="canManagePermissions" class="mb-6 mx-4">
+            <v-col v-if="auth.isAdmin" cols="auto">
+                <v-btn  prepend-icon="mdi-account-multiple-outline" @click="router.push({ name: 'user-mgmt' })">
                     User Management
                 </v-btn>
             </v-col>
-            <!-- TODOD12: this is inside the isAdmin-only row, and canManagePermissions is always true for admins, so the v-if is redundant and non-admins with edit access never see this link despite the comment above -->
-            <v-col v-if="canManagePermissions" cols="auto">
+            <v-col cols="auto">
                 <v-btn prepend-icon="mdi-shield-key-outline" @click="router.push({ name: 'permissions' })">
                     Permission Management
                 </v-btn>
             </v-col>
-            <v-col cols="auto">
+            <v-col v-if="auth.isAdmin" cols="auto">
                 <v-btn prepend-icon="mdi-history" @click="router.push({ name: 'activity-logs' })">Activity Logs</v-btn>
             </v-col>
             <!-- //TODO DATABASE EDITS -->
@@ -130,7 +128,7 @@ watch(
 
         <!-- One row per dataset: name (links to the dataset), private/public switch, and edit button -->
         <!-- TODOD13: v-if and v-for on the same element is discouraged (v-if is evaluated first in Vue 3); wrap in a <template v-if> instead -->
-        <v-row v-if="isAdmin" v-for="dataset in datasets" :key="dataset.url" align="center" class="mx-4">
+        <v-row v-if="auth.isAdmin" v-for="dataset in datasets" :key="dataset.url" align="center" class="mx-4">
             <v-col @click="navTo('/dataset/' + dataset.url)">{{ dataset.name }}</v-col>
             <v-col cols="auto" class="d-flex align-center">
                 <span class="mr-2">Private</span>

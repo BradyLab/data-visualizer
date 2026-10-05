@@ -55,25 +55,23 @@ function toggleExpanded(id: string) {
     expanded.value = expanded.value.includes(id) ? expanded.value.filter((e) => e !== id) : [...expanded.value, id];
 }
 
-const isAdmin = computed(() => auth.user.role === UserRoles.ADMIN);
-
 // Only admins may view this page; everyone else is sent home.
 // A saved token with a GUEST user means the session is still being restored on page load, so wait for it.
 watchEffect(() => {
     const restoring = auth.isLoggedIn && auth.user.role === UserRoles.GUEST;
-    if (!isAdmin.value && !restoring) router.replace("/home");
+    if (!auth.isAdmin && !restoring) router.replace("/home");
 });
 
 // Load the log (and users, for the filter names) once we know the viewer is an admin
 // TODOE02: if the session is still being restored on mount (role is GUEST), isAdmin is false here and nothing is fetched
 // again once the user becomes admin, so the table stays empty after a page reload
 onMounted(async () => {
-    if (isAdmin.value) await Promise.all([activityStore.fetchActivities(), userStore.fetchUsers()]);
+    if (auth.isAdmin) await Promise.all([activityStore.fetchActivities(), userStore.fetchUsers()]);
 });
 </script>
 
 <template>
-    <v-container v-if="isAdmin">
+    <v-container v-if="auth.isAdmin">
         <div class="d-flex align-center mb-4">
             <h1 class="text-h6 font-weight-bold">ACTIVITY LOGS</h1>
         </div>

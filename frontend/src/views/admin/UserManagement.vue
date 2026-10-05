@@ -36,19 +36,17 @@ const filteredUsers = computed(() =>
     )
 );
 
-const isAdmin = computed(() => auth.user.role === UserRoles.ADMIN);
-
 // Only admins may view this page; everyone else is sent home.
 // A saved token with a GUEST user means the session is still being restored on page load, so wait for it.
 watchEffect(() => {
     const restoring = auth.isLoggedIn && auth.user.role === UserRoles.GUEST;
-    if (!isAdmin.value && !restoring) router.replace("/home");
+    if (!auth.isAdmin && !restoring) router.replace("/home");
 });
 
 // Load the users once we know the viewer is an admin
 // TODOE05: same as ActivityLogs: if the session is still restoring on mount, users are never fetched once the viewer turns out to be admin
 onMounted(async () => {
-    if (isAdmin.value) await userStore.fetchUsers();
+    if (auth.isAdmin) await userStore.fetchUsers();
 });
 
 // User currently being edited in the popup
@@ -80,7 +78,7 @@ function inviteUser() {
 </script>
 
 <template>
-    <v-container v-if="isAdmin">
+    <v-container v-if="auth.isAdmin">
         <div class="d-flex align-center mb-4">
             <h1 class="text-h6 font-weight-bold">USER MANAGEMENT</h1>
             <v-spacer></v-spacer>

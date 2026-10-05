@@ -6,29 +6,22 @@ import { permissionApi } from "@src/api/permission";
 import { type CreatePermissionPayload } from "@src/interfaces/permission";
 
 export const usePermissionStore = defineStore("permission", () => {
-    const permissions = ref<IPermission[]>([]);
+    const myPermissions = ref<IPermission[]>([]);
     // Ids of the datasets the viewer holds EDIT permission on (not used for admins, who see everything)
     const editableDatasetIds = ref<string[]>([]);
-
-    /** Loads just the ids of the datasets a user holds EDIT permission on (used to decide which pages to link to) */
-    async function fetchEditable(userId: string) {
-        const mine = await permissionApi.getByUser(userId);
-        editableDatasetIds.value = mine.filter((p) => p.perm === PermissionOptions.EDIT).map((p) => p.dataset_id);
-    }
+    const adminPermissions = ref<IPermission[]>([]);
 
     /**
      * Loads the permissions visible to a user. Admins get every permission; anyone else gets only the
      * permissions on datasets they hold EDIT permission on.
      */
-    async function fetchVisible(userId: string, isAdmin: boolean) {
-        if (isAdmin) {
-            permissions.value = await permissionApi.getPermissions();
-            return;
-        }
+    async function fetchEditable(userId: string, isAdmin: boolean) {
+        adminPermissions.value = await permissionApi.getPermissions();
+        if(isAdmin) return;
         const mine = await permissionApi.getByUser(userId);
         editableDatasetIds.value = mine.filter((p) => p.perm === PermissionOptions.EDIT).map((p) => p.dataset_id);
-        // TODOC08: passing permissionApi.getByDataset directly to map also passes (index, array) as extra args (harmless today, fragile if the API gains parameters); this block also duplicates fetchEditable and mutates editableDatasetIds as a side effect
-        permissions.value = (await Promise.all(editableDatasetIds.value.map(permissionApi.getByDataset))).flat();
+        
+        adminPermissions.value = adminPermissions.value.filter((p) => (editableDatasetIds.value.includes(p.dataset_id)));
     }
 
     /** Grants a permission (or re-grants/updates an existing one) and puts it in the store */
@@ -48,23 +41,24 @@ export const usePermissionStore = defineStore("permission", () => {
     /** Revokes a permission and removes it from the store */
     async function removePermission(userId: string, datasetId: string) {
         await permissionApi.deletePermission(userId, datasetId);
-        permissions.value = permissions.value.filter((p) => !(p.user_id === userId && p.dataset_id === datasetId));
+        myPermissions.value = myPermissions.value.filter((p) => !(p.user_id === userId && p.dataset_id === datasetId));
     }
 
     // Replaces the cached permission for the same user + dataset, or adds it
+    //TODO move upsert to backend
     function upsert(permission: IPermission) {
-        const i = permissions.value.findIndex(
+        const i = myPermissions.value.findIndex(
             (p) => p.user_id === permission.user_id && p.dataset_id === permission.dataset_id,
         );
-        if (i === -1) permissions.value.push(permission);
-        else permissions.value[i] = permission;
+        if (i === -1) myPermissions.value.push(permission);
+        else myPermissions.value[i] = permission;
     }
 
     return {
-        permissions,
+        permissions: myPermissions,
         editableDatasetIds,
+        adminPermissions,
         fetchEditable,
-        fetchVisible,
         addPermission,
         editPermission,
         removePermission,
