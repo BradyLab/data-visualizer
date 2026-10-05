@@ -142,7 +142,14 @@ watch(
 
         <!-- One row per dataset: name (links to the dataset), private/public switch, and edit button -->
         <!-- TODO: v-if and v-for on the same element is discouraged (v-if is evaluated first in Vue 3); wrap in a <template v-if> instead -->
-        <v-alert v-if="auth.isAdmin && visibilityError" type="error" variant="tonal" closable class="mb-4 mx-4" @click:close="visibilityError = null">
+        <v-alert
+            v-if="auth.isAdmin && visibilityError"
+            type="error"
+            variant="tonal"
+            closable
+            class="mb-4 mx-4"
+            @click:close="visibilityError = null"
+        >
             {{ visibilityError }}
         </v-alert>
         <v-row v-if="auth.isAdmin" v-for="dataset in datasetStore.datasets" :key="dataset.url" align="center" class="mx-4">
@@ -152,7 +159,11 @@ watch(
                 <v-switch
                     :model-value="dataset.visibility === DatasetVisibility.PUBLIC"
                     @update:model-value="(value) => setVisibility(dataset, value)"
-                    color="primary" density="compact" inset hide-details></v-switch>
+                    color="primary"
+                    density="compact"
+                    inset
+                    hide-details
+                ></v-switch>
                 <span class="ml-2">Public</span>
             </v-col>
             <v-col cols="auto">

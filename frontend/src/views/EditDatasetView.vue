@@ -73,7 +73,12 @@ function onUrlInput(value: string) {
 }
 
 const canSave = computed(
-    () => !saving.value && !loading.value && !!dataset.value.name.trim() && !!slugify(dataset.value.url) && (!isEdit.value || !!dataset.value.id)
+    () =>
+        !saving.value &&
+        !loading.value &&
+        !!dataset.value.name.trim() &&
+        !!slugify(dataset.value.url) &&
+        (!isEdit.value || !!dataset.value.id)
 );
 
 // In edit mode, loads the dataset with the url from the route and fills the form
@@ -157,7 +162,13 @@ async function save() {
 
         <!-- Description -->
         <v-row class="text-body-medium mb-1 mx-4">Description</v-row>
-        <v-textarea v-model="dataset.description" placeholder="Type a description of the dataset here" rows="2" hide-details class="mb-4 mx-4"></v-textarea>
+        <v-textarea
+            v-model="dataset.description"
+            placeholder="Type a description of the dataset here"
+            rows="2"
+            hide-details
+            class="mb-4 mx-4"
+        ></v-textarea>
 
         <!-- URL slug: the dataset is served at /dataset/<url> -->
         <v-row class="text-body-medium mb-1 mx-4">Website URL</v-row>
@@ -184,7 +195,13 @@ async function save() {
 
         <!-- Link to raw data download (NCBI/SRA) -->
         <v-row class="text-body-medium mb-1 mx-4">Raw Data Download Link (NCBI/SRA)</v-row>
-        <v-text-field v-model="dataset.rawDataLink" placeholder="Add download link here" density="compact" hide-details class="mb-4 mx-4"></v-text-field>
+        <v-text-field
+            v-model="dataset.rawDataLink"
+            placeholder="Add download link here"
+            density="compact"
+            hide-details
+            class="mb-4 mx-4"
+        ></v-text-field>
 
         <!-- Raw data file upload -->
         <v-row class="mx-4">
@@ -238,7 +255,9 @@ async function save() {
         <v-row class="justify-end mx-4">
             <v-spacer />
             <v-col class="justify-end" cols="auto">
-                <v-btn :disabled="!canSave" :loading="saving" @click="save">{{ isEdit ? "Save Changes" : "Create New Dataset" }}</v-btn>
+                <v-btn :disabled="!canSave" :loading="saving" @click="save">{{
+                    isEdit ? "Save Changes" : "Create New Dataset"
+                }}</v-btn>
             </v-col>
         </v-row>
     </v-container>
@@ -260,6 +279,6 @@ async function save() {
 /* Vuetify 3 renders the prefix as .v-text-field__prefix (there is no .v-field__prefix) and keeps it at opacity 0 until the field has a value */
 :deep(.v-text-field__prefix) {
     opacity: 1;
-    color: #3E3E3E;
+    color: #3e3e3e;
 }
 </style>

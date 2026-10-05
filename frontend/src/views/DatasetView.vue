@@ -28,9 +28,7 @@ const canEdit = computed(
     () =>
         !!dataset.value &&
         auth.isLoggedIn &&
-        (auth.isAdmin ||
-            dataset.value.owner === auth.user.id ||
-            permissionStore.editableDatasetIds.includes(dataset.value.id))
+        (auth.isAdmin || dataset.value.owner === auth.user.id || permissionStore.editableDatasetIds.includes(dataset.value.id))
 );
 
 // DOI as a link: bare DOIs (10.xxxx/...) are resolved through doi.org
@@ -83,7 +81,13 @@ watch(
                 </div>
             </v-col>
             <v-col cols="auto" class="d-flex align-center ga-2">
-                <v-btn v-if="canEdit" color="primary" prepend-icon="mdi-pencil" @click="router.push(`/dataset/${dataset.url}/edit`)">Edit</v-btn>
+                <v-btn
+                    v-if="canEdit"
+                    color="primary"
+                    prepend-icon="mdi-pencil"
+                    @click="router.push(`/dataset/${dataset.url}/edit`)"
+                    >Edit</v-btn
+                >
                 <v-btn
                     color="primary"
                     prepend-icon="mdi-download"

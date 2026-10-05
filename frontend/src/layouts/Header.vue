@@ -48,7 +48,11 @@ async function logout() {
                     </template>
 
                     <v-list>
-                        <v-list-item v-for="dataset in datasetStore.datasets" :key="dataset.url" @click="navTo('/dataset/' + dataset.url)">
+                        <v-list-item
+                            v-for="dataset in datasetStore.datasets"
+                            :key="dataset.url"
+                            @click="navTo('/dataset/' + dataset.url)"
+                        >
                             {{ dataset.name }}
                         </v-list-item>
                     </v-list>

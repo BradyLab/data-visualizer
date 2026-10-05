@@ -13,7 +13,7 @@
     "lint": "run-s \"lint:*\"",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
-    "format": "prettier --write --experimental-cli src/ && prettier --write ../commons"
+    "format": "prettier --write --experimental-cli src/ && prettier --write --experimental-cli ../commons"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",

@@ -5,7 +5,17 @@ import { IDataset } from "@src/models/dataset.ts";
 import { pick } from "@src/utils/pick.ts";
 
 // Whitelist of columns clients may set (see utils/pick.ts)
-const DATASET_FIELDS = ["name", "owner", "url", "description", "doi", "rawDataLink", "treatments", "plots", "visibility"] as const;
+const DATASET_FIELDS = [
+    "name",
+    "owner",
+    "url",
+    "description",
+    "doi",
+    "rawDataLink",
+    "treatments",
+    "plots",
+    "visibility",
+] as const;
 // Same whitelist minus owner, which is set when the dataset is created and cannot be changed afterwards
 const DATASET_UPDATE_FIELDS = DATASET_FIELDS.filter((f) => f !== "owner");
 /** GET / : returns all datasets (200) */
