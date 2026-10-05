@@ -39,7 +39,7 @@ async function submit() {
     saving.value = true;
     error.value = null;
     try {
-        await userStore.inviteUser({ name: name.value.trim(), email: email.value.trim(), role: role.value });
+        await userStore.addUser({ name: name.value.trim(), email: email.value.trim(), role: role.value });
         open.value = false;
     } catch (err) {
         error.value =

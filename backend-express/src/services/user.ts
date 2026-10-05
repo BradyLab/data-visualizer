@@ -30,17 +30,11 @@ export const getById = (id: string) => {
     return Users.findByPk(id, { attributes: PUBLIC_ATTRIBUTES });
 };
 
-/** Creates a user (password is hashed first) and returns it without the password */
-export const create = async (body: Partial<IUserPass>) => {
-    console.log("[USER SERVICE] Creating user...");
-    return toPublic(await Users.create(prepare(body) as IUserPass));
-};
-
 /**
  * Invites a user: creates them with INVITED status and the default password from the DEFAULT_PASSWORD env var.
  * Returns the user without the password. Throws if DEFAULT_PASSWORD is not configured.
  */
-export const invite = async (data: Partial<IUserPass>) => {
+export const create = async (data: Partial<IUserPass>) => {
     console.log("[USER SERVICE] Inviting user...");
     const defaultPassword = process.env.DEFAULT_PASSWORD;
     if (!defaultPassword) throw new Error("DEFAULT_PASSWORD is not set");

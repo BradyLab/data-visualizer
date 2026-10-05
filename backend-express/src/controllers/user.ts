@@ -29,21 +29,15 @@ export const get = async (req: Request, res: Response) => {
     res.status(200).json(item);
 };
 
-/** POST / : creates a user from the request body (201) */
-export const create = async (req: Request, res: Response) => {
-    console.log("[USER CONTROLLER] Attempting to create user...");
-    res.status(201).json(await service.create(pick<IUserPass>(req.body, USER_FIELDS)));
-};
-
 /** POST /invite : invites a user from {name, email, role} with INVITED status and the default password (201), or 400 if a field is missing or invalid */
-export const invite = async (req: Request, res: Response) => {
+export const create = async (req: Request, res: Response) => {
     console.log("[USER CONTROLLER] Attempting to invite user...");
     const { name, email, role } = req.body ?? {};
     if (typeof name !== "string" || !name.trim() || typeof email !== "string" || !email.trim())
         return res.status(400).json({ error: "Name and email are required" });
     if (!Object.values(UserRoles).includes(role) || role === UserRoles.GUEST)
         return res.status(400).json({ error: "A valid role is required" });
-    res.status(201).json(await service.invite(pick<IUserPass>({ name: name.trim(), email: email.trim(), role }, ["email", "name", "role"] as const)));
+    res.status(201).json(await service.create(pick<IUserPass>({ name: name.trim(), email: email.trim(), role }, ["email", "name", "role"] as const)));
 };
 
 /** PUT /:id : updates an existing user (200), or 404 if it does not exist */
