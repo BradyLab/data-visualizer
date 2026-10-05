@@ -17,11 +17,11 @@ export const usePermissionStore = defineStore("permission", () => {
      */
     async function fetchEditable(userId: string, isAdmin: boolean) {
         adminPermissions.value = await permissionApi.getPermissions();
-        if(isAdmin) return;
+        if (isAdmin) return;
         const mine = await permissionApi.getByUser(userId);
         editableDatasetIds.value = mine.filter((p) => p.perm === PermissionOptions.EDIT).map((p) => p.dataset_id);
-        
-        adminPermissions.value = adminPermissions.value.filter((p) => (editableDatasetIds.value.includes(p.dataset_id)));
+
+        adminPermissions.value = adminPermissions.value.filter((p) => editableDatasetIds.value.includes(p.dataset_id));
     }
 
     /** Grants a permission (or re-grants/updates an existing one) and puts it in the store */
@@ -48,7 +48,7 @@ export const usePermissionStore = defineStore("permission", () => {
     //TODO move upsert to backend
     function upsert(permission: IPermission) {
         const i = myPermissions.value.findIndex(
-            (p) => p.user_id === permission.user_id && p.dataset_id === permission.dataset_id,
+            (p) => p.user_id === permission.user_id && p.dataset_id === permission.dataset_id
         );
         if (i === -1) myPermissions.value.push(permission);
         else myPermissions.value[i] = permission;

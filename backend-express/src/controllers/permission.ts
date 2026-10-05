@@ -52,7 +52,11 @@ export const create = async (req: Request, res: Response) => {
 /** PUT /:userId/:datasetId : updates an existing permission (200), or 404 if it does not exist */
 export const update = async (req: Request, res: Response) => {
     console.log("[PERMISSION CONTROLLER] Attempting to update permission...");
-    const item = await service.update(req.params.userId as string, req.params.datasetId as string, pick<IPermission>(req.body, ["perm"]));
+    const item = await service.update(
+        req.params.userId as string,
+        req.params.datasetId as string,
+        pick<IPermission>(req.body, ["perm"])
+    );
     if (!item) {
         console.log("[PERMISSION CONTROLLER] Permission not found");
         return res.status(404).json({ error: "Permission not found" });

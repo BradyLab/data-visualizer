@@ -29,7 +29,13 @@
 
         <!-- Raw data file upload -->
         <v-row class="mx-4">
-            <v-file-upload density="compact" title="Upload Raw Data File" clearable :multiple="false" hide-details></v-file-upload>
+            <v-file-upload
+                density="compact"
+                title="Upload Raw Data File"
+                clearable
+                :multiple="false"
+                hide-details
+            ></v-file-upload>
             <!-- <v-btn color="primary" prepend-icon="mdi-upload">Upload raw data file</v-btn> -->
         </v-row>
 

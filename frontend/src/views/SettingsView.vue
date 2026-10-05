@@ -110,7 +110,7 @@ watch(
         <h2 v-if="canManagePermissions" class="text-subtitle-1 font-weight-bold mb-2">ADMIN</h2>
         <v-row v-if="canManagePermissions" class="mb-6 mx-4">
             <v-col v-if="auth.isAdmin" cols="auto">
-                <v-btn  prepend-icon="mdi-account-multiple-outline" @click="router.push({ name: 'user-mgmt' })">
+                <v-btn prepend-icon="mdi-account-multiple-outline" @click="router.push({ name: 'user-mgmt' })">
                     User Management
                 </v-btn>
             </v-col>
@@ -125,7 +125,7 @@ watch(
         </v-row>
 
         <!-- One row per dataset: name (links to the dataset), private/public switch, and edit button -->
-        <!-- TODOD13: v-if and v-for on the same element is discouraged (v-if is evaluated first in Vue 3); wrap in a <template v-if> instead -->
+        <!-- TODO: v-if and v-for on the same element is discouraged (v-if is evaluated first in Vue 3); wrap in a <template v-if> instead -->
         <v-row v-if="auth.isAdmin" v-for="dataset in datasets" :key="dataset.url" align="center" class="mx-4">
             <v-col @click="navTo('/dataset/' + dataset.url)">{{ dataset.name }}</v-col>
             <v-col cols="auto" class="d-flex align-center">

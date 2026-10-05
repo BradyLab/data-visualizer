@@ -37,7 +37,11 @@ export const create = async (req: Request, res: Response) => {
         return res.status(400).json({ error: "Name and email are required" });
     if (!Object.values(UserRoles).includes(role) || role === UserRoles.GUEST)
         return res.status(400).json({ error: "A valid role is required" });
-    res.status(201).json(await service.create(pick<IUserPass>({ name: name.trim(), email: email.trim(), role }, ["email", "name", "role"] as const)));
+    res.status(201).json(
+        await service.create(
+            pick<IUserPass>({ name: name.trim(), email: email.trim(), role }, ["email", "name", "role"] as const)
+        )
+    );
 };
 
 /** PUT /:id : updates an existing user (200), or 404 if it does not exist */

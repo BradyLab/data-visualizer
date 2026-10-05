@@ -111,7 +111,7 @@ export class Datasets extends Model<IDataset> {
     declare permissions?: Permissions[];
 
     // Deleting a dataset also deletes its files (Files is not paranoid, so these rows are removed outright)
-     @HasMany(() => Files, { foreignKey: "dataset_id", onDelete: "CASCADE", onUpdate: "CASCADE", hooks: true })
+    @HasMany(() => Files, { foreignKey: "dataset_id", onDelete: "CASCADE", onUpdate: "CASCADE", hooks: true })
     declare files?: Files[];
 }
 

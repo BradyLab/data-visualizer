@@ -29,7 +29,7 @@ export const create = async (data: Partial<IPermission>) => {
         return existing.update({ perm: data.perm } as Partial<IPermission>);
     } else if (existing) {
         console.log("[PERMISSION SERVICE] Updating already existing permission");
-        return existing?.update({perm: data.perm} as Partial<IPermission>);
+        return existing?.update({ perm: data.perm } as Partial<IPermission>);
     }
     return Permissions.create(data as IPermission);
 };

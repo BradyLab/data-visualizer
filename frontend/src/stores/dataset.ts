@@ -17,9 +17,9 @@ export const useDatasetStore = defineStore("dataset", () => {
     function getById(id: string) {
         const data = datasets.value.find((d) => d.id === id);
 
-        if(!data) {
+        if (!data) {
             fetchDatasets();
-            return datasets.value.find((d) => d.id === id)
+            return datasets.value.find((d) => d.id === id);
         }
 
         return data;
