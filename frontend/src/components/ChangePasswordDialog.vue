@@ -38,6 +38,7 @@ watch(open, (isOpen) => {
 
 // Validates the form, then changes the password; shows a message either way and closes only via the buttons
 async function submit() {
+    // Ignore repeat submits (e.g. Enter key) once the change has gone through
     if (success.value || !(await form.value?.validate())?.valid) return;
     saving.value = true;
     error.value = null;

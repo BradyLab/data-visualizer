@@ -1,7 +1,7 @@
 // Database access for Datasets
 import { Datasets, IDataset } from "@src/models/dataset.ts";
 
-/** Returns all non-deleted datasets */
+/** Returns all datasets */
 export const getAll = () => {
     console.log("[DATASET SERVICE] Fetching all datasets...");
     return Datasets.findAll();
@@ -30,7 +30,7 @@ export const update = async (id: string, body: Partial<IDataset>) => {
     return dataset.update(body);
 };
 
-// Soft-deletes the dataset (and its permissions); returns false if not found
+// Deletes the dataset (and its permissions); returns false if not found
 export const remove = async (id: string) => {
     console.log("[DATASET SERVICE] Deleting dataset...");
     const dataset = await Datasets.findByPk(id);

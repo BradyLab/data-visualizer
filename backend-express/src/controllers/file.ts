@@ -5,7 +5,7 @@ import { IFile } from "@src/models/file.ts";
 import { pick } from "@src/utils/pick.ts";
 
 // Whitelist of columns clients may set (see utils/pick.ts)
-const FILE_FIELDS = ["dataset_id", "type", "sizeBytes", "ogName"] as const;
+const FILE_FIELDS = ["dataset_id", "user_id", "type", "sizeBytes", "ogName"] as const;
 // GET /files?dataset_id=... lists files, optionally for one dataset
 export const list = async (req: Request, res: Response) => {
     console.log("[FILE CONTROLLER] Attempting to list files...");

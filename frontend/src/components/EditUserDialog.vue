@@ -49,6 +49,7 @@ async function save() {
             <v-card-title>{{ user.name }} ({{ user.email }})</v-card-title>
             <v-card-text class="px-4 pb-0">
                 <v-select v-model="role" :items="roleOptions" label="Role" :clearable="false"></v-select>
+                <!-- Status of invited users is hidden: they become ACTIVE by changing their password -->
                 <v-select
                     v-if="status !== UserStatus.INVITED"
                     v-model="status"

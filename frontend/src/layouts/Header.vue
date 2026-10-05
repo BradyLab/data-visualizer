@@ -15,6 +15,7 @@ const auth = useAuthStore();
 
 // Dataset store, which populates the DATASETS menu
 const datasetStore = useDatasetStore();
+// TODOD04: datasets are fetched only once on mount, so the menu is not refreshed after login/logout (visibility may differ per user)
 onMounted(() => {
     // If the request fails the menu is simply empty
     datasetStore.fetchDatasets().catch(() => {});

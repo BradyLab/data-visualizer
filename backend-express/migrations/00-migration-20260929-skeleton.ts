@@ -15,6 +15,7 @@ const migrationLogger = {
 };
 
 // Apply the migration
+// queryInterface issues DDL commands; sequelize is the connection (both unused in this template)
 export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
     try {
         // add schema changes here

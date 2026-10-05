@@ -37,7 +37,6 @@ const visibleDatasets = computed(() =>
 // Permission rows joined with user and dataset details, limited to the selected filters.
 // Admins have implicit edit access everywhere, so they see every permission; others only see permissions on visible datasets.
 const rows = computed(() => {
-    const visibleIds = new Set(visibleDatasets.value.map((d) => d.id));
     return permissionStore.adminPermissions
         .filter(
             (p) =>
@@ -49,13 +48,14 @@ const rows = computed(() => {
             userId: p.user_id,
             datasetId: p.dataset_id,
             userName: userStore.getById(p.user_id)?.name ?? p.user_id,
-            email: userStore.getById(p.user_id)?.email ?? "",
+            email: "",
             datasetName: visibleDatasets.value.find((d) => d.id === p.dataset_id)?.name ?? p.dataset_id,
             perm: p.perm,
         }));
 });
 
 // Display names for the filter chips
+// They fall back to the raw id if the user or dataset isn't in the loaded lists
 const userName = (id: string) => userStore.getById(id)?.name ?? id;
 const datasetName = (id: string) => visibleDatasets.value.find((d) => d.id === id)?.name ?? id;
 

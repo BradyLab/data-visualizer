@@ -47,11 +47,11 @@ export const usePermissionStore = defineStore("permission", () => {
     // Replaces the cached permission for the same user + dataset, or adds it
     //TODO move upsert to backend
     function upsert(permission: IPermission) {
-        const i = myPermissions.value.findIndex(
+        const i = adminPermissions.value.findIndex(
             (p) => p.user_id === permission.user_id && p.dataset_id === permission.dataset_id
         );
-        if (i === -1) myPermissions.value.push(permission);
-        else myPermissions.value[i] = permission;
+        if (i === -1) adminPermissions.value.push(permission);
+        else adminPermissions.value[i] = permission;
     }
 
     return {

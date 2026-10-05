@@ -29,7 +29,7 @@ export const get = async (req: Request, res: Response) => {
     res.status(200).json(item);
 };
 
-/** POST /invite : invites a user from {name, email, role} with INVITED status and the default password (201), or 400 if a field is missing or invalid */
+/** POST / : invites a user from {name, email, role} with INVITED status and the default password (201), or 400 if a field is missing or invalid */
 export const create = async (req: Request, res: Response) => {
     console.log("[USER CONTROLLER] Attempting to invite user...");
     const { name, email, role } = req.body ?? {};

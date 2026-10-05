@@ -44,7 +44,7 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 allowNull: false,
                 defaultValue: PermissionOptions.VIEW,
             },
-            // Timestamps; deletedAt is set for soft deletes (paranoid models)
+            // Timestamps
             createdAt: {
                 type: DataTypes.DATE,
                 allowNull: false,
@@ -65,6 +65,7 @@ export async function down(queryInterface: QueryInterface, sequelize: Sequelize)
     try {
         // revert schema changes
         await queryInterface.dropTable("Permissions");
+        await (queryInterface as any).dropEnum("enum_Permissions_perm");
     } catch (error) {
         migrationLogger.error(error);
         throw error;

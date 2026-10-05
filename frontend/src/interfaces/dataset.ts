@@ -5,4 +5,5 @@ import { type ServerFields } from "./general";
 export type CreateDatasetPayload = Omit<IDataset, ServerFields>;
 
 /** Payload for updating a dataset; any subset of the editable fields */
-export type UpdateDatasetPayload = Partial<CreateDatasetPayload>;
+// Note: owner is allowed by this type but the backend update whitelist ignores it
+export type UpdateDatasetPayload = Partial<Omit<CreateDatasetPayload, "owner">>;

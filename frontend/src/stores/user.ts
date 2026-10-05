@@ -3,10 +3,10 @@ import { ref } from "vue";
 import { defineStore } from "pinia";
 import type { IUser } from "@commons/user";
 import { userApi } from "@src/api/user";
-import { type CreateUserPayload, type UpdateUserPayload, type InviteUserPayload } from "@src/interfaces/user";
+import { type UpdateUserPayload, type InviteUserPayload } from "@src/interfaces/user";
 
 export const useUserStore = defineStore("user", () => {
-    // Reactive state
+    // Reactive state (cached list of all users, filled by fetchUsers)
     const users = ref<IUser[]>([]);
 
     /** Loads all users from the backend into the store */
@@ -36,6 +36,7 @@ export const useUserStore = defineStore("user", () => {
         return user;
     }
 
+    // Note: editUser/removeUser only touch this local cache after the backend call succeeds
     /** Deletes a user and removes it from the store */
     async function removeUser(id: string) {
         await userApi.deleteUser(id);

@@ -3,7 +3,7 @@
 // (placeholder, UI only) plus links to the management pages the user is allowed to see
 import { useRouter } from "vue-router";
 import { computed, onMounted, ref, watch } from "vue";
-import { UserRoles, UserStatus } from "@commons/user";
+import { UserStatus } from "@commons/user";
 import { DatasetVisibility, type IDataset } from "@commons/dataset";
 import { useAuthStore } from "@src/stores/auth";
 import { useUserStore } from "@src/stores/user";
@@ -21,6 +21,7 @@ const permissionStore = usePermissionStore();
 const datasetStore = useDatasetStore();
 
 // Sets a dataset public or private; the switch follows the store, so a failed save leaves it unchanged
+// (the switch reports null when it is cleared, which is treated the same as off, i.e. private)
 const visibilityError = ref<string | null>(null);
 async function setVisibility(dataset: IDataset, isPublic: boolean | null) {
     visibilityError.value = null;
@@ -61,6 +62,7 @@ watch(
     { immediate: true }
 );
 
+// Vuetify validation rule factory: fails on empty or whitespace-only input
 const required = (label: string) => (v: string) => !!v?.trim() || `${label} is required`;
 
 // --- Name ---
@@ -101,7 +103,7 @@ watch(
         <h1 class="text-h6 font-weight-bold mb-4">SETTINGS</h1>
 
         <!-- User settings: change name and password -->
-        <h2 v-if="auth.isAdmin" class="text-subtitle-1 font-weight-bold mb-2">USER SETTINGS</h2>
+        <h2 v-if="canManagePermissions" class="text-subtitle-1 font-weight-bold mb-2">USER SETTINGS</h2>
         <v-form ref="nameForm" @submit.prevent="saveName">
             <v-row class="mb-6 mx-4">
                 <v-col cols="12" md="6">
@@ -141,6 +143,7 @@ watch(
         </v-row>
 
         <!-- One row per dataset: name (links to the dataset), private/public switch, and edit button -->
+        <!-- Only admins see this list and the visibility error above it -->
         <!-- TODO: v-if and v-for on the same element is discouraged (v-if is evaluated first in Vue 3); wrap in a <template v-if> instead -->
         <v-alert
             v-if="auth.isAdmin && visibilityError"

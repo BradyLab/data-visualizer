@@ -8,7 +8,7 @@ import { Files } from "@src/models/file.ts";
 
 export type { IDataset };
 
-// Maps this class to the "Datasets" table and enables createdAt/updatedAt timestamps (paranoid: true = soft deletes via deletedAt)
+// Maps this class to the "Datasets" table and enables createdAt/updatedAt timestamps
 @Table({
     tableName: "Datasets",
     timestamps: true,
@@ -83,6 +83,7 @@ export class Datasets extends Model<IDataset> {
     })
     declare plots: DatasetPlots[];
 
+    // Who may see the dataset; defaults to PRIVATE (not enforced anywhere in the API yet)
     @Column({
         type: DataType.ENUM(...Object.values(DatasetVisibility)),
         allowNull: false,

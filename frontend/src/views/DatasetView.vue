@@ -24,6 +24,7 @@ const selectedTreatments = ref<string[]>([]);
 const selectedPlots = ref<string[]>([]);
 
 // Edit is offered to admins, the dataset's owner, and users with EDIT permission on the dataset
+// This only hides the button; the edit route itself just requires a login (see the router)
 const canEdit = computed(
     () =>
         !!dataset.value &&
@@ -32,6 +33,7 @@ const canEdit = computed(
 );
 
 // DOI as a link: bare DOIs (10.xxxx/...) are resolved through doi.org
+// Values already starting with http(s):// are used as-is
 const doiHref = computed(() => {
     const doi = dataset.value?.doi;
     if (!doi) return null;
@@ -39,6 +41,7 @@ const doiHref = computed(() => {
 });
 
 // Loads the dataset (and, for logged-in users, their permissions) whenever the url slug changes
+// The whole list is fetched and searched by url, since there is no lookup-by-slug call.
 watch(
     () => route.params.datasetURL as string,
     async (url) => {

@@ -52,7 +52,7 @@ export class Files extends Model<IFile> {
         type: DataType.BIGINT,
         allowNull: false,
     })
-    declare sizeBytes: number;
+    declare sizeBytes: string;
 
     // Original file name as uploaded
     @Column({

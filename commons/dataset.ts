@@ -10,6 +10,7 @@ export enum DatasetPlots {
     HEATMAP = "Heatmap",
 }
 
+// Whether a dataset is listed publicly or only for permitted users (stored in the DB enum)
 export enum DatasetVisibility {
     PUBLIC = "PUBLIC",
     PRIVATE = "PRIVATE",

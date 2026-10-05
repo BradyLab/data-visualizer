@@ -4,7 +4,6 @@ import jwt from "jsonwebtoken";
 import { Users } from "@src/models/user.ts";
 import { UserStatus } from "@commons/user.ts";
 import { hashPassword } from "@src/utils/password.ts";
-import e from "cors";
 
 // Payload stored in the token
 export interface TokenPayload {
@@ -58,22 +57,26 @@ export const changePassword = async (id: string, oldPassword: string, newPasswor
 export const login = async (email: string, password: string) => {
     console.log("[AUTH SERVICE] Looking up user to log in...");
     const user = await Users.findOne({ where: { email } });
+    var success = true;
     // Callers get the same result for unknown email, wrong password, and inactive account so they can't tell which;
     // the logs say which, but they stay server-side
     if (!user) {
         console.log("[AUTH SERVICE] No user found for that email");
-        return null;
+        success = false;
     }
-    if (!verifyPassword(password, user.password)) {
+    if (user && !verifyPassword(password, user.password)) {
         console.log("[AUTH SERVICE] Password did not match");
-        return null;
+        success = false;
     }
-    if (user.status == UserStatus.INACTIVE) {
+    if (user && user.status == UserStatus.INACTIVE) {
         console.log("[AUTH SERVICE] User is inactive");
-        return null;
+        success = false;
     }
-    console.log("[AUTH SERVICE] Credentials verified, signing token");
-    // Strip the hash so it is never sent to the client
-    const { password: _password, ...publicUser } = user.get({ plain: true });
-    return { token: signToken(user.id), user: publicUser };
+    if(success && user) {
+        console.log("[AUTH SERVICE] Credentials verified, signing token");
+        // Strip the hash so it is never sent to the client
+        const { password: _password, ...publicUser } = user.get({ plain: true });
+        return { token: signToken(user.id), user: publicUser };
+    } else return null;
+    
 };

@@ -46,6 +46,7 @@ const expanded = ref<string[]>([]);
 const PREVIEW_LINES = 3;
 
 // Pretty-printed JSON for an activity's data
+// lineCount decides whether it is long enough to need the expand/collapse behaviour
 const formatData = (data: Record<string, unknown>) => JSON.stringify(data, null, 2);
 const lineCount = (data: Record<string, unknown>) => formatData(data).split("\n").length;
 
@@ -53,13 +54,6 @@ const lineCount = (data: Record<string, unknown>) => formatData(data).split("\n"
 function toggleExpanded(id: string) {
     expanded.value = expanded.value.includes(id) ? expanded.value.filter((e) => e !== id) : [...expanded.value, id];
 }
-
-// Only admins may view this page; everyone else is sent home.
-// A saved token with a GUEST user means the session is still being restored on page load, so wait for it.
-watchEffect(() => {
-    const restoring = auth.isLoggedIn && auth.user.role === UserRoles.GUEST;
-    if (!auth.isAdmin && !restoring) router.replace("/home");
-});
 
 // Load the log (and users, for the filter names) once we know the viewer is an admin
 onMounted(async () => {

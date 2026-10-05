@@ -32,6 +32,7 @@ const dataset = ref<IDataset>({
     plots: [],
     // New datasets start private; visibility is changed from the settings page
     visibility: DatasetVisibility.PRIVATE,
+    // Placeholders to satisfy IDataset; they are not sent on save (the backend sets the real timestamps)
     createdAt: new Date(),
     updatedAt: null,
 });

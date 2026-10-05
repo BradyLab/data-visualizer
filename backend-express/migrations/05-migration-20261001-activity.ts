@@ -37,6 +37,7 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 allowNull: false,
             },
             // Data from the activity
+            // JSON column; shape varies by ActivityType
             data: {
                 type: DataTypes.JSON,
                 allowNull: false,
@@ -66,6 +67,7 @@ export async function down(queryInterface: QueryInterface, sequelize: Sequelize)
     try {
         // revert schema changes
         await queryInterface.dropTable("Activities");
+        await (queryInterface as any).dropEnum("enum_Activities_type");
     } catch (error) {
         migrationLogger.error(error);
         throw error;

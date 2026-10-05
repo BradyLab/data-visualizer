@@ -13,6 +13,7 @@ const app = createApp(App);
 // Pinia: global state management
 app.use(createPinia());
 // Restore a saved login session (re-attaches the token and reloads the user)
+// Top-level await: the session must settle before the router is installed so the route guard sees the real auth state
 await useAuthStore().restore();
 // Vuetify: UI component library and theme
 app.use(vuetify);

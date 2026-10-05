@@ -8,6 +8,7 @@ export enum PermissionOptions {
 }
 
 // A permission record: grants one user an access level on one dataset
+// No separate id: (user_id, dataset_id) is the composite primary key
 export interface IPermission {
     user_id: string;
     dataset_id: string;

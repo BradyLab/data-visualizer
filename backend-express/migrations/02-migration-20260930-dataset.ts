@@ -65,16 +65,18 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 allowNull: false,
             },
             // Plot types enabled for this dataset; values come from DatasetPlots
+            // Postgres array of ENUM values (creates the enum_Datasets_plots type)
             plots: {
                 type: DataTypes.ARRAY(DataTypes.ENUM(...Object.values(DatasetPlots))),
                 allowNull: false,
             },
+            // Whether the dataset is publicly listed or restricted; new datasets default to PRIVATE
             visibility: {
                 type: DataTypes.ENUM(...Object.values(DatasetVisibility)),
                 allowNull: false,
                 defaultValue: DatasetVisibility.PRIVATE,
             },
-            // Timestamps; deletedAt is set for soft deletes (paranoid models)
+            // Timestamps
             createdAt: {
                 type: DataTypes.DATE,
                 allowNull: false,
@@ -95,6 +97,8 @@ export async function down(queryInterface: QueryInterface, sequelize: Sequelize)
     try {
         // revert schema changes
         await queryInterface.dropTable("Datasets");
+        await (queryInterface as any).dropEnum("enum_Datasets_plots");
+        await (queryInterface as any).dropEnum("enum_Datasets_visibility");
     } catch (error) {
         migrationLogger.error(error);
         throw error;

@@ -38,6 +38,8 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 type: DataTypes.UUID,
                 allowNull: false,
                 references: { model: "Users", key: "id" },
+                onUpdate: "CASCADE",
+                onDelete: "CASCADE",
             },
             // Kind of file (cover image, RDS, or raw data); values come from FileTypes
             type: {
@@ -46,7 +48,7 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
             },
             // File size in bytes
             sizeBytes: {
-                type: DataTypes.INTEGER,
+                type: DataTypes.BIGINT,
                 allowNull: false,
             },
             // Original filename as uploaded by the user
@@ -66,6 +68,7 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
         });
 
         // Each dataset can have at most one file of each type
+        // Added as a named constraint after createTable; the Files model declares the same name via @Unique("Files_dataset_id_type_unique")
         await queryInterface.addConstraint("Files", {
             fields: ["dataset_id", "type"],
             type: "unique",
@@ -82,6 +85,7 @@ export async function down(queryInterface: QueryInterface, sequelize: Sequelize)
     try {
         // revert schema changes
         await queryInterface.dropTable("Files");
+        await (queryInterface as any).dropEnum("enum_Files_type");
     } catch (error) {
         migrationLogger.error(error);
         throw error;

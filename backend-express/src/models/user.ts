@@ -76,9 +76,6 @@ export class Users extends Model<IUserPass> {
     })
     declare updatedAt: Date | null;
 
-    // Soft-deleting a user (user.destroy()) also soft-deletes their permissions.
-    // hooks: true makes Sequelize load and destroy each child row individually, which honors paranoid mode;
-    // it does not apply to bulk deletes like Users.destroy({ where }) unless individualHooks: true is passed
     @HasMany(() => Permissions, { foreignKey: "user_id", onDelete: "CASCADE", onUpdate: "CASCADE", hooks: true })
     declare permissions?: Permissions[];
 }

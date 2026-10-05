@@ -2,12 +2,11 @@
 import axios from "axios";
 import type { ILoginRequest, ILoginResponse, IUser } from "@commons/user";
 import { apis } from "@commons/general";
-
-// Backend origin plus optional API path prefix; both come from Vite env vars with a local-dev fallback
-const baseURL = `${import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3001"}${import.meta.env.VITE_API_PATH ?? ""}`;
+import { baseURL } from "@src/interfaces/general";
 
 export const authApi = {
     /** POST /auth/login : returns a token and the user, rejects with a 401 error for bad credentials */
+    // Unauthenticated call: no token exists yet, so no Authorization header is attached
     async login(credentials: ILoginRequest): Promise<ILoginResponse> {
         const response = await axios.post<ILoginResponse>(`${baseURL}/${apis.AUTH}/login`, credentials);
         return response.data;

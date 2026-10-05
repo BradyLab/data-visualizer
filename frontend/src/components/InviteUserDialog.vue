@@ -53,6 +53,7 @@ async function submit() {
 </script>
 
 <template>
+    <!-- Cannot be dismissed while the invite request is in flight -->
     <v-dialog v-model="open" max-width="480" :persistent="saving">
         <v-card class="pa-4">
             <v-card-title>Invite User</v-card-title>

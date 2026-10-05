@@ -6,12 +6,6 @@ import { UserStatus } from "@commons/user.ts";
 // Query option that keeps the password hash out of query results
 const PUBLIC_ATTRIBUTES = { exclude: ["password"] };
 
-// Hashes the password field (if present) before it is stored
-const prepare = (data: Partial<IUserPass>) => {
-    if (data.password) data.password = hashPassword(data.password);
-    return data;
-};
-
 // Removes the password from a model instance before returning it
 const toPublic = (user: Users) => {
     const { password: _password, ...rest } = user.get({ plain: true });

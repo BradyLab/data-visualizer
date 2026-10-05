@@ -6,6 +6,7 @@ import { activityApi } from "@src/api/activity";
 
 export const useActivityStore = defineStore("activity", () => {
     const activities = ref<IActivity[]>([]);
+    const userActivities = ref<IActivity[]>([]);
 
     /** Loads all activities from the backend into the store */
     async function fetchActivities() {
@@ -14,7 +15,7 @@ export const useActivityStore = defineStore("activity", () => {
 
     /** Loads only one user's activities into the store, replacing what was there */
     async function fetchByUser(userId: string) {
-        activities.value = await activityApi.getByUser(userId);
+        userActivities.value = await activityApi.getByUser(userId);
     }
 
     /** Returns the cached activity with this id, or null if not loaded */
@@ -22,5 +23,5 @@ export const useActivityStore = defineStore("activity", () => {
         return activities.value.find((a) => a.id === id) ?? null;
     }
 
-    return { activities, fetchActivities, fetchByUser, getById };
+    return { activities, userActivities, fetchActivities, fetchByUser, getById };
 });

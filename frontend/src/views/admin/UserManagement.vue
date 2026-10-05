@@ -44,11 +44,13 @@ watchEffect(() => {
 });
 
 // Load the users once we know the viewer is an admin
+// (the restoring branch above is defensive; see the router guard)
 onMounted(async () => {
     if (auth.isAdmin) await userStore.fetchUsers();
 });
 
 // User currently being edited in the popup
+// (the dialog stays mounted and receives the selected user as a prop)
 const editingUser = ref<IUser | null>(null);
 const editDialogOpen = ref(false);
 

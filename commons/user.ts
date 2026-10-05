@@ -16,6 +16,7 @@ export enum UserStatus {
 }
 
 // A user account as stored in the Users table
+// Deliberately has no password field; the backend adds it in IUserPass so it never reaches the frontend
 export interface IUser {
     id: string;
     email: string;

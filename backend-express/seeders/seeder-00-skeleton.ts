@@ -2,6 +2,7 @@
 import { DataTypes, type QueryInterface, type Sequelize } from "sequelize";
 
 // Insert seed data
+// queryInterface runs schema/data commands; sequelize is the connection (both unused in this template)
 export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
     /**
      * Add seed commands here.

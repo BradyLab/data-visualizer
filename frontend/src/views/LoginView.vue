@@ -24,6 +24,7 @@ const submit = async () => {
 // Already logged in: skip the login page
 onMounted(() => {
     if (auth.isLoggedIn) router.push(auth.user.status === UserStatus.INVITED ? "/settings" : "/home");
+    auth.error = "";
 });
 </script>
 

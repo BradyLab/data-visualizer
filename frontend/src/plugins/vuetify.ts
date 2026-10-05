@@ -31,6 +31,7 @@ export default (app: App) => {
         },
     };
 
+    // Global default props for components, so individual views do not repeat them
     //defaults
     const defaults = {
         VBtn: {
@@ -43,6 +44,7 @@ export default (app: App) => {
             rounded: "lg",
             border: false,
         },
+        // Nested default: applies only to buttons inside an app bar
         VAppBar: {
             VBtn: {
                 color: "primary",
@@ -57,7 +59,7 @@ export default (app: App) => {
         },
         VFileUpload: {
             VBtn: {
-                color: "#FFFFFF",
+                color: "#8da091",
             },
         },
         // Tables match a tonal chip: translucent primary background with primary text (VDataTable has no color prop, so use theme variables)

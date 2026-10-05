@@ -34,6 +34,7 @@ export const useAuthStore = defineStore("auth", () => {
     const error = ref<string | null>(null);
 
     // Logged in whenever a token is present (the token is not validated client-side)
+    // TODOD05: true while restore() is still pending (user is still the GUEST placeholder) and for an expired token until /me fails
     const isLoggedIn = computed(() => !!token.value);
 
     //misc information to avoid recalculations
@@ -75,6 +76,7 @@ export const useAuthStore = defineStore("auth", () => {
     /** Restores the user from a saved token (call on app start); logs out if the token is no longer valid */
     async function restore() {
         if (!token.value) return;
+        // Re-saving the token re-attaches the Authorization header after a reload
         setToken(token.value);
         try {
             user.value = await authApi.me();

@@ -13,7 +13,7 @@ export interface IFile {
     dataset_id: string;
     user_id: string;
     type: FileTypes;
-    sizeBytes: number;
+    sizeBytes: string;
     ogName: string;
     createdAt: Date;
     updatedAt: Date | null;

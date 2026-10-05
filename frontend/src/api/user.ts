@@ -2,10 +2,8 @@
 import axios from "axios";
 import type { IUser } from "@commons/user";
 import { apis } from "@commons/general";
-import { type CreateUserPayload, type UpdateUserPayload, type InviteUserPayload } from "@src/interfaces/user";
-
-// Backend origin plus optional API path prefix; both come from Vite env vars with a local-dev fallback
-const baseURL = `${import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3001"}${import.meta.env.VITE_API_PATH ?? ""}`;
+import { type UpdateUserPayload, type InviteUserPayload } from "@src/interfaces/user";
+import { baseURL } from "@src/interfaces/general";
 
 export const userApi = {
     /** GET /users : returns all users */
@@ -21,6 +19,7 @@ export const userApi = {
     },
 
     /** POST /users : creates a user and returns it */
+    // Users are created by invitation (name, email, role); the server sets status, which starts as INVITED
     async createUser(payload: InviteUserPayload): Promise<IUser> {
         const response = await axios.post<IUser>(`${baseURL}/${apis.USER}`, payload);
         return response.data;

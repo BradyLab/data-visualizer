@@ -19,18 +19,6 @@ export const getById = (user_id: string, dataset_id: string) => {
 // Re-activates a previously soft-deleted permission instead of violating the composite primary key
 export const create = async (data: Partial<IPermission>) => {
     console.log("[PERMISSION SERVICE] Creating permission...");
-    const existing = await Permissions.findOne({
-        where: { user_id: data.user_id, dataset_id: data.dataset_id } as Partial<IPermission>,
-        paranoid: false,
-    });
-    if (existing?.deletedAt) {
-        console.log("[PERMISSION SERVICE] Restoring previously deleted permission");
-        await existing.restore();
-        return existing.update({ perm: data.perm } as Partial<IPermission>);
-    } else if (existing) {
-        console.log("[PERMISSION SERVICE] Updating already existing permission");
-        return existing?.update({ perm: data.perm } as Partial<IPermission>);
-    }
     return Permissions.create(data as IPermission);
 };
 
