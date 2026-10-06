@@ -4,8 +4,6 @@ import type { IActivity } from "@commons/activity";
 import { apis } from "@commons/general";
 import { baseURL } from "@src/interfaces/general";
 
-// Backend origin plus optional API path prefix; both come from Vite env vars with a local-dev fallback
-
 export const activityApi = {
     /** GET /activities : returns all activities */
     // Read-only API: the backend exposes no create/update/delete for activities

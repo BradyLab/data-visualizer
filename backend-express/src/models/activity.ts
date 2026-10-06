@@ -23,12 +23,13 @@ export class Activities extends Model<IActivity> {
     declare id: string;
 
     // User who performed the activity
+    // Null if the user was deleted (FK is ON DELETE SET NULL)
     @ForeignKey(() => Users)
     @Column({
         type: DataType.UUID,
-        allowNull: false,
+        allowNull: true,
     })
-    declare user_id: string;
+    declare user_id: string | null;
 
     // Type of activity logged
     @Column({

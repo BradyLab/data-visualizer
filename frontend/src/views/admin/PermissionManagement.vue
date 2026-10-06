@@ -26,7 +26,13 @@ const headers = [
 
 // Selected filter values (user ids and dataset ids); an empty list means no filter on that field
 // The user filter can be preset with a ?user=<id> query param (e.g. from the User Management page)
-const userFilter = ref<string[]>(typeof route.query.user === "string" ? [route.query.user] : []);
+const userFromQuery = () => (typeof route.query.user === "string" ? [route.query.user] : []);
+const userFilter = ref<string[]>(userFromQuery());
+// The router reuses this component when only the query changes, so re-apply the preset whenever ?user= changes
+watch(
+    () => route.query.user,
+    () => (userFilter.value = userFromQuery())
+);
 const datasetFilter = ref<string[]>([]);
 
 // Datasets the viewer may manage: all for admins, otherwise only those they own
@@ -46,7 +52,6 @@ const rows = computed(() => {
             userId: p.user_id,
             datasetId: p.dataset_id,
             userName: userStore.nameOf(p.user_id),
-            email: "",
             datasetName: visibleDatasets.value.find((d) => d.id === p.dataset_id)?.name ?? p.dataset_id,
             perm: p.perm,
         }));
@@ -57,9 +62,11 @@ const rows = computed(() => {
 const userName = (id: string) => userStore.nameOf(id);
 const datasetName = (id: string) => visibleDatasets.value.find((d) => d.id === id)?.name ?? id;
 
-// Logged-out visitors are sent home. A saved token with no user yet means the session is still being restored.
+// Visitors without a login are sent home (also covers logging out while on this page).
+// Checks the token rather than isLoggedIn, which is also false while a saved session is still being restored
+// (token set, user id empty); the route guard already keeps logged-out visitors from getting here at all
 watchEffect(() => {
-    if (!auth.isLoggedIn) router.replace("/home");
+    if (!auth.token) router.replace("/home");
 });
 
 // Message shown when the datasets or permissions could not be loaded

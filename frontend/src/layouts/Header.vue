@@ -6,6 +6,7 @@ import BradyLabLogo from "@src/components/BradyLabLogo.vue";
 import LayoutHelper from "@src/components/LayoutHelper.vue";
 import { useAuthStore } from "@src/stores/auth";
 import { useDatasetStore } from "@src/stores/dataset";
+import { HELP_URL } from "@src/interfaces/general";
 
 // Router instance used for programmatic navigation
 const router = useRouter();
@@ -19,13 +20,6 @@ onMounted(() => {
     // If the request fails the menu is simply empty
     datasetStore.fetchDatasets().catch(() => {});
 });
-
-// The visible datasets can differ per user, so reload the menu whenever the user changes (login, logout, switching accounts).
-// Not immediate: main.ts awaits restore() before mounting, so the fetch above already has the right user
-watch(
-    () => auth.user.id,
-    () => datasetStore.fetchDatasets().catch(() => {})
-);
 
 // Navigate to the given route path
 function navTo(route: string) {
@@ -69,7 +63,7 @@ async function logout() {
             <v-col cols="auto">
                 <!-- Link to the help document (opens in a new tab) -->
                 <a
-                    href="https://docs.google.com/document/d/1VB1B6OtJmUqrp9LV7py-gPYMQm0WqmPKwHOjb4I01S0/edit?tab=t.h5arv6ibis4c"
+                    :href="HELP_URL"
                     target="_blank"
                     :class="{ 'text-decoration-none': true }"
                     class="text-text"
@@ -83,7 +77,8 @@ async function logout() {
 
         <!-- Account menu at the right of the app bar -->
         <template v-slot:append>
-            <v-menu open-on-hover>
+            <!-- Opens on hover or click (click is what touch devices use), like the DATASETS menu -->
+            <v-menu open-on-hover open-on-click>
                 <template v-slot:activator="{ props }">
                     <div v-bind="props">
                         <v-icon>mdi-dots-vertical</v-icon>

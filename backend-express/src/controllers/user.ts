@@ -13,6 +13,12 @@ const USER_FIELDS = ["email", "password", "name", "role", "status"] as const;
 // changed through POST /auth/change-password (which checks the old password)
 const UPDATE_FIELDS = ["email", "name", "role", "status"] as const;
 
+// Same pattern as the invite dialog's frontend check: something@something.something with no whitespace
+const EMAIL_FORMAT = /^\S+@\S+\.\S+$/;
+
+// Returns the trimmed email, or null if the value is not a string or is blank; used for the email in both create and update
+const cleanEmail = (value: unknown) => (typeof value === "string" && value.trim() ? value.trim() : null);
+
 /** GET / : returns all users (200) */
 export const list = async (req: Request, res: Response) => {
     console.log("[USER CONTROLLER] Attempting to list users...");
@@ -39,20 +45,22 @@ export const get = async (req: Request, res: Response) => {
 /** POST / : invites a user from {name, email, role} with INVITED status and the default password (201), or 400 if a field is missing or invalid */
 export const create = async (req: Request, res: Response) => {
     console.log("[USER CONTROLLER] Attempting to invite user...");
-    const { name, email, role } = req.body ?? {};
-    if (typeof name !== "string" || !name.trim() || typeof email !== "string" || !email.trim())
+    const { name, role } = req.body ?? {};
+    const email = cleanEmail(req.body?.email);
+    if (typeof name !== "string" || !name.trim() || !email)
         return res.status(400).json({ error: "Name and email are required" });
-    if (!Object.values(UserRoles).includes(role) || role === UserRoles.GUEST)
+    if (!EMAIL_FORMAT.test(email)) return res.status(400).json({ error: "Enter a valid email address" });
+    if (!ASSIGNABLE_ROLES.includes(role))
         return res.status(400).json({ error: "A valid role is required" });
     res.status(201).json(
         await service.create(
-            pick<IUserPass>({ name: name.trim(), email: email.trim(), role }, ["email", "name", "role"] as const)
+            pick<IUserPass>({ name: name.trim(), email, role }, ["email", "name", "role"] as const)
         )
     );
 };
 
 /**
- * PUT /:id : updates an existing user (200), or 404 if it does not exist, 400 for a bad name or role.
+ * PUT /:id : updates an existing user (200), or 404 if it does not exist, 400 for a bad name, email (blank or badly formatted) or role.
  * Admins may change any field; a user editing themselves may only change their name (403 if the body would change
  * their email, role or status). 409 if it would remove the last active admin
  */
@@ -64,6 +72,12 @@ export const update = async (req: Request, res: Response) => {
         if (typeof fields.name !== "string" || !fields.name.trim())
             return res.status(400).json({ error: "Name cannot be empty" });
         fields.name = fields.name.trim();
+    }
+    if (fields.email !== undefined) {
+        const email = cleanEmail(fields.email);
+        if (!email) return res.status(400).json({ error: "Email cannot be empty" });
+        if (!EMAIL_FORMAT.test(email)) return res.status(400).json({ error: "Enter a valid email address" });
+        fields.email = email;
     }
     if (fields.role !== undefined && !ASSIGNABLE_ROLES.includes(fields.role))
         return res.status(400).json({ error: "A valid role is required" });

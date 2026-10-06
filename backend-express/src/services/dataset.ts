@@ -51,7 +51,7 @@ export const update = async (id: string, body: Partial<IDataset>) => {
     return dataset.update(body);
 };
 
-// Deletes the dataset (and its permissions); returns false if not found
+// Deletes the dataset (and its permissions and files via cascade); returns false if not found
 export const remove = async (id: string) => {
     console.log("[DATASET SERVICE] Deleting dataset...");
     const dataset = await Datasets.findByPk(id);

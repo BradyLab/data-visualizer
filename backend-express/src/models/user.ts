@@ -76,6 +76,7 @@ export class Users extends Model<IUserPass> {
     })
     declare updatedAt: Date | null;
 
+    // Deleting a user also deletes their permissions (hard delete); hooks: true makes Sequelize destroy each row individually
     @HasMany(() => Permissions, { foreignKey: "user_id", onDelete: "CASCADE", onUpdate: "CASCADE", hooks: true })
     declare permissions?: Permissions[];
 }

@@ -19,7 +19,7 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 password: hashPassword(process.env.DEFAULT_PASSWORD),
                 name: "Liz Wright",
                 role: UserRoles.LAB_MEMBER,
-                status: UserStatus.ACTIVE,
+                status: UserStatus.INVITED,
                 createdAt: new Date(),
             },
             {
@@ -28,7 +28,7 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 password: hashPassword(process.env.DEFAULT_PASSWORD),
                 name: "Siobhan Brady",
                 role: UserRoles.ADMIN,
-                status: UserStatus.ACTIVE,
+                status: UserStatus.INVITED,
                 createdAt: new Date(),
             },
         ],

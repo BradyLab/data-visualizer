@@ -33,7 +33,7 @@ export const get = async (req: Request, res: Response) => {
 };
 
 /** POST / : creates an activity from the request body (201) */
-export const create = async (req: Request, res: Response) => {
-    console.log("[ACTIVITY CONTROLLER] Attempting to create activity...");
-    res.status(201).json(await service.create(pick<IActivity>(req.body, ACTIVITY_FIELDS)));
-};
+// export const create = async (req: Request, res: Response) => {
+//     console.log("[ACTIVITY CONTROLLER] Attempting to create activity...");
+//     res.status(201).json(await service.create(pick<IActivity>(req.body, ACTIVITY_FIELDS)));
+// };

@@ -92,18 +92,22 @@ export const usePermissionStore = defineStore("permission", () => {
         adminPermissions.value = adminPermissions.value.filter(keep);
     }
 
-    // Replaces the cached permission for the same user + dataset, or adds it
     //TODO move upsert to backend
+    // Replaces the cached permission for the same user + dataset, or adds it, in both lists it belongs to: the
+    // management list always, and the viewer's own list (which the can* checks use) when the permission is the
+    // viewer's, e.g. an admin editing their own row
     function upsert(permission: IPermission) {
-        const i = adminPermissions.value.findIndex(
-            (p) => p.user_id === permission.user_id && p.dataset_id === permission.dataset_id
-        );
-        if (i === -1) adminPermissions.value.push(permission);
-        else adminPermissions.value[i] = permission;
+        const replace = (list: IPermission[]) => {
+            const i = list.findIndex((p) => p.user_id === permission.user_id && p.dataset_id === permission.dataset_id);
+            if (i === -1) list.push(permission);
+            else list[i] = permission;
+        };
+        replace(adminPermissions.value);
+        if (permission.user_id === auth.user.id) replace(myPermissions.value);
     }
 
     return {
-        permissions: myPermissions,
+        myPermissions,
         downloadableDatasetIds,
         editableDatasetIds,
         adminPermissions,

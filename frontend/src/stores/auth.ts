@@ -18,6 +18,10 @@ const loadToken = () => {
     }
 };
 
+// Id of the axios response interceptor installed by the store, so a re-created store (e.g. a fresh Pinia in tests)
+// can remove the old one instead of stacking a duplicate that still points at the old store's state
+let interceptorId: number | null = null;
+
 const guestUser: IUser = {
     id: "",
     email: "",
@@ -25,6 +29,7 @@ const guestUser: IUser = {
     role: UserRoles.GUEST,
     status: UserStatus.ACTIVE,
     createdAt: new Date(),
+    updatedAt: new Date(),
 };
 
 export const useAuthStore = defineStore("auth", () => {
@@ -32,6 +37,8 @@ export const useAuthStore = defineStore("auth", () => {
     const token = ref<string | null>(loadToken());
     const user = ref<IUser>(guestUser);
     const loading = ref(false);
+    // True when the saved session could not be restored because the server was unreachable or failed (the token is kept)
+    const restoreFailed = ref(false);
     const error = ref<string | null>(null);
 
     // Logged in once there is a token and the user it belongs to has been loaded (id is "" for the GUEST placeholder),
@@ -64,6 +71,7 @@ export const useAuthStore = defineStore("auth", () => {
             const result = await authApi.login({ email, password });
             setToken(result.token);
             user.value = result.user;
+            restoreFailed.value = false;
             return true;
         } catch (err) {
             const status = axios.isAxiosError(err) ? err.response?.status : undefined;
@@ -79,15 +87,19 @@ export const useAuthStore = defineStore("auth", () => {
         }
     }
 
-    /** Restores the user from a saved token (call on app start); logs out if the token is no longer valid */
+    /**
+     * Restores the user from a saved token (call on app start). Logs out only if the server rejects the token (401);
+     * on a network error or 5xx the token is kept, so a reload can retry, and the user shows as logged out meanwhile
+     */
     async function restore() {
         if (!token.value) return;
         // Re-saving the token re-attaches the Authorization header after a reload
         setToken(token.value);
         try {
             user.value = await authApi.me();
-        } catch {
-            clearSession();
+        } catch (err) {
+            if (axios.isAxiosError(err) && err.response?.status === 401) clearSession();
+            else restoreFailed.value = true;
         }
     }
 
@@ -95,6 +107,7 @@ export const useAuthStore = defineStore("auth", () => {
     function clearSession() {
         setToken(null);
         user.value = guestUser;
+        restoreFailed.value = false;
     }
 
     // Global response handling:
@@ -102,7 +115,8 @@ export const useAuthStore = defineStore("auth", () => {
     //   "logged in" (skipped without a token, where a 401 just means bad credentials on the login form)
     // - 403 PASSWORD_CHANGE_REQUIRED: the user is still INVITED (default password), so mark them as such and send them
     //   to /settings, where the unclosable change-password dialog opens (SettingsView watches the status)
-    axios.interceptors.response.use(undefined, (err) => {
+    if (interceptorId !== null) axios.interceptors.response.eject(interceptorId);
+    interceptorId = axios.interceptors.response.use(undefined, (err) => {
         if (axios.isAxiosError(err)) {
             const { status, data } = err.response ?? {};
             if (status === 401 && token.value) clearSession();
@@ -131,6 +145,7 @@ export const useAuthStore = defineStore("auth", () => {
         user,
         loading,
         error,
+        restoreFailed,
         isLoggedIn,
         isAdmin,
         canCreateDatasets,

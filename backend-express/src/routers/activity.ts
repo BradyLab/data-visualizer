@@ -10,9 +10,11 @@ const router = Router();
 // Request flow: router (who is calling) -> controller (HTTP in/out) -> service (database)
 // Activity logs hold user ids and event payloads, so every route needs a login and only admins see everything
 
+// Admin only: lists every activity, optionally filtered
 router.get("/", requireAuth, requireRole(UserRoles.ADMIN), controller.list);
 // A user may read their own activity
 router.get("/byUser/:userId", requireAuth, requireSelfOrAdmin("userId"), controller.listByUser);
-router.get("/:id", requireAuth, requireRole(UserRoles.ADMIN), controller.get);
+// Admin only: a single activity can belong to any user
+router.get("/:id",requireAuth, requireRole(UserRoles.ADMIN), controller.get);
 
 export default router;

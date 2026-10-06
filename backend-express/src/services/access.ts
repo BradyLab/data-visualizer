@@ -19,6 +19,7 @@ export type AccessLevel = PermissionOptions | typeof OWNER;
 // null means no access at all
 export type Access = AccessLevel | null;
 
+// Numeric order of access levels, used to compare them
 const RANK: Record<AccessLevel, number> = {
     [PermissionOptions.VIEW]: 1,
     [PermissionOptions.DOWNLOAD]: 2,
@@ -26,6 +27,7 @@ const RANK: Record<AccessLevel, number> = {
     [OWNER]: 4,
 };
 
+// The higher of two levels; null (no access) loses to any level
 const higher = (a: Access, b: Access): Access => (a && b ? (RANK[a] >= RANK[b] ? a : b) : (a ?? b));
 
 // The lower of two levels

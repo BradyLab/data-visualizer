@@ -156,8 +156,9 @@ async function save() {
 <!-- Form for creating or editing a dataset; file uploads are UI only for now -->
 <template>
     <v-container class="py-6 px-12">
-        <!-- Dataset name -->
+        <!-- Load/save error message -->
         <v-alert v-if="error" type="error" variant="tonal" closable class="mb-4" @click:close="error = null">{{ error }}</v-alert>
+        <!-- Dataset name -->
         <v-text-field
             :model-value="dataset.name"
             @update:model-value="onNameInput"

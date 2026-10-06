@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// Admin-only user management page: table of users with their role and buttons for permissions / activity logs
-import { computed, onMounted, ref, watchEffect } from "vue";
+// Admin-only user management page: table of users with their role and status, filters, an invite popup, and buttons for editing / permissions / activity logs
+import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ASSIGNABLE_ROLES, UserRoles, UserStatus, type IUser } from "@commons/user";
 import EditUserDialog from "@src/components/EditUserDialog.vue";
@@ -12,7 +12,7 @@ const router = useRouter();
 const auth = useAuthStore();
 const userStore = useUserStore();
 
-// Table columns: name, email, role, and an actions column for the buttons
+// Table columns: name, email, role, status, and an actions column for the buttons
 const headers = [
     { title: "NAME", key: "name" },
     { title: "EMAIL", key: "email" },
@@ -36,8 +36,7 @@ const filteredUsers = computed(() =>
     )
 );
 
-// Load the users once we know the viewer is an admin
-// (the restoring branch above is defensive; see the router guard)
+// Load the users once we know the viewer is an admin (the router guard keeps everyone else off this page)
 onMounted(async () => {
     if (auth.isAdmin) await userStore.fetchUsers();
 });

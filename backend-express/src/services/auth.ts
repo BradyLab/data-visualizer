@@ -20,6 +20,9 @@ const verifyPassword = (password: string, stored: string) => {
     return timingSafeEqual(expected, actual);
 };
 
+// Hash of a throwaway password, checked when the email is unknown so login takes about as long as for a real account
+const DUMMY_HASH = hashPassword("not-a-real-password");
+
 /** Signs a token for the user id; lifetime comes from JWT_EXPIRES_IN (default 8h), signed with JWT_SECRET. Throws if JWT_SECRET is not set */
 export const signToken = (id: string) => {
     const expiresIn = (process.env.JWT_EXPIRES_IN ?? "8h") as NonNullable<jwt.SignOptions["expiresIn"]>;
@@ -61,6 +64,8 @@ export const changePassword = async (id: string, oldPassword: string, newPasswor
 export const login = async (email: string, password: string) => {
     console.log("[AUTH SERVICE] Looking up user to log in...");
     const user = await Users.findOne({ where: { email } });
+    // Always run scrypt, even for an unknown email, so response time doesn't reveal whether an account exists
+    const passwordOk = verifyPassword(password, user?.password ?? DUMMY_HASH);
     var success = true;
     // Callers get the same result for unknown email, wrong password, and inactive account so they can't tell which;
     // the logs say which, but they stay server-side
@@ -68,7 +73,7 @@ export const login = async (email: string, password: string) => {
         console.log("[AUTH SERVICE] No user found for that email");
         success = false;
     }
-    if (user && !verifyPassword(password, user.password)) {
+    if (user && !passwordOk) {
         console.log("[AUTH SERVICE] Password did not match");
         success = false;
     }

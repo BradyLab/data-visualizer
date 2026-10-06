@@ -74,9 +74,11 @@ export const create = async (req: Request, res: Response) => {
     if (typeof fields.user_id !== "string" || typeof fields.dataset_id !== "string")
         return res.status(400).json({ error: "user_id and dataset_id are required" });
     if (!(await authorizeDataset(res, fields.dataset_id, OWNER))) return;
-    const problem = await grantError(fields.user_id, fields.perm ?? PermissionOptions.VIEW);
+    // A missing perm defaults to VIEW; the same value is validated and stored so the two can't diverge
+    const perm = fields.perm ?? PermissionOptions.VIEW;
+    const problem = await grantError(fields.user_id, perm);
     if (problem) return res.status(400).json({ error: problem });
-    res.status(201).json(await service.create(fields));
+    res.status(201).json(await service.create({ ...fields, perm }));
 };
 
 /** PUT /:userId/:datasetId : updates an existing permission (200), or 404 if it does not exist; needs OWNER access and a perm that suits the user's role (400) */

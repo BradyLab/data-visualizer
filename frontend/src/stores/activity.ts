@@ -18,9 +18,11 @@ export const useActivityStore = defineStore("activity", () => {
         userActivities.value = await activityApi.getByUser(userId);
     }
 
-    /** Returns the cached activity with this id, or null if not loaded */
+    /** Returns the cached activity with this id (from either the full or the per-user list), or null if not loaded */
     function getById(id: string) {
-        return activities.value.find((a) => a.id === id) ?? null;
+        return (
+            activities.value.find((a) => a.id === id) ?? userActivities.value.find((a) => a.id === id) ?? null
+        );
     }
 
     return { activities, userActivities, fetchActivities, fetchByUser, getById };

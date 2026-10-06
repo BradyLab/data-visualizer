@@ -27,7 +27,7 @@ export interface IUser {
     role: UserRoles;
     status: UserStatus;
     createdAt: Date;
-    updatedAt?: Date | null;
+    updatedAt: Date | null;
 }
 
 // Credentials sent to the login endpoint

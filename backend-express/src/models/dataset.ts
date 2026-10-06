@@ -89,7 +89,7 @@ export class Datasets extends Model<IDataset> {
     })
     declare plots: DatasetPlots[];
 
-    // Who may see the dataset; defaults to PRIVATE (not enforced anywhere in the API yet)
+    // Who may see the dataset; defaults to PRIVATE (enforced by getAccess/getVisibleTo in the services)
     @Column({
         type: DataType.ENUM(...Object.values(DatasetVisibility)),
         allowNull: false,

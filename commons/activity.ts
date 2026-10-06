@@ -21,7 +21,7 @@ export enum ActivityType {
 // An activity record as stored in the Activities table
 export interface IActivity {
     id: string;
-    user_id: string;
+    user_id: string | null; // null once the user has been deleted
     type: ActivityType;
     data: Record<string, unknown>;
     createdAt: Date;

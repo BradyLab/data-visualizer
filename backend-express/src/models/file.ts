@@ -47,7 +47,7 @@ export class Files extends Model<IFile> {
     })
     declare type: FileTypes;
 
-    // File size in bytes
+    // File size in bytes (typed as string because Postgres BIGINT values are returned as strings)
     @Column({
         type: DataType.BIGINT,
         allowNull: false,

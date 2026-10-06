@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// Settings page view: user settings (name, plus a change password popup) and an admin section with dataset controls
-// (placeholder, UI only) plus links to the management pages the user is allowed to see
+// Settings page view: user settings (name, plus a change password popup) and an admin section with per-dataset
+// visibility switches and edit buttons, plus links to the management pages the user is allowed to see
 import { useRouter } from "vue-router";
 import { computed, onMounted, ref, watch } from "vue";
 import { UserStatus } from "@commons/user";
@@ -39,7 +39,7 @@ function navTo(route: string) {
     router.push(route);
 }
 
-// Settings requires a login; guests are redirected login
+// Settings requires a login; guests are redirected to the login page
 onMounted(() => {
     if (!auth.isLoggedIn) navTo("/login");
     // Dataset list for the admin section; if the request fails the list is simply empty
@@ -124,7 +124,7 @@ watch(
             </v-col>
         </v-row>
 
-        <!-- Admin section: dataset setup (placeholder) and links to the management pages -->
+        <!-- Admin section: links to the management pages (dataset list with visibility switches follows) -->
         <h2 v-if="canManagePermissions" class="text-subtitle-1 font-weight-bold mb-2">ADMIN</h2>
         <v-row v-if="canManagePermissions" class="mb-6 mx-4">
             <v-col v-if="auth.isAdmin" cols="auto">

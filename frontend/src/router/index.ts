@@ -87,7 +87,7 @@ const router = createRouter({
             component: () => import("@src/views/admin/ActivityLogs.vue"),
             meta: { hideFooter: false, requiresAuth: true, requiresAdmin: true },
         },
-        // Permission management page (admins see all datasets, other users only datasets they can edit)
+        // Permission management page (admins see all datasets, other users only the datasets they own; see fetchManaged)
         {
             path: "/admin/permissions",
             name: "permissions",
@@ -97,13 +97,14 @@ const router = createRouter({
     ],
 });
 
-// Route guard: login-required pages send logged-out users to /login, admin-only and dataset-creation pages send
+// Route guard: login-required pages send logged-out users to /login (with the requested page in the redirect query), admin-only and dataset-creation pages send
 // users without the needed role home.
 // The session is restored before the router is installed (see main.ts), so the auth state is settled here.
 // Returning a route location redirects; returning nothing lets navigation proceed
 router.beforeEach((to) => {
     const auth = useAuthStore();
-    if (to.meta.requiresAuth && !auth.isLoggedIn) return { name: "login" };
+    // LoginView sends the user back to the redirect page after they log in
+    if (to.meta.requiresAuth && !auth.isLoggedIn) return { name: "login", query: { redirect: to.fullPath } };
     if (to.meta.requiresAdmin && !auth.isAdmin) return { name: "home" };
     if (to.meta.requiresDatasetCreator && !auth.canCreateDatasets) return { name: "home" };
 });

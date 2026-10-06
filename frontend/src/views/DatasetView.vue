@@ -14,7 +14,8 @@ const auth = useAuthStore();
 const datasetStore = useDatasetStore();
 const permissionStore = usePermissionStore();
 
-// The dataset for the current url, read from the store (null until loaded or when no dataset has that url)
+// Loading and error state for the page; the dataset itself is datasetStore.currentDataset
+// (null until loaded or when no dataset has that url)
 const loading = ref(true);
 const error = ref<string | null>(null);
 
@@ -38,6 +39,8 @@ const doiHref = computed(() => {
 watch(
     () => route.params.datasetURL as string,
     async (url) => {
+        // Responses can arrive out of order, so only the latest request may update the page state
+        const isLatest = () => url === (route.params.datasetURL as string);
         loading.value = true;
         error.value = null;
         // Clear the previous dataset so a stale one is not shown while loading
@@ -47,13 +50,14 @@ watch(
                 datasetStore.getByUrl(url),
                 auth.isLoggedIn ? permissionStore.fetchMine(auth.user.id) : Promise.resolve(),
             ]);
+            if (!isLatest()) return;
             selectedTreatments.value = [];
             selectedPlots.value = [];
             if (!found) error.value = "Dataset not found";
         } catch {
-            error.value = "Unable to load the dataset. Please try again.";
+            if (isLatest()) error.value = "Unable to load the dataset. Please try again.";
         } finally {
-            loading.value = false;
+            if (isLatest()) loading.value = false;
         }
     },
     { immediate: true }

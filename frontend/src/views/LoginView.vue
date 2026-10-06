@@ -1,12 +1,13 @@
 <script setup lang="ts">
-// Login page view: email and password form; logs in through the auth store and goes to the home page
+// Login page view: email and password form; logs in through the auth store and goes to the requested page (or home)
 import { ref, onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "@src/stores/auth";
 import { UserStatus } from "@commons/user";
 
 const auth = useAuthStore();
 const router = useRouter();
+const route = useRoute();
 
 // Form field values
 const email = ref("");
@@ -15,15 +16,23 @@ const password = ref("");
 // Whether the password is shown as plain text (toggled by the eye icon)
 const showPass = ref(false);
 
-// Submits the credentials; on success goes to the home page (invited users go to settings to set a password), otherwise the store's error is shown
+// Where to go once logged in: invited users go to settings to set a password, otherwise the page the route guard
+// sent them from (?redirect=), or home. Only same-site paths are followed, so a crafted link can't send users elsewhere
+const afterLogin = () => {
+    if (auth.user.status === UserStatus.INVITED) return "/settings";
+    const redirect = route.query.redirect;
+    return typeof redirect === "string" && redirect.startsWith("/") && !redirect.startsWith("//") ? redirect : "/home";
+};
+
+// Submits the credentials; on success goes to afterLogin(), otherwise the store's error is shown
 const submit = async () => {
     if (!(await auth.login(email.value, password.value))) return;
-    await router.push(auth.user.status === UserStatus.INVITED ? "/settings" : "/home");
+    await router.push(afterLogin());
 };
 
 // Already logged in: skip the login page
 onMounted(() => {
-    if (auth.isLoggedIn) router.push(auth.user.status === UserStatus.INVITED ? "/settings" : "/home");
+    if (auth.isLoggedIn) router.push(afterLogin());
     auth.error = "";
 });
 </script>

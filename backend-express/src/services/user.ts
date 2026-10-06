@@ -62,7 +62,9 @@ export const update = async (id: string, body: Partial<IUserPass>) => {
         return null;
     }
     const wasExternal = user.role === UserRoles.EXTERNAL;
-    await user.update(body);
+    // Drop any password so it can't be saved unhashed (passwords change only through the auth service)
+    const { password: _password, ...fields } = body;
+    await user.update(fields);
     if (!wasExternal && user.role === UserRoles.EXTERNAL)
         await Permissions.update({ perm: PermissionOptions.DOWNLOAD }, { where: { user_id: id, perm: PermissionOptions.EDIT } });
     return toPublic(user);

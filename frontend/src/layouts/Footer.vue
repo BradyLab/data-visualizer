@@ -3,6 +3,7 @@
 import { useRoute } from "vue-router";
 import BradyLabLogo from "@src/components/BradyLabLogo.vue";
 import LayoutHelper from "@src/components/LayoutHelper.vue";
+import { HELP_URL } from "@src/interfaces/general";
 
 // Current route, used to read meta.hideFooter
 const route = useRoute();
@@ -18,7 +19,7 @@ const route = useRoute();
                 <v-col cols="auto" class="ml-n4">
                     <!-- Link to the help document (opens in a new tab) -->
                     <a
-                        href="https://docs.google.com/document/d/1VB1B6OtJmUqrp9LV7py-gPYMQm0WqmPKwHOjb4I01S0/edit?tab=t.h5arv6ibis4c"
+                        :href="HELP_URL"
                         target="_blank"
                         :class="{ 'text-decoration-none': true }"
                         class="text-text"

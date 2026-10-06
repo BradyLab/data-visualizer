@@ -1,13 +1,12 @@
 <script setup lang="ts">
-// Admin-only activity log page: table of recorded events with their type, user id and JSON data
-import { computed, onMounted, ref, watch, watchEffect } from "vue";
-import { useRoute, useRouter } from "vue-router";
+// Admin-only activity log page: table of recorded events with their type, user name and JSON data
+import { computed, onMounted, ref, watch } from "vue";
+import { useRoute } from "vue-router";
 import { ActivityType } from "@commons/activity";
 import { useAuthStore } from "@src/stores/auth";
 import { useUserStore } from "@src/stores/user";
 import { useActivityStore } from "@src/stores/activity";
 
-const router = useRouter();
 const route = useRoute();
 const auth = useAuthStore();
 const userStore = useUserStore();
@@ -30,7 +29,7 @@ watch(() => route.query.user, () => (userFilter.value = userFromQuery()));
 const typeOptions = Object.values(ActivityType);
 
 // Shows the user's name, falling back to the id if the user isn't loaded
-const userName = (id: string) => userStore.getById(id)?.name ?? id;
+const userName = (id: string | null) => (id ? (userStore.getById(id)?.name ?? id) : "Deleted user");
 
 // Activities matching any selected type and any selected user, where set, with the user's name added for display and sorting
 const filteredActivities = computed(() =>
@@ -38,7 +37,7 @@ const filteredActivities = computed(() =>
         .filter(
             (a) =>
                 (!typeFilter.value.length || typeFilter.value.includes(a.type)) &&
-                (!userFilter.value.length || userFilter.value.includes(a.user_id))
+                (!userFilter.value.length || (a.user_id !== null && userFilter.value.includes(a.user_id)))
         )
         .map((a) => ({ ...a, userName: userName(a.user_id) }))
 );

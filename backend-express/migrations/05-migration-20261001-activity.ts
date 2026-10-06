@@ -26,10 +26,13 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 primaryKey: true,
             },
             // Foreign key to Users.id: the user who performed the activity
+            // Nullable so the activity log survives user deletion (onDelete SET NULL); id changes propagate (onUpdate CASCADE)
             user_id: {
                 type: DataTypes.UUID,
-                allowNull: false,
+                allowNull: true,
                 references: { model: "Users", key: "id" },
+                onDelete: "SET NULL",
+                onUpdate: "CASCADE",
             },
             // Type of activity logged
             type: {

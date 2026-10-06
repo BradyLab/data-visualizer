@@ -1,7 +1,10 @@
 // Rate limiters for login, to slow down password brute-forcing
 import { ipKeyGenerator, rateLimit } from "express-rate-limit";
 import { Request, Response } from "express";
+import { PostgresStore } from "@src/middleware/rateLimitStore.ts";
 
+// Counters are kept in Postgres (see rateLimitStore.ts), so they survive restarts and are shared across instances.
+// Each limiter gets its own store prefix. If the database is unreachable the request fails with an error rather than skipping the limit
 const WINDOW_MS = 15 * 60 * 1000;
 // Body shared by both limiters; the client shows this message on HTTP 429
 const TOO_MANY = { error: "Too many login attempts. Please try again later." };
@@ -17,6 +20,7 @@ export const loginIpLimiter = rateLimit({
     standardHeaders: "draft-7", // sends the RateLimit and Retry-After headers
     legacyHeaders: false,
     skipSuccessfulRequests: true,
+    store: new PostgresStore("login-ip"),
     message: TOO_MANY,
 });
 
@@ -32,6 +36,7 @@ export const loginAccountLimiter = rateLimit({
     standardHeaders: "draft-7",
     legacyHeaders: false,
     skipSuccessfulRequests: true,
+    store: new PostgresStore("login-account"),
     // Same email in any casing counts as one account; bodies without a usable email fall back to the IP
     keyGenerator: (req: Request) => {
         const email = req.body?.email;
@@ -52,6 +57,7 @@ export const changePasswordLimiter = rateLimit({
     standardHeaders: "draft-7",
     legacyHeaders: false,
     skipSuccessfulRequests: true,
+    store: new PostgresStore("change-password"),
     keyGenerator: (req: Request, res: Response) => {
         const id = res.locals.user?.id;
         return typeof id === "string" ? `user:${id}` : ipKeyGenerator(req.ip ?? "");
