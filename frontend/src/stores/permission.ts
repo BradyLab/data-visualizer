@@ -14,19 +14,13 @@ export const usePermissionStore = defineStore("permission", () => {
     const myPermissions = ref<IPermission[]>([]);
     // The permission rows shown on the management page: every row for admins, otherwise the rows on datasets the viewer manages
     const adminPermissions = ref<IPermission[]>([]);
-    // Ids of the datasets the viewer holds a DOWNLOAD, EDIT or OWNER permission row on (each level includes the ones below it)
+    // Ids of the datasets the viewer holds a DOWNLOAD or EDIT permission row on (each level includes the ones below it)
     const downloadableDatasetIds = computed(() =>
         myPermissions.value.filter((p) => p.perm !== PermissionOptions.VIEW).map((p) => p.dataset_id)
     );
-    // Ids of the datasets the viewer holds an EDIT or OWNER permission row on (OWNER includes edit access)
+    // Ids of the datasets the viewer holds an EDIT permission row on
     const editableDatasetIds = computed(() =>
-        myPermissions.value
-            .filter((p) => p.perm === PermissionOptions.EDIT || p.perm === PermissionOptions.OWNER)
-            .map((p) => p.dataset_id)
-    );
-    // Ids of the datasets the viewer holds an OWNER permission row on
-    const ownedDatasetIds = computed(() =>
-        myPermissions.value.filter((p) => p.perm === PermissionOptions.OWNER).map((p) => p.dataset_id)
+        myPermissions.value.filter((p) => p.perm === PermissionOptions.EDIT).map((p) => p.dataset_id)
     );
 
     /** Loads the logged-in user's own permissions */
@@ -52,12 +46,12 @@ export const usePermissionStore = defineStore("permission", () => {
 
     /**
      * True if the viewer may manage this dataset: change its visibility, delete it, and see or change who it is shared with.
-     * Admins always can; the dataset's owner can whatever their role; others need an OWNER permission row.
+     * Only admins and the dataset's owner (whatever their role) can; ownership is the dataset's owner column, not a permission row.
      * This mirrors the backend rules and only decides what the UI offers, the backend enforces them.
      */
     function canManage(dataset: IDataset) {
         if (!auth.isLoggedIn) return false;
-        return auth.isAdmin || dataset.owner === auth.user.id || ownedDatasetIds.value.includes(dataset.id);
+        return auth.isAdmin || dataset.owner === auth.user.id;
     }
 
     /** True if the viewer may edit this dataset and its files: anyone who can manage it, or with an EDIT permission row */
@@ -112,7 +106,6 @@ export const usePermissionStore = defineStore("permission", () => {
         permissions: myPermissions,
         downloadableDatasetIds,
         editableDatasetIds,
-        ownedDatasetIds,
         adminPermissions,
         fetchMine,
         fetchManaged,

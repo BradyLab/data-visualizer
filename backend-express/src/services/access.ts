@@ -7,14 +7,23 @@ import { DatasetVisibility } from "@commons/dataset.ts";
 import { PermissionOptions } from "@commons/permissions.ts";
 import { UserRoles } from "@commons/user.ts";
 
-// null means no access at all
-export type Access = PermissionOptions | null;
+/**
+ * OWNER is the top access level, held by a dataset's owner (its owner column) and by admins. Unlike the other levels
+ * it is never stored as a permission row, so it is not part of PermissionOptions
+ */
+export const OWNER = "OWNER" as const;
 
-const RANK: Record<PermissionOptions, number> = {
+// What a user can hold on a dataset: a granted permission level, or OWNER
+export type AccessLevel = PermissionOptions | typeof OWNER;
+
+// null means no access at all
+export type Access = AccessLevel | null;
+
+const RANK: Record<AccessLevel, number> = {
     [PermissionOptions.VIEW]: 1,
     [PermissionOptions.DOWNLOAD]: 2,
     [PermissionOptions.EDIT]: 3,
-    [PermissionOptions.OWNER]: 4,
+    [OWNER]: 4,
 };
 
 const higher = (a: Access, b: Access): Access => (a && b ? (RANK[a] >= RANK[b] ? a : b) : (a ?? b));
@@ -23,7 +32,7 @@ const higher = (a: Access, b: Access): Access => (a && b ? (RANK[a] >= RANK[b] ?
 const atMost = (level: PermissionOptions, max: PermissionOptions) => (RANK[level] <= RANK[max] ? level : max);
 
 /** True if the level is at least `min` */
-export const hasAccess = (level: Access, min: PermissionOptions) => level !== null && RANK[level] >= RANK[min];
+export const hasAccess = (level: Access, min: AccessLevel) => level !== null && RANK[level] >= RANK[min];
 
 /** The logged-in user set by requireAuth/optionalAuth, or null for a guest */
 export const caller = (res: Response): Users | null => res.locals.user ?? null;
@@ -31,7 +40,7 @@ export const caller = (res: Response): Users | null => res.locals.user ?? null;
 /**
  * The access level a user (null = guest) has on a dataset:
  * - ADMIN: OWNER on everything
- * - the dataset's owner: OWNER whatever their role, so former lab members keep control of their datasets
+ * - the dataset's owner (its owner column): OWNER whatever their role, so former lab members keep control of their datasets
  * - LAB_MEMBER: at least DOWNLOAD on everything, including PRIVATE; more only through a permission row
  * - EXTERNAL: the level of their permission row, capped at DOWNLOAD
  * - anyone, guests included: VIEW on PUBLIC datasets
@@ -39,8 +48,8 @@ export const caller = (res: Response): Users | null => res.locals.user ?? null;
 export const getAccess = async (user: Users | null, dataset: Datasets): Promise<Access> => {
     let level: Access = dataset.visibility === DatasetVisibility.PUBLIC ? PermissionOptions.VIEW : null;
     if (!user) return level;
-    if (user.role === UserRoles.ADMIN) return PermissionOptions.OWNER;
-    if (dataset.owner === user.id) return PermissionOptions.OWNER;
+    if (user.role === UserRoles.ADMIN) return OWNER;
+    if (dataset.owner === user.id) return OWNER;
     const row = await Permissions.findOne({ where: { user_id: user.id, dataset_id: dataset.id } });
     if (row) level = higher(level, user.role === UserRoles.EXTERNAL ? atMost(row.perm, PermissionOptions.DOWNLOAD) : row.perm);
     if (user.role === UserRoles.LAB_MEMBER) level = higher(level, PermissionOptions.DOWNLOAD);
@@ -52,12 +61,7 @@ export const getAccess = async (user: Users | null, dataset: Datasets): Promise<
  * returns null: 404 if the dataset does not exist or the caller cannot even view it (so private datasets are not
  * revealed), 403 if they can view it but not at the `min` level.
  */
-export const authorizeDataset = async (
-    res: Response,
-    datasetId: string,
-    min: PermissionOptions,
-    notFound = "Dataset not found"
-) => {
+export const authorizeDataset = async (res: Response, datasetId: string, min: AccessLevel, notFound = "Dataset not found") => {
     const dataset = await Datasets.findByPk(datasetId);
     const access = dataset ? await getAccess(caller(res), dataset) : null;
     if (!dataset || !access) {

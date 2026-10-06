@@ -3,7 +3,7 @@ import { Request, Response } from "express";
 import * as service from "@src/services/dataset.ts";
 import { IDataset } from "@src/models/dataset.ts";
 import * as userService from "@src/services/user.ts";
-import { authorizeDataset, caller, getAccess, hasAccess } from "@src/services/access.ts";
+import { authorizeDataset, caller, getAccess, hasAccess, OWNER } from "@src/services/access.ts";
 import { pick } from "@src/utils/pick.ts";
 import { PermissionOptions } from "@commons/permissions.ts";
 import { UserRoles } from "@commons/user.ts";
@@ -72,11 +72,7 @@ export const update = async (req: Request, res: Response) => {
     const found = await authorizeDataset(res, req.params.id as string, PermissionOptions.EDIT);
     if (!found) return;
     const fields = pick<IDataset>(req.body, DATASET_UPDATE_FIELDS);
-    if (
-        fields.visibility !== undefined &&
-        fields.visibility !== found.dataset.visibility &&
-        !hasAccess(found.access, PermissionOptions.OWNER)
-    ) {
+    if (fields.visibility !== undefined && fields.visibility !== found.dataset.visibility && !hasAccess(found.access, OWNER)) {
         console.log("[DATASET CONTROLLER] Only an owner may change visibility");
         return res.status(403).json({ error: "Forbidden" });
     }
@@ -86,7 +82,7 @@ export const update = async (req: Request, res: Response) => {
 /** DELETE /:id : deletes a dataset (204 with no body); needs OWNER access (404 if not found or not visible, 403 if not an owner) */
 export const remove = async (req: Request, res: Response) => {
     console.log("[DATASET CONTROLLER] Attempting to delete dataset...");
-    const found = await authorizeDataset(res, req.params.id as string, PermissionOptions.OWNER);
+    const found = await authorizeDataset(res, req.params.id as string, OWNER);
     if (!found) return;
     await service.remove(found.dataset.id);
     res.status(204).send();

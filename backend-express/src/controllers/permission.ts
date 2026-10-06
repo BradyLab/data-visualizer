@@ -3,7 +3,7 @@ import { Request, Response } from "express";
 import * as service from "@src/services/permission.ts";
 import { IPermission } from "@src/models/permission.ts";
 import * as userService from "@src/services/user.ts";
-import { authorizeDataset, caller } from "@src/services/access.ts";
+import { authorizeDataset, caller, OWNER } from "@src/services/access.ts";
 import { pick } from "@src/utils/pick.ts";
 import { PermissionOptions } from "@commons/permissions.ts";
 import { UserRoles } from "@commons/user.ts";
@@ -13,7 +13,7 @@ const PERMISSION_FIELDS = ["user_id", "dataset_id", "perm"] as const;
 // Only a dataset's OWNER (or an admin) may see or change who it is shared with, so these checks are all OWNER-level.
 // Checks that perm is a valid level for the user receiving it; returns the error message, or null if fine:
 // EXTERNAL users only ever get VIEW or DOWNLOAD, and admins/lab members already view and download every dataset,
-// so only EDIT and OWNER rows make sense for them
+// so only EDIT rows make sense for them. OWNER is not a permission (it is the dataset's owner column), so it is never valid here
 const grantError = async (userId: string, perm: unknown) => {
     if (!Object.values(PermissionOptions).includes(perm as PermissionOptions)) return "A valid perm is required";
     const target = await userService.getById(userId);
@@ -48,18 +48,14 @@ export const listByUser = async (req: Request, res: Response) => {
 /** GET /byDataset/:datasetId : lists all permissions on one dataset (200); needs OWNER access (404 if not found or not visible, 403 otherwise) */
 export const listByDataset = async (req: Request, res: Response) => {
     console.log("[PERMISSION CONTROLLER] Attempting to list permissions by dataset...");
-    if (!(await authorizeDataset(res, req.params.datasetId as string, PermissionOptions.OWNER))) return;
+    if (!(await authorizeDataset(res, req.params.datasetId as string, OWNER))) return;
     res.status(200).json(await service.getAll({ dataset_id: req.params.datasetId as string }));
 };
 
 /** GET /:userId/:datasetId : returns one permission (200), or 404 if it does not exist; a user may read their own, otherwise it needs OWNER access */
 export const get = async (req: Request, res: Response) => {
     console.log("[PERMISSION CONTROLLER] Attempting to get permission...");
-    if (
-        req.params.userId !== caller(res)!.id &&
-        !(await authorizeDataset(res, req.params.datasetId as string, PermissionOptions.OWNER))
-    )
-        return;
+    if (req.params.userId !== caller(res)!.id && !(await authorizeDataset(res, req.params.datasetId as string, OWNER))) return;
     const item = await service.getById(req.params.userId as string, req.params.datasetId as string);
     if (!item) {
         console.log("[PERMISSION CONTROLLER] Permission not found");
@@ -77,7 +73,7 @@ export const create = async (req: Request, res: Response) => {
     const fields = pick<IPermission>(req.body, PERMISSION_FIELDS);
     if (typeof fields.user_id !== "string" || typeof fields.dataset_id !== "string")
         return res.status(400).json({ error: "user_id and dataset_id are required" });
-    if (!(await authorizeDataset(res, fields.dataset_id, PermissionOptions.OWNER))) return;
+    if (!(await authorizeDataset(res, fields.dataset_id, OWNER))) return;
     const problem = await grantError(fields.user_id, fields.perm ?? PermissionOptions.VIEW);
     if (problem) return res.status(400).json({ error: problem });
     res.status(201).json(await service.create(fields));
@@ -86,7 +82,7 @@ export const create = async (req: Request, res: Response) => {
 /** PUT /:userId/:datasetId : updates an existing permission (200), or 404 if it does not exist; needs OWNER access and a perm that suits the user's role (400) */
 export const update = async (req: Request, res: Response) => {
     console.log("[PERMISSION CONTROLLER] Attempting to update permission...");
-    if (!(await authorizeDataset(res, req.params.datasetId as string, PermissionOptions.OWNER))) return;
+    if (!(await authorizeDataset(res, req.params.datasetId as string, OWNER))) return;
     const problem = await grantError(req.params.userId as string, req.body?.perm);
     if (problem) return res.status(400).json({ error: problem });
     const item = await service.update(
@@ -104,7 +100,7 @@ export const update = async (req: Request, res: Response) => {
 /** DELETE /:userId/:datasetId : deletes a permission (204 with no body), or 404 if it does not exist; needs OWNER access */
 export const remove = async (req: Request, res: Response) => {
     console.log("[PERMISSION CONTROLLER] Attempting to delete permission...");
-    if (!(await authorizeDataset(res, req.params.datasetId as string, PermissionOptions.OWNER))) return;
+    if (!(await authorizeDataset(res, req.params.datasetId as string, OWNER))) return;
     if (!(await service.remove(req.params.userId as string, req.params.datasetId as string))) {
         console.log("[PERMISSION CONTROLLER] Permission not found");
         return res.status(404).json({ error: "Permission not found" });

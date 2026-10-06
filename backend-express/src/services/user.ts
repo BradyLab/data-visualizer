@@ -52,7 +52,7 @@ export const hasOtherActiveAdmin = async (id: string) =>
 
 /**
  * Updates a user's email, name, role or status (any password in the body is ignored); returns null if not found.
- * Becoming EXTERNAL downgrades the user's EDIT and OWNER permissions to DOWNLOAD, since external users cannot edit
+ * Becoming EXTERNAL downgrades the user's EDIT permissions to DOWNLOAD, since external users cannot edit
  */
 export const update = async (id: string, body: Partial<IUserPass>) => {
     console.log("[USER SERVICE] Updating user...");
@@ -64,10 +64,7 @@ export const update = async (id: string, body: Partial<IUserPass>) => {
     const wasExternal = user.role === UserRoles.EXTERNAL;
     await user.update(body);
     if (!wasExternal && user.role === UserRoles.EXTERNAL)
-        await Permissions.update(
-            { perm: PermissionOptions.DOWNLOAD },
-            { where: { user_id: id, perm: { [Op.in]: [PermissionOptions.EDIT, PermissionOptions.OWNER] } } }
-        );
+        await Permissions.update({ perm: PermissionOptions.DOWNLOAD }, { where: { user_id: id, perm: PermissionOptions.EDIT } });
     return toPublic(user);
 };
 

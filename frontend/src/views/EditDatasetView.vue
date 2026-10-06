@@ -88,7 +88,7 @@ const canSave = computed(
 );
 
 // In edit mode, loads the dataset with the url from the route and fills the form, but only for viewers who may edit it
-// (admin, owner or an EDIT/OWNER permission, same rule as the edit button in DatasetView); everyone else is sent to the dataset page.
+// (admin, owner or an EDIT permission, same rule as the edit button in DatasetView); everyone else is sent to the dataset page.
 // This is a usability check only: the backend must enforce edit access itself
 onMounted(async () => {
     // Owner options are needed in both modes; a failure here just leaves the dropdown empty.

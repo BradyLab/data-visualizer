@@ -22,7 +22,7 @@ const error = ref<string | null>(null);
 const selectedTreatments = ref<string[]>([]);
 const selectedPlots = ref<string[]>([]);
 
-// Edit is offered to admins, the dataset's owner (a lab member), and users with an EDIT or OWNER permission on the dataset
+// Edit is offered to admins, the dataset's owner (a lab member), and users with an EDIT permission on the dataset
 // This hides the button; EditDatasetView repeats the check client-side and redirects, and the backend enforces it
 const canEdit = computed(() => !!datasetStore.currentDataset && permissionStore.canEdit(datasetStore.currentDataset));
 
