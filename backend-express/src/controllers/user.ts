@@ -18,6 +18,12 @@ export const list = async (req: Request, res: Response) => {
     res.status(200).json(await service.getAll());
 };
 
+/** GET /names : returns just the id and name of every user (200) */
+export const listNames = async (req: Request, res: Response) => {
+    console.log("[USER CONTROLLER] Attempting to list user names...");
+    res.status(200).json(await service.getNames());
+};
+
 /** GET /:id : returns one user (200), or 404 if it does not exist */
 export const get = async (req: Request, res: Response) => {
     console.log("[USER CONTROLLER] Attempting to get user...");

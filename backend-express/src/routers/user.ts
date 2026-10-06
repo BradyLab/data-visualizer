@@ -9,6 +9,8 @@ const router = Router();
 
 // TODO: user routes have no requireAuth or role check, so anyone can list, create, invite, edit, or delete users (including changing roles)
 router.get("/", controller.list);
+// Must be registered before "/:id" or "names" would be treated as an id
+router.get("/names", controller.listNames);
 router.post("/", controller.create);
 router.get("/:id", controller.get);
 router.put("/:id", controller.update);

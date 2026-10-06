@@ -18,6 +18,12 @@ export const getAll = () => {
     return Users.findAll({ attributes: PUBLIC_ATTRIBUTES });
 };
 
+/** Returns only the id and name of every user */
+export const getNames = () => {
+    console.log("[USER SERVICE] Fetching user names...");
+    return Users.findAll({ attributes: ["id", "name"] });
+};
+
 /** Finds a user by primary key without the password, or null */
 export const getById = (id: string) => {
     console.log("[USER SERVICE] Fetching user by id...");
