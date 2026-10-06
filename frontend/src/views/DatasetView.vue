@@ -3,7 +3,6 @@
 // Gene and cell type selection and plot generation are still static placeholders.
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { storeToRefs } from "pinia";
 import { useAuthStore } from "@src/stores/auth";
 import { useDatasetStore } from "@src/stores/dataset";
 import { usePermissionStore } from "@src/stores/permission";
@@ -22,10 +21,6 @@ const error = ref<string | null>(null);
 // Treatments and plots the viewer has ticked (nothing starts selected)
 const selectedTreatments = ref<string[]>([]);
 const selectedPlots = ref<string[]>([]);
-
-// Edit is offered to admins, the dataset's owner (a lab member), and users with an EDIT permission on the dataset
-// This hides the button; EditDatasetView repeats the check client-side and redirects, and the backend enforces it
-const canEdit = computed(() => !!datasetStore.currentDataset && permissionStore.canEdit(datasetStore.currentDataset));
 
 // DOI as a link: bare DOIs (10.xxxx/...) are resolved through doi.org
 // Values already starting with http(s):// are used as-is
@@ -81,13 +76,14 @@ watch(
             </v-col>
             <v-col cols="auto" class="d-flex align-center ga-2">
                 <v-btn
-                    v-if="canEdit"
+                    v-if="permissionStore.canEdit(datasetStore.currentDataset)"
                     color="primary"
                     prepend-icon="mdi-pencil"
                     @click="router.push(`/dataset/${datasetStore.currentDataset.url}/edit`)"
                     >Edit</v-btn
                 >
                 <v-btn
+                    v-if="permissionStore.canDownload(datasetStore.currentDataset)"
                     color="primary"
                     prepend-icon="mdi-download"
                     target="_blank"
