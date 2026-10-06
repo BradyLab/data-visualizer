@@ -90,17 +90,20 @@ watch(
                 <v-btn
                     color="primary"
                     prepend-icon="mdi-download"
-                    :href="datasetStore.currentDataset.rawDataLink || undefined"
-                    :disabled="!datasetStore.currentDataset.rawDataLink"
                     target="_blank"
                     rel="noopener noreferrer"
-                    >Raw Data</v-btn
+                    >Data</v-btn
                 >
             </v-col>
         </v-row>
 
         <!-- Dataset description -->
         <v-row class="text-body-large">{{ datasetStore.currentDataset.description }}</v-row>
+
+        <!-- Attribution (only when set) -->
+        <v-row v-if="datasetStore.currentDataset.attribution" class="text-body-medium text-medium-emphasis">{{
+            datasetStore.currentDataset.attribution
+        }}</v-row>
 
         <!-- Gene selector (multi-select with removable chips) -->
         <v-row class="text-body-medium mx-4">Pick Your Genes</v-row>

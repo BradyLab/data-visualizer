@@ -16,10 +16,6 @@ const auth = useAuthStore();
 
 // Dataset store, which populates the DATASETS menu
 const datasetStore = useDatasetStore();
-onMounted(() => {
-    // If the request fails the menu is simply empty
-    datasetStore.fetchDatasets().catch(() => {});
-});
 
 // Navigate to the given route path
 function navTo(route: string) {

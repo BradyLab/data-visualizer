@@ -67,13 +67,13 @@ export class Datasets extends Model<IDataset> {
     })
     declare doi: string;
 
-    // Optional link to the raw data
+    // Optional credit/attribution text
     @Column({
         type: DataType.STRING,
         allowNull: false,
         defaultValue: "",
     })
-    declare rawDataLink: string;
+    declare attribution: string;
 
     // Treatment names used in the dataset
     @Column({

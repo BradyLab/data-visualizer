@@ -15,7 +15,7 @@ const DATASET_FIELDS = [
     "url",
     "description",
     "doi",
-    "rawDataLink",
+    "attribution",
     "treatments",
     "plots",
     "visibility",

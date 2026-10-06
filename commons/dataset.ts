@@ -24,7 +24,7 @@ export interface IDataset {
     url: string;
     description: string;
     doi: string;
-    rawDataLink: string;
+    attribution: string;
     treatments: string[];
     plots: DatasetPlots[];
     visibility: DatasetVisibility;

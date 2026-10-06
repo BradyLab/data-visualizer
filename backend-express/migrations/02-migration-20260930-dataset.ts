@@ -53,8 +53,8 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 allowNull: false,
                 defaultValue: "",
             },
-            // Optional link to the raw data download
-            rawDataLink: {
+            // Optional credit/attribution text shown with the dataset
+            attribution: {
                 type: DataTypes.STRING,
                 allowNull: false,
                 defaultValue: "",

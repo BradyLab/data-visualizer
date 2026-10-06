@@ -29,7 +29,7 @@ const dataset = ref<IDataset>({
     url: "",
     description: "",
     doi: "",
-    rawDataLink: "",
+    attribution: "",
     treatments: [],
     plots: [],
     // New datasets start private; visibility is changed from the settings page
@@ -129,7 +129,7 @@ async function save() {
         url: slugify(d.url),
         description: d.description,
         doi: d.doi.trim(),
-        rawDataLink: d.rawDataLink.trim(),
+        attribution: d.attribution.trim(),
         treatments: d.treatments,
         plots: d.plots,
     };
@@ -215,27 +215,15 @@ async function save() {
             class="mb-4 mx-4"
         ></v-text-field>
 
-        <!-- Link to raw data download (NCBI/SRA) -->
-        <v-row class="text-body-medium mb-1 mx-4">Raw Data Download Link (NCBI/SRA)</v-row>
+        <!-- Attribution / credit text -->
+        <v-row class="text-body-medium mb-1 mx-4">Attribution</v-row>
         <v-text-field
-            v-model="dataset.rawDataLink"
-            placeholder="Add download link here"
+            v-model="dataset.attribution"
+            placeholder="Add attribution here"
             density="compact"
             hide-details
             class="mb-4 mx-4"
         ></v-text-field>
-
-        <!-- Raw data file upload -->
-        <v-row class="mx-4">
-            <v-file-upload
-                density="compact"
-                title="Upload Raw Data File"
-                clearable
-                :multiple="false"
-                hide-details
-            ></v-file-upload>
-            <!-- <v-btn color="primary" prepend-icon="mdi-upload">Upload raw data file</v-btn> -->
-        </v-row>
 
         <!-- Treatments associated with the dataset -->
         <v-row class="text-body-medium mb-1 mx-4">Add Your Treatments</v-row>
