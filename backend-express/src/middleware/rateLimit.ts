@@ -40,9 +40,7 @@ export const loginAccountLimiter = rateLimit({
     // Same email in any casing counts as one account; bodies without a usable email fall back to the IP
     keyGenerator: (req: Request) => {
         const email = req.body?.email;
-        return typeof email === "string" && email.trim()
-            ? `email:${email.trim().toLowerCase()}`
-            : ipKeyGenerator(req.ip ?? "");
+        return typeof email === "string" && email.trim() ? `email:${email.trim().toLowerCase()}` : ipKeyGenerator(req.ip ?? "");
     },
     message: TOO_MANY,
 });

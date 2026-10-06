@@ -115,9 +115,7 @@ function edit(userId: string, datasetId: string) {
 <template>
     <v-container v-if="auth.user.id">
         <h1 class="text-h6 font-weight-bold">PERMISSIONS MANAGEMENT</h1>
-        <v-alert v-if="error" type="error" variant="tonal" closable class="my-4" @click:close="error = null">{{
-            error
-        }}</v-alert>
+        <v-alert v-if="error" type="error" variant="tonal" closable class="my-4" @click:close="error = null">{{ error }}</v-alert>
 
         <!-- Filter menu: each item opens a submenu of values; picking one sets the filter and shows a chip -->
         <v-row class="align-center mb-2">

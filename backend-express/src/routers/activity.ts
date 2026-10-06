@@ -15,6 +15,6 @@ router.get("/", requireAuth, requireRole(UserRoles.ADMIN), controller.list);
 // A user may read their own activity
 router.get("/byUser/:userId", requireAuth, requireSelfOrAdmin("userId"), controller.listByUser);
 // Admin only: a single activity can belong to any user
-router.get("/:id",requireAuth, requireRole(UserRoles.ADMIN), controller.get);
+router.get("/:id", requireAuth, requireRole(UserRoles.ADMIN), controller.get);
 
 export default router;

@@ -25,7 +25,10 @@ const typeFilter = ref<ActivityType[]>([]);
 const userFromQuery = () => (typeof route.query.user === "string" ? [route.query.user] : []);
 const userFilter = ref<string[]>(userFromQuery());
 // The router reuses this component when only the query changes, so re-apply the preset whenever ?user= changes
-watch(() => route.query.user, () => (userFilter.value = userFromQuery()));
+watch(
+    () => route.query.user,
+    () => (userFilter.value = userFromQuery())
+);
 const typeOptions = Object.values(ActivityType);
 
 // Shows the user's name, falling back to the id if the user isn't loaded

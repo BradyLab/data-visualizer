@@ -81,11 +81,10 @@ export const login = async (email: string, password: string) => {
         console.log("[AUTH SERVICE] User is inactive");
         success = false;
     }
-    if(success && user) {
+    if (success && user) {
         console.log("[AUTH SERVICE] Credentials verified, signing token");
         // Strip the hash so it is never sent to the client
         const { password: _password, ...publicUser } = user.get({ plain: true });
         return { token: signToken(user.id), user: publicUser };
     } else return null;
-    
 };

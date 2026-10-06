@@ -47,15 +47,11 @@ export const create = async (req: Request, res: Response) => {
     console.log("[USER CONTROLLER] Attempting to invite user...");
     const { name, role } = req.body ?? {};
     const email = cleanEmail(req.body?.email);
-    if (typeof name !== "string" || !name.trim() || !email)
-        return res.status(400).json({ error: "Name and email are required" });
+    if (typeof name !== "string" || !name.trim() || !email) return res.status(400).json({ error: "Name and email are required" });
     if (!EMAIL_FORMAT.test(email)) return res.status(400).json({ error: "Enter a valid email address" });
-    if (!ASSIGNABLE_ROLES.includes(role))
-        return res.status(400).json({ error: "A valid role is required" });
+    if (!ASSIGNABLE_ROLES.includes(role)) return res.status(400).json({ error: "A valid role is required" });
     res.status(201).json(
-        await service.create(
-            pick<IUserPass>({ name: name.trim(), email, role }, ["email", "name", "role"] as const)
-        )
+        await service.create(pick<IUserPass>({ name: name.trim(), email, role }, ["email", "name", "role"] as const))
     );
 };
 

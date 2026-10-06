@@ -62,14 +62,7 @@ async function logout() {
             <v-col cols="auto"> | </v-col>
             <v-col cols="auto">
                 <!-- Link to the help document (opens in a new tab) -->
-                <a
-                    :href="HELP_URL"
-                    target="_blank"
-                    :class="{ 'text-decoration-none': true }"
-                    class="text-text"
-                >
-                    HELP
-                </a>
+                <a :href="HELP_URL" target="_blank" :class="{ 'text-decoration-none': true }" class="text-text"> HELP </a>
             </v-col>
             <!-- ABOUT and FEEDBACK links shared with the footer -->
             <LayoutHelper />
