@@ -11,6 +11,8 @@ const router = Router();
 // TODO: reads also ignore Dataset.visibility, so PRIVATE datasets are listed and fetched for anyone
 router.get("/", controller.list);
 router.post("/", controller.create);
+// Must be registered before "/:id" or "byURL" would be treated as an id
+router.get("/byURL/:url", controller.getByUrl);
 router.get("/:id", controller.get);
 router.put("/:id", controller.update);
 router.delete("/:id", controller.remove);

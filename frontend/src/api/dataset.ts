@@ -1,5 +1,5 @@
 // Axios client for the backend /datasets endpoints
-import axios from "axios";
+import axios, { isAxiosError } from "axios";
 import type { IDataset } from "@commons/dataset";
 import { apis } from "@commons/general";
 import { type CreateDatasetPayload, type UpdateDatasetPayload } from "@src/interfaces/dataset";
@@ -12,10 +12,26 @@ export const datasetApi = {
         return response.data;
     },
 
-    /** GET /datasets/:id : returns one dataset (rejects with a 404 error if it does not exist) */
-    async getDataset(id: string): Promise<IDataset> {
-        const response = await axios.get<IDataset>(`${baseURL}/${apis.DATASET}/${id}`);
-        return response.data;
+    /** GET /datasets/:id : returns one dataset, or null if it does not exist (other errors still reject) */
+    async getDataset(id: string): Promise<IDataset | null> {
+        try {
+            const response = await axios.get<IDataset>(`${baseURL}/${apis.DATASET}/${id}`);
+            return response.data;
+        } catch (e) {
+            if (isAxiosError(e) && e.response?.status === 404) return null;
+            throw e;
+        }
+    },
+
+    /** GET /datasets/byURL/:url : returns the dataset with this url slug, or null if it does not exist (other errors still reject) */
+    async getDatasetByUrl(url: string): Promise<IDataset | null> {
+        try {
+            const response = await axios.get<IDataset>(`${baseURL}/${apis.DATASET}/byURL/${encodeURIComponent(url)}`);
+            return response.data;
+        } catch (e) {
+            if (isAxiosError(e) && e.response?.status === 404) return null;
+            throw e;
+        }
     },
 
     /** POST /datasets : creates a dataset and returns it */

@@ -92,12 +92,11 @@ onMounted(async () => {
     if (!isEdit.value) return;
     loading.value = true;
     try {
-        await Promise.all([
-            datasetStore.fetchDatasets(),
+        const [found] = await Promise.all([
+            datasetStore.getByUrl(editingUrl.value!),
             permissionStore.fetchEditable(auth.user.id, auth.isAdmin),
             usersLoaded,
         ]);
-        const found = datasetStore.datasets.find((d) => d.url === editingUrl.value);
         if (!found) {
             error.value = "Dataset not found";
             return;

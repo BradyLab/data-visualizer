@@ -35,6 +35,17 @@ export const get = async (req: Request, res: Response) => {
     res.status(200).json(item);
 };
 
+/** GET /byURL/:url : returns the dataset with this url slug (200), or 404 if it does not exist */
+export const getByUrl = async (req: Request, res: Response) => {
+    console.log("[DATASET CONTROLLER] Attempting to get dataset by url...");
+    const item = await service.getByUrl(req.params.url as string);
+    if (!item) {
+        console.log("[DATASET CONTROLLER] Dataset not found");
+        return res.status(404).json({ error: "Dataset not found" });
+    }
+    res.status(200).json(item);
+};
+
 /** POST / : creates a dataset from the request body (201) */
 export const create = async (req: Request, res: Response) => {
     console.log("[DATASET CONTROLLER] Attempting to create dataset...");

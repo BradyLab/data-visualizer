@@ -7,22 +7,24 @@ import { type CreateDatasetPayload, type UpdateDatasetPayload } from "@src/inter
 
 export const useDatasetStore = defineStore("dataset", () => {
     const datasets = ref<IDataset[]>([]);
+    // Result of the latest getById / getByUrl lookup (null if that lookup found nothing)
+    const currentDataset = ref<IDataset | null>(null);
 
     /** Loads all datasets from the backend into the store */
     async function fetchDatasets() {
         datasets.value = await datasetApi.getDatasets();
     }
 
-    /** Returns the cached dataset with this id, or null if not loaded */
+    /** Fetches the dataset with this id from the backend, or null if there is none; also stores it in currentDataset */
     async function getById(id: string) {
-        const data = datasets.value.find((d) => d.id === id);
+        currentDataset.value = await datasetApi.getDataset(id);
+        return currentDataset.value;
+    }
 
-        if (!data) {
-            await fetchDatasets();
-            return datasets.value.find((d) => d.id === id) ?? null;
-        }
-
-        return data;
+    /** Fetches the dataset with this url slug from the backend, or null if there is none; also stores it in currentDataset */
+    async function getByUrl(url: string) {
+        currentDataset.value = await datasetApi.getDatasetByUrl(url);
+        return currentDataset.value;
     }
 
     /** Creates a dataset and adds it to the store */
@@ -48,5 +50,5 @@ export const useDatasetStore = defineStore("dataset", () => {
         datasets.value = datasets.value.filter((d) => d.id !== id);
     }
 
-    return { datasets, fetchDatasets, getById, addDataset, editDataset, removeDataset };
+    return { datasets, currentDataset, fetchDatasets, getById, getByUrl, addDataset, editDataset, removeDataset };
 });

@@ -13,6 +13,12 @@ export const getById = (id: string) => {
     return Datasets.findByPk(id);
 };
 
+/** Finds a dataset by its url slug, or null */
+export const getByUrl = (url: string) => {
+    console.log("[DATASET SERVICE] Fetching dataset by url...");
+    return Datasets.findOne({ where: { url } });
+};
+
 /** Creates a dataset from the whitelisted body fields */
 export const create = (body: Partial<IDataset>) => {
     console.log("[DATASET SERVICE] Creating dataset...");

@@ -3,7 +3,7 @@
 // Gene and cell type selection and plot generation are still static placeholders.
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import type { IDataset } from "@commons/dataset";
+import { storeToRefs } from "pinia";
 import { useAuthStore } from "@src/stores/auth";
 import { useDatasetStore } from "@src/stores/dataset";
 import { usePermissionStore } from "@src/stores/permission";
@@ -14,8 +14,7 @@ const auth = useAuthStore();
 const datasetStore = useDatasetStore();
 const permissionStore = usePermissionStore();
 
-// The dataset for the current url (null until loaded or when no dataset has that url)
-const dataset = ref<IDataset | null>(null);
+// The dataset for the current url, read from the store (null until loaded or when no dataset has that url)
 const loading = ref(true);
 const error = ref<string | null>(null);
 
@@ -27,34 +26,32 @@ const selectedPlots = ref<string[]>([]);
 // This hides the button; EditDatasetView repeats the check client-side and redirects, and the backend must enforce it
 const canEdit = computed(
     () =>
-        !!dataset.value &&
+        !!datasetStore.currentDataset &&
         auth.isLoggedIn &&
-        (auth.isAdmin || dataset.value.owner === auth.user.id || permissionStore.editableDatasetIds.includes(dataset.value.id))
+        (auth.isAdmin || datasetStore.currentDataset.owner === auth.user.id || permissionStore.editableDatasetIds.includes(datasetStore.currentDataset.id))
 );
 
 // DOI as a link: bare DOIs (10.xxxx/...) are resolved through doi.org
 // Values already starting with http(s):// are used as-is
 const doiHref = computed(() => {
-    const doi = dataset.value?.doi;
+    const doi = datasetStore.currentDataset?.doi;
     if (!doi) return null;
     return /^https?:\/\//i.test(doi) ? doi : `https://doi.org/${doi}`;
 });
 
 // Loads the dataset (and, for logged-in users, their permissions) whenever the url slug changes
-// The whole list is fetched and searched by url, since there is no lookup-by-slug call.
 watch(
     () => route.params.datasetURL as string,
     async (url) => {
         loading.value = true;
         error.value = null;
-        dataset.value = null;
+        // Clear the previous dataset so a stale one is not shown while loading
+        datasetStore.currentDataset = null;
         try {
-            await Promise.all([
-                datasetStore.fetchDatasets(),
+            const [found] = await Promise.all([
+                datasetStore.getByUrl(url),
                 auth.isLoggedIn ? permissionStore.fetchEditable(auth.user.id, auth.isAdmin) : Promise.resolve(),
             ]);
-            const found = datasetStore.datasets.find((d) => d.url === url) ?? null;
-            dataset.value = found;
             selectedTreatments.value = [];
             selectedPlots.value = [];
             if (!found) error.value = "Dataset not found";
@@ -70,7 +67,7 @@ watch(
 
 <!-- Dataset page: name, description, treatments and plots come from the backend; genes and cell types are still placeholders -->
 <template>
-    <v-container v-if="!dataset" class="px-12">
+    <v-container v-if="!datasetStore.currentDataset" class="px-12">
         <v-progress-circular v-if="loading" indeterminate></v-progress-circular>
         <v-alert v-else type="error" variant="tonal">{{ error }}</v-alert>
     </v-container>
@@ -78,9 +75,9 @@ watch(
         <!-- Title, DOI, and action buttons -->
         <v-row class="mb-4">
             <v-col>
-                <h1 class="text-h6 my-0 font-weight-bold">{{ dataset.name }}</h1>
+                <h1 class="text-h6 my-0 font-weight-bold">{{ datasetStore.currentDataset.name }}</h1>
                 <div v-if="doiHref" class="text-body-small">
-                    DOI: <a :href="doiHref" target="_blank" rel="noopener noreferrer">{{ dataset.doi }}</a>
+                    DOI: <a :href="doiHref" target="_blank" rel="noopener noreferrer">{{ datasetStore.currentDataset.doi }}</a>
                 </div>
             </v-col>
             <v-col cols="auto" class="d-flex align-center ga-2">
@@ -88,14 +85,14 @@ watch(
                     v-if="canEdit"
                     color="primary"
                     prepend-icon="mdi-pencil"
-                    @click="router.push(`/dataset/${dataset.url}/edit`)"
+                    @click="router.push(`/dataset/${datasetStore.currentDataset.url}/edit`)"
                     >Edit</v-btn
                 >
                 <v-btn
                     color="primary"
                     prepend-icon="mdi-download"
-                    :href="dataset.rawDataLink || undefined"
-                    :disabled="!dataset.rawDataLink"
+                    :href="datasetStore.currentDataset.rawDataLink || undefined"
+                    :disabled="!datasetStore.currentDataset.rawDataLink"
                     target="_blank"
                     rel="noopener noreferrer"
                     >Raw Data</v-btn
@@ -104,7 +101,7 @@ watch(
         </v-row>
 
         <!-- Dataset description -->
-        <v-row class="text-body-large">{{ dataset.description }}</v-row>
+        <v-row class="text-body-large">{{ datasetStore.currentDataset.description }}</v-row>
 
         <!-- Gene selector (multi-select with removable chips) -->
         <v-row class="text-body-medium mx-4">Pick Your Genes</v-row>
@@ -139,7 +136,7 @@ watch(
             <v-col cols="12" md="6">
                 <div class="text-body-medium mb-1">Pick Your Treatments</div>
                 <v-checkbox
-                    v-for="treatment in dataset.treatments"
+                    v-for="treatment in datasetStore.currentDataset.treatments"
                     :key="treatment"
                     v-model="selectedTreatments"
                     :value="treatment"
@@ -152,7 +149,7 @@ watch(
             <v-col cols="12" md="6">
                 <div class="text-body-medium mb-1">Pick Your Plots</div>
                 <v-checkbox
-                    v-for="plot in dataset.plots"
+                    v-for="plot in datasetStore.currentDataset.plots"
                     :key="plot"
                     v-model="selectedPlots"
                     :value="plot"
