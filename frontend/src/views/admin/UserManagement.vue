@@ -2,7 +2,7 @@
 // Admin-only user management page: table of users with their role and buttons for permissions / activity logs
 import { computed, onMounted, ref, watchEffect } from "vue";
 import { useRouter } from "vue-router";
-import { UserRoles, UserStatus, type IUser } from "@commons/user";
+import { ASSIGNABLE_ROLES, UserRoles, UserStatus, type IUser } from "@commons/user";
 import EditUserDialog from "@src/components/EditUserDialog.vue";
 import InviteUserDialog from "@src/components/InviteUserDialog.vue";
 import { useAuthStore } from "@src/stores/auth";
@@ -24,7 +24,7 @@ const headers = [
 // Selected filter values; an empty list means no filter on that field
 const roleFilter = ref<UserRoles[]>([]);
 const statusFilter = ref<UserStatus[]>([]);
-const roleOptions = Object.values(UserRoles);
+const roleOptions = ASSIGNABLE_ROLES;
 const statusOptions = Object.values(UserStatus);
 
 // Users matching any selected status and any selected role
@@ -35,13 +35,6 @@ const filteredUsers = computed(() =>
             (!roleFilter.value.length || roleFilter.value.includes(u.role))
     )
 );
-
-// Only admins may view this page; everyone else is sent home.
-// A saved token with a GUEST user means the session is still being restored on page load, so wait for it.
-watchEffect(() => {
-    const restoring = auth.isLoggedIn && auth.user.role === UserRoles.GUEST;
-    if (!auth.isAdmin && !restoring) router.replace("/home");
-});
 
 // Load the users once we know the viewer is an admin
 // (the restoring branch above is defensive; see the router guard)

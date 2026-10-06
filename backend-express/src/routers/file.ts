@@ -7,6 +7,7 @@ const router = Router();
 
 // Request flow: router -> controller (HTTP in/out) -> service (database). No requireAuth is applied to these routes
 
+// TODO: no route here is protected, so anyone can read, create, edit, or delete file records for any dataset
 router.get("/", controller.list);
 router.post("/", controller.create);
 router.get("/byDataset/:datasetId", controller.listByDataset);

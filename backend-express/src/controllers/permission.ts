@@ -43,7 +43,7 @@ export const get = async (req: Request, res: Response) => {
     res.status(200).json(item);
 };
 
-/** POST / : creates a permission from the request body (201) */
+/** POST / : creates a permission from the request body (201); a duplicate user/dataset pair becomes a 409 in the global error handler */
 export const create = async (req: Request, res: Response) => {
     console.log("[PERMISSION CONTROLLER] Attempting to create permission...");
     res.status(201).json(await service.create(pick<IPermission>(req.body, PERMISSION_FIELDS)));

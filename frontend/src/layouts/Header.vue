@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Top app bar: logo, DATASETS menu, HELP/ABOUT/FEEDBACK links, and account menu
-import { onMounted } from "vue";
+import { onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import BradyLabLogo from "@src/components/BradyLabLogo.vue";
 import LayoutHelper from "@src/components/LayoutHelper.vue";
@@ -15,11 +15,17 @@ const auth = useAuthStore();
 
 // Dataset store, which populates the DATASETS menu
 const datasetStore = useDatasetStore();
-// TODOD04: datasets are fetched only once on mount, so the menu is not refreshed after login/logout (visibility may differ per user)
 onMounted(() => {
     // If the request fails the menu is simply empty
     datasetStore.fetchDatasets().catch(() => {});
 });
+
+// The visible datasets can differ per user, so reload the menu whenever the user changes (login, logout, switching accounts).
+// Not immediate: main.ts awaits restore() before mounting, so the fetch above already has the right user
+watch(
+    () => auth.user.id,
+    () => datasetStore.fetchDatasets().catch(() => {})
+);
 
 // Navigate to the given route path
 function navTo(route: string) {

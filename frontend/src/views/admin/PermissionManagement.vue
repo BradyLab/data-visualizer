@@ -64,16 +64,28 @@ watchEffect(() => {
     if (!auth.isLoggedIn) router.replace("/home");
 });
 
+// Message shown when the datasets or permissions could not be loaded
+const error = ref<string | null>(null);
+
 // Load the data once the real user is known (the id is empty until login / session restore finishes)
 watch(
     () => auth.user.id,
     async (id) => {
         if (!id) return;
-        await Promise.all([
-            userStore.fetchUsers(),
-            datasetStore.fetchDatasets(),
-            permissionStore.fetchEditable(id, auth.isAdmin),
-        ]);
+        error.value = null;
+        try {
+            await Promise.all([
+                // Only used for names and the user filter, so a failure just leaves ids showing instead of names.
+                // Non-admins load the whole user list too, because there is no endpoint for just the names they need
+                userStore.fetchUsers().catch(() => {}),
+                datasetStore.fetchDatasets(),
+                permissionStore.fetchEditable(id, auth.isAdmin),
+            ]);
+        } catch {
+            // No redirect here: an empty editable list after a failure doesn't mean the viewer lacks access
+            error.value = "Unable to load permissions. Please try again.";
+            return;
+        }
         // Non-admins without edit access to any dataset have nothing to manage here
         if (!auth.isAdmin && !permissionStore.editableDatasetIds.length) router.replace("/home");
     },
@@ -94,6 +106,9 @@ function edit(userId: string, datasetId: string) {
 <template>
     <v-container v-if="auth.user.id">
         <h1 class="text-h6 font-weight-bold">PERMISSIONS MANAGEMENT</h1>
+        <v-alert v-if="error" type="error" variant="tonal" closable class="my-4" @click:close="error = null">{{
+            error
+        }}</v-alert>
 
         <!-- Filter menu: each item opens a submenu of values; picking one sets the filter and shows a chip -->
         <v-row class="align-center mb-2">

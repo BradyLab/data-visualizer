@@ -3,6 +3,7 @@ import { ref, computed } from "vue";
 import { defineStore } from "pinia";
 import axios from "axios";
 import { UserRoles, UserStatus, type IUser } from "@commons/user";
+import { PASSWORD_CHANGE_REQUIRED } from "@commons/general";
 import { authApi } from "@src/api/auth";
 
 // localStorage key for the token so the session survives a page reload
@@ -33,12 +34,14 @@ export const useAuthStore = defineStore("auth", () => {
     const loading = ref(false);
     const error = ref<string | null>(null);
 
-    // Logged in whenever a token is present (the token is not validated client-side)
-    // TODOD05: true while restore() is still pending (user is still the GUEST placeholder) and for an expired token until /me fails
-    const isLoggedIn = computed(() => !!token.value);
+    // Logged in once there is a token and the user it belongs to has been loaded (id is "" for the GUEST placeholder),
+    // so this is false while restore() is still pending; an expired token is caught by the 401 handler below
+    const isLoggedIn = computed(() => !!token.value && !!user.value.id);
 
     //misc information to avoid recalculations
     const isAdmin = computed(() => user.value.role === UserRoles.ADMIN);
+    // Admins and lab members may create datasets (the same roles the owner dropdown offers)
+    const canCreateDatasets = computed(() => isAdmin.value || user.value.role === UserRoles.LAB_MEMBER);
 
     // Saves the token, and makes every axios request send it
     function setToken(value: string | null) {
@@ -63,10 +66,13 @@ export const useAuthStore = defineStore("auth", () => {
             user.value = result.user;
             return true;
         } catch (err) {
+            const status = axios.isAxiosError(err) ? err.response?.status : undefined;
             error.value =
-                axios.isAxiosError(err) && err.response?.status === 401
+                status === 401
                     ? "Invalid email or password"
-                    : "Unable to log in. Please try again.";
+                    : status === 429
+                      ? "Too many login attempts. Please wait a few minutes and try again."
+                      : "Unable to log in. Please try again.";
             return false;
         } finally {
             loading.value = false;
@@ -91,6 +97,24 @@ export const useAuthStore = defineStore("auth", () => {
         user.value = guestUser;
     }
 
+    // Global response handling:
+    // - 401 while holding a token: it expired or the account was disabled, so drop the session instead of staying
+    //   "logged in" (skipped without a token, where a 401 just means bad credentials on the login form)
+    // - 403 PASSWORD_CHANGE_REQUIRED: the user is still INVITED (default password), so mark them as such and send them
+    //   to /settings, where the unclosable change-password dialog opens (SettingsView watches the status)
+    axios.interceptors.response.use(undefined, (err) => {
+        if (axios.isAxiosError(err)) {
+            const { status, data } = err.response ?? {};
+            if (status === 401 && token.value) clearSession();
+            else if (status === 403 && data?.code === PASSWORD_CHANGE_REQUIRED && token.value) {
+                if (user.value.status !== UserStatus.INVITED) user.value = { ...user.value, status: UserStatus.INVITED };
+                // Imported lazily because the router imports this store
+                import("@src/router").then((m) => m.default.push("/settings"));
+            }
+        }
+        return Promise.reject(err);
+    });
+
     /** Notifies the backend, then clears the token and user; the local session is cleared even if the request fails */
     async function logout() {
         try {
@@ -109,6 +133,7 @@ export const useAuthStore = defineStore("auth", () => {
         error,
         isLoggedIn,
         isAdmin,
+        canCreateDatasets,
         login,
         restore,
         logout,

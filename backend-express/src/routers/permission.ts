@@ -7,6 +7,7 @@ const router = Router();
 
 // Request flow: router -> controller (HTTP in/out) -> service (database). No requireAuth is applied to these routes
 
+// TODO: reads are unauthenticated too, so anyone can see which users can access which datasets
 router.get("/", controller.list);
 // TODO: permission routes have no requireAuth or role check, so anyone can grant themselves access to any dataset
 router.post("/", controller.create);

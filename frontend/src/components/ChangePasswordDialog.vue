@@ -5,6 +5,7 @@ import axios from "axios";
 import { authApi } from "@src/api/auth";
 import { useAuthStore } from "@src/stores/auth";
 import { UserStatus } from "@commons/user";
+import { MIN_PASSWORD_LENGTH } from "@commons/general";
 
 const auth = useAuthStore();
 
@@ -22,9 +23,17 @@ const error = ref<string | null>(null);
 const success = ref(false);
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 
+// Field rules; each returns true when valid or an error message when not
+// The backend enforces the same minimum (and also rejects the default password, which the client cannot know)
+const minLength = (v: string) => v.length >= MIN_PASSWORD_LENGTH || `Must be at least ${MIN_PASSWORD_LENGTH} characters`;
 const required = (label: string) => (v: string) => !!v || `${label} is required`;
 const matchesNew = (v: string) => v === newPassword.value || "Passwords do not match";
 const notSameAsOld = (v: string) => v !== oldPassword.value || "New password must not equal old password";
+
+// Editing the new password invalidates a confirmation typed earlier, so re-run the form rules
+watch(newPassword, () => {
+    if (confirmPassword.value) form.value?.validate();
+});
 
 // Start with an empty form each time the popup opens
 watch(open, (isOpen) => {
@@ -48,10 +57,14 @@ async function submit() {
         // The backend activates invited users on their first password change
         if (auth.user.status === UserStatus.INVITED) auth.user = { ...auth.user, status: UserStatus.ACTIVE };
     } catch (err) {
+        const response = axios.isAxiosError(err) ? err.response : undefined;
+        // 400 and 429 carry the backend's reason (e.g. new password is the default password, too many attempts)
         error.value =
-            axios.isAxiosError(err) && err.response?.status === 403
+            response?.status === 403
                 ? "Old password is incorrect."
-                : "Unable to change your password. Please try again.";
+                : (response?.status === 400 || response?.status === 429) && typeof response.data?.error === "string"
+                  ? response.data.error
+                  : "Unable to change your password. Please try again.";
     } finally {
         saving.value = false;
     }
@@ -76,7 +89,7 @@ async function submit() {
                         label="New password"
                         type="password"
                         :clearable="false"
-                        :rules="[required('New password'), notSameAsOld]"
+                        :rules="[required('New password'), minLength, notSameAsOld]"
                     ></v-text-field>
                     <v-text-field
                         v-model="confirmPassword"

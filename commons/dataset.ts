@@ -31,3 +31,21 @@ export interface IDataset {
     createdAt: Date;
     updatedAt: Date | null;
 }
+
+// Url slugs that would collide with fixed frontend routes under /dataset/ (e.g. /dataset/new is the create page)
+export const RESERVED_DATASET_SLUGS = ["new"];
+
+// Turns a name into a url slug: lowercase letters/digits separated by single dashes
+export const slugify = (value: string) =>
+    value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+
+// Returns why a dataset url is not a usable slug, or null if it is fine; used by the form and enforced by the backend model
+export const datasetUrlError = (url: string): string | null => {
+    if (!url) return "Url is required";
+    if (url !== slugify(url)) return "Url may only contain lowercase letters, digits and single dashes";
+    if (RESERVED_DATASET_SLUGS.includes(url)) return `"${url}" is reserved and cannot be used as a url`;
+    return null;
+};

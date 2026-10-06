@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Popup for an admin to edit a user's role and status; saves through the user store
 import { ref, watch } from "vue";
-import { UserRoles, UserStatus, type IUser } from "@commons/user";
+import { ASSIGNABLE_ROLES, UserRoles, UserStatus, type IUser } from "@commons/user";
 import { useUserStore } from "@src/stores/user";
 
 const props = defineProps<{ user: IUser | null }>();
@@ -11,7 +11,7 @@ const open = defineModel<boolean>({ default: false });
 const userStore = useUserStore();
 
 // GUEST is the logged-out placeholder role, so it isn't offered for real users
-const roleOptions: UserRoles[] = Object.values(UserRoles).filter((r) => r !== UserRoles.GUEST);
+const roleOptions = ASSIGNABLE_ROLES;
 const statusOptions: UserStatus[] = Object.values(UserStatus).filter((s) => s !== UserStatus.INVITED);
 
 const role = ref<UserRoles>(UserRoles.EXTERNAL);

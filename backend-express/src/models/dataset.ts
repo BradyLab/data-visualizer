@@ -1,7 +1,7 @@
 // Sequelize model for the Datasets table (columns must stay in sync with the dataset migration)
 import { Column, DataType, ForeignKey, HasMany, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
 // Shared dataset interface and plot types from the commons package
-import { IDataset, DatasetPlots, DatasetVisibility } from "@commons/dataset.ts";
+import { IDataset, DatasetPlots, DatasetVisibility, datasetUrlError } from "@commons/dataset.ts";
 import { Users } from "@src/models/user.ts";
 import { Permissions } from "@src/models/permission.ts";
 import { Files } from "@src/models/file.ts";
@@ -38,11 +38,17 @@ export class Datasets extends Model<IDataset> {
     })
     declare owner: string;
 
-    // Unique URL/slug for the dataset
+    // Unique URL/slug for the dataset; must be a clean slug and not a reserved word (a failure becomes a 400)
     @Unique
     @Column({
         type: DataType.STRING,
         allowNull: false,
+        validate: {
+            isValidSlug(value: string) {
+                const problem = datasetUrlError(value);
+                if (problem) throw new Error(problem);
+            },
+        },
     })
     declare url: string;
 
@@ -105,8 +111,8 @@ export class Datasets extends Model<IDataset> {
     })
     declare updatedAt: Date | null;
 
-    // Soft-deleting a dataset (dataset.destroy()) also soft-deletes its permissions.
-    // hooks: true makes Sequelize load and destroy each child row individually, which honors paranoid mode;
+    // Deleting a dataset (dataset.destroy()) also deletes its permissions (hard delete, Permissions is not paranoid).
+    // hooks: true makes Sequelize load and destroy each child row individually;
     // it does not apply to bulk deletes like Datasets.destroy({ where }) unless individualHooks: true is passed
     @HasMany(() => Permissions, { foreignKey: "dataset_id", onDelete: "CASCADE", onUpdate: "CASCADE", hooks: true })
     declare permissions?: Permissions[];

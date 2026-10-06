@@ -20,11 +20,15 @@ const verifyPassword = (password: string, stored: string) => {
     return timingSafeEqual(expected, actual);
 };
 
-/** Signs a token for the user id; lifetime comes from JWT_EXPIRES_IN (default 8h), signed with JWT_SECRET */
+/** Signs a token for the user id; lifetime comes from JWT_EXPIRES_IN (default 8h), signed with JWT_SECRET. Throws if JWT_SECRET is not set */
 export const signToken = (id: string) => {
     const expiresIn = (process.env.JWT_EXPIRES_IN ?? "8h") as NonNullable<jwt.SignOptions["expiresIn"]>;
-    if (process.env.JWT_SECRET) return jwt.sign({ id } satisfies TokenPayload, process.env.JWT_SECRET, { expiresIn });
-    else console.log("[AUTH SERVICE] JWT_SECRET not set");
+    // Fail loudly: returning undefined here would let login() answer 200 with no token
+    if (!process.env.JWT_SECRET) {
+        console.error("[AUTH SERVICE] JWT_SECRET not set");
+        throw new Error("JWT_SECRET is not set");
+    }
+    return jwt.sign({ id } satisfies TokenPayload, process.env.JWT_SECRET, { expiresIn });
 };
 
 /** Returns the id in a valid token, or null if the token is invalid or expired */

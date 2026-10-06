@@ -12,7 +12,7 @@ const toPublic = (user: Users) => {
     return rest;
 };
 
-/** Returns all non-deleted users without passwords */
+/** Returns all users without passwords */
 export const getAll = () => {
     console.log("[USER SERVICE] Fetching all users...");
     return Users.findAll({ attributes: PUBLIC_ATTRIBUTES });
@@ -49,7 +49,7 @@ export const update = async (id: string, body: Partial<IUserPass>) => {
     return toPublic(user);
 };
 
-// Soft-deletes the user (and their permissions); returns false if not found
+// Hard-deletes the user; their permissions and uploaded files are removed by the foreign-key cascades. Returns false if not found
 export const remove = async (id: string) => {
     console.log("[USER SERVICE] Deleting user...");
     const user = await Users.findByPk(id);

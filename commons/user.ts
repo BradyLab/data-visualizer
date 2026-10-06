@@ -8,6 +8,9 @@ export enum UserRoles {
     GUEST = "GUEST",
 }
 
+// Roles a real user account can hold; GUEST is only the frontend's logged-out placeholder, so it is never assigned or filtered on
+export const ASSIGNABLE_ROLES: UserRoles[] = Object.values(UserRoles).filter((r) => r !== UserRoles.GUEST);
+
 // Account lifecycle states
 export enum UserStatus {
     ACTIVE = "ACTIVE",

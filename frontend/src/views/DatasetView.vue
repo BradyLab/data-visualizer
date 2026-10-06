@@ -24,7 +24,7 @@ const selectedTreatments = ref<string[]>([]);
 const selectedPlots = ref<string[]>([]);
 
 // Edit is offered to admins, the dataset's owner, and users with EDIT permission on the dataset
-// This only hides the button; the edit route itself just requires a login (see the router)
+// This hides the button; EditDatasetView repeats the check client-side and redirects, and the backend must enforce it
 const canEdit = computed(
     () =>
         !!dataset.value &&

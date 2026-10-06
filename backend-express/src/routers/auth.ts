@@ -1,17 +1,18 @@
 // Routes for authentication, mounted at /auth in index.ts
 import { Router } from "express";
 import * as controller from "@src/controllers/auth.ts";
-import { requireAuth } from "@src/middleware/auth.ts";
+import { requireAuth, requireAuthAllowInvited } from "@src/middleware/auth.ts";
+import { changePasswordLimiter, loginAccountLimiter, loginIpLimiter } from "@src/middleware/rateLimit.ts";
 
 const router = Router();
 
-// Public: exchanges email + password for a JWT
-router.post("/login", controller.login);
+// Public: exchanges email + password for a JWT; failed attempts are rate limited per IP and per account (429)
+router.post("/login", loginIpLimiter, loginAccountLimiter, controller.login);
 // Protected: requireAuth validates the Bearer token and loads the user before the controller runs
-router.get("/me", requireAuth, controller.me);
+router.get("/me", requireAuthAllowInvited, controller.me);
 // Protected: acknowledges the logout; the client is responsible for discarding the token
-router.post("/logout", requireAuth, controller.logout);
-// Protected: changes the logged-in user's password after checking the old one
-router.post("/change-password", requireAuth, controller.changePassword);
+router.post("/logout", requireAuthAllowInvited, controller.logout);
+// Protected: changes the logged-in user's password after checking the old one; failed attempts are rate limited per user (429)
+router.post("/change-password", requireAuthAllowInvited, changePasswordLimiter, controller.changePassword);
 
 export default router;

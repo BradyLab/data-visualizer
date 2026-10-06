@@ -3,16 +3,18 @@
 import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
-import { DatasetPlots, DatasetVisibility, type IDataset } from "@commons/dataset";
+import { DatasetPlots, DatasetVisibility, datasetUrlError, slugify, type IDataset } from "@commons/dataset";
 import { UserRoles, UserStatus } from "@commons/user";
 import { useAuthStore } from "@src/stores/auth";
 import { useDatasetStore } from "@src/stores/dataset";
+import { usePermissionStore } from "@src/stores/permission";
 import { useUserStore } from "@src/stores/user";
 
 const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
 const datasetStore = useDatasetStore();
+const permissionStore = usePermissionStore();
 const userStore = useUserStore();
 
 // Edit mode when the route carries a dataset url slug; otherwise we are creating a new dataset
@@ -55,14 +57,8 @@ const ownerOptions = computed(() =>
 // Plot options the backend accepts (value is the stored enum value)
 const plotOptions = Object.values(DatasetPlots);
 
-// Turns a name into a url slug: lowercase letters/digits separated by single dashes
-const slugify = (value: string) =>
-    value
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "");
-
 // While creating, keep the url in step with the name until the user types their own url
+// The url field shows the raw text as typed; it is only normalised with slugify() when saving (and in canSave).
 const urlTouched = ref(false);
 function onNameInput(value: string) {
     dataset.value.name = value;
@@ -73,26 +69,43 @@ function onUrlInput(value: string) {
     dataset.value.url = value;
 }
 
+// Problem with the url as it will be saved (empty, or a reserved slug such as "new"), shown under the field; null once typing starts out empty
+const urlError = computed(() => (dataset.value.url ? datasetUrlError(slugify(dataset.value.url)) : null));
+
+// Save is blocked while busy, without a name or owner, or with an unusable url; in edit mode the dataset must have loaded (id set)
 const canSave = computed(
     () =>
         !saving.value &&
         !loading.value &&
         !!dataset.value.name.trim() &&
-        !!slugify(dataset.value.url) &&
+        !!dataset.value.owner &&
+        !datasetUrlError(slugify(dataset.value.url)) &&
         (!isEdit.value || !!dataset.value.id)
 );
 
-// In edit mode, loads the dataset with the url from the route and fills the form
+// In edit mode, loads the dataset with the url from the route and fills the form, but only for viewers who may edit it
+// (admin, owner or EDIT permission, same rule as the edit button in DatasetView); everyone else is sent to the dataset page.
+// This is a usability check only: the backend must enforce edit access itself
 onMounted(async () => {
     // Owner options are needed in both modes; a failure here just leaves the dropdown empty
     const usersLoaded = userStore.fetchUsers().catch(() => {});
     if (!isEdit.value) return;
     loading.value = true;
     try {
-        await Promise.all([datasetStore.fetchDatasets(), usersLoaded]);
+        await Promise.all([
+            datasetStore.fetchDatasets(),
+            permissionStore.fetchEditable(auth.user.id, auth.isAdmin),
+            usersLoaded,
+        ]);
         const found = datasetStore.datasets.find((d) => d.url === editingUrl.value);
         if (!found) {
             error.value = "Dataset not found";
+            return;
+        }
+        const mayEdit =
+            auth.isAdmin || found.owner === auth.user.id || permissionStore.editableDatasetIds.includes(found.id);
+        if (!mayEdit) {
+            await router.replace(`/dataset/${found.url}`);
             return;
         }
         // Copy so edits don't change the store's cached dataset before saving
@@ -124,10 +137,14 @@ async function save() {
             : await datasetStore.addDataset({ ...fields, owner: d.owner, visibility: d.visibility });
         await router.push(`/dataset/${saved.url}`);
     } catch (err) {
-        const taken = axios.isAxiosError(err) && err.response?.status === 500;
-        error.value = taken
-            ? "Unable to save the dataset. The url may already be in use by another dataset."
-            : "Unable to save the dataset. Please try again.";
+        // 409 is a duplicate url; 400 carries the backend's validation message (e.g. a reserved url)
+        const response = axios.isAxiosError(err) ? err.response : undefined;
+        error.value =
+            response?.status === 409
+                ? "Unable to save the dataset. The url is already in use by another dataset."
+                : response?.status === 400 && typeof response.data?.error === "string"
+                  ? `Unable to save the dataset. ${response.data.error}`
+                  : "Unable to save the dataset. Please try again.";
     } finally {
         saving.value = false;
     }
@@ -179,7 +196,8 @@ async function save() {
             prefix="/dataset/"
             placeholder="dataset-url"
             density="compact"
-            hide-details
+            :error-messages="urlError ?? undefined"
+            :hide-details="!urlError"
             class="mb-4 mx-4"
         ></v-text-field>
 

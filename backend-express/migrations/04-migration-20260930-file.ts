@@ -33,7 +33,7 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 onUpdate: "CASCADE",
                 onDelete: "CASCADE",
             },
-            // Foreign key to Users.id: the user that uploaded this file (no cascade; Users are soft-deleted)
+            // Foreign key to Users.id: the user that uploaded this file (cascades, so deleting a user also deletes the files they uploaded; Users are hard-deleted)
             user_id: {
                 type: DataTypes.UUID,
                 allowNull: false,

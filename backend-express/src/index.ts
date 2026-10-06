@@ -14,7 +14,7 @@ import fileRouter from "@src/routers/file.ts";
 import activityRouter from "@src/routers/activity.ts";
 import authRouter from "@src/routers/auth.ts";
 
-import { UniqueConstraintError, ValidationError, ForeignKeyConstraintError } from "sequelize";
+import { UniqueConstraintError, ValidationError, ForeignKeyConstraintError, DatabaseError } from "sequelize";
 
 // Port to listen on; falls back to 3001 if API_PORT is not set
 const PORT = process.env.API_PORT || 3001;
@@ -49,6 +49,10 @@ export const get = () => {
         if (err instanceof UniqueConstraintError) return res.status(409).json({ error: "Already exists" });
         if (err instanceof ValidationError || err instanceof ForeignKeyConstraintError)
             return res.status(400).json({ error: err.message });
+        // Postgres code 22P02 (invalid_text_representation): a value that can't be parsed for its column type,
+        // e.g. a non-UUID in /:id or an unknown enum value in a filter. Must come after the subclasses above
+        if (err instanceof DatabaseError && (err.parent as { code?: string } | undefined)?.code === "22P02")
+            return res.status(400).json({ error: "Invalid value in request" });
         console.error("[ERROR HANDLER] Unhandled error:", err.stack);
         res.status(500).json({ error: "Internal Server Error" });
     });
@@ -59,6 +63,12 @@ export const get = () => {
 // Connects to the database and starts the HTTP server (the schema is managed by migrations, not sequelize.sync())
 export const start = async () => {
     const app = get();
+
+    // Refuse to start without a signing secret, since every login would otherwise fail (see signToken in services/auth.ts)
+    if (!process.env.JWT_SECRET) {
+        console.error("[SERVER]: JWT_SECRET is not set; refusing to start.");
+        return;
+    }
 
     try {
         await sequelize.authenticate();

@@ -2,12 +2,14 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@src/stores/auth";
 
-// Route meta flags: requiresAuth needs a login, requiresAdmin needs an admin (and implies a login)
+// Route meta flags: requiresAuth needs a login, requiresAdmin needs an admin (and implies a login),
+// requiresDatasetCreator needs an admin or lab member (and implies a login)
 declare module "vue-router" {
     interface RouteMeta {
         hideFooter?: boolean;
         requiresAuth?: boolean;
         requiresAdmin?: boolean;
+        requiresDatasetCreator?: boolean;
     }
 }
 
@@ -56,12 +58,13 @@ const router = createRouter({
             component: () => import("@src/views/EditDatasetView.vue"),
             meta: { hideFooter: false, requiresAuth: true },
         },
-        // Page for creating a new dataset
+        // Page for creating a new dataset; static routes outrank "/dataset/:datasetURL", so "new" is a reserved slug
+        // (RESERVED_DATASET_SLUGS in commons/dataset.ts, enforced by the Datasets model and the edit form)
         {
             path: "/dataset/new",
             name: "new",
             component: () => import("@src/views/EditDatasetView.vue"),
-            meta: { hideFooter: false, requiresAuth: true },
+            meta: { hideFooter: false, requiresAuth: true, requiresDatasetCreator: true },
         },
         // Login page (footer hidden)
         {
@@ -94,12 +97,15 @@ const router = createRouter({
     ],
 });
 
-// Route guard: login-required pages send logged-out users to /login, admin-only pages send non-admins home.
+// Route guard: login-required pages send logged-out users to /login, admin-only and dataset-creation pages send
+// users without the needed role home.
 // The session is restored before the router is installed (see main.ts), so the auth state is settled here.
+// Returning a route location redirects; returning nothing lets navigation proceed
 router.beforeEach((to) => {
     const auth = useAuthStore();
     if (to.meta.requiresAuth && !auth.isLoggedIn) return { name: "login" };
     if (to.meta.requiresAdmin && !auth.isAdmin) return { name: "home" };
+    if (to.meta.requiresDatasetCreator && !auth.canCreateDatasets) return { name: "home" };
 });
 
 export default router;

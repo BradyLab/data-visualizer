@@ -2,7 +2,7 @@
 // Popup for an admin to enter the name, email and role of a user to invite; sends the invite through the user store
 import { ref, watch } from "vue";
 import axios from "axios";
-import { UserRoles } from "@commons/user";
+import { ASSIGNABLE_ROLES, UserRoles } from "@commons/user";
 import { useUserStore } from "@src/stores/user";
 
 // v-model controls whether the popup is open
@@ -11,7 +11,7 @@ const open = defineModel<boolean>({ default: false });
 const userStore = useUserStore();
 
 // GUEST is the logged-out placeholder role, so it isn't offered for real users
-const roleOptions: UserRoles[] = Object.values(UserRoles).filter((r) => r !== UserRoles.GUEST);
+const roleOptions = ASSIGNABLE_ROLES;
 
 const name = ref("");
 const email = ref("");

@@ -1,6 +1,7 @@
 // Request handlers for authentication
 import { Request, Response } from "express";
 import * as service from "@src/services/auth.ts";
+import { MIN_PASSWORD_LENGTH } from "@commons/general.ts";
 
 /** POST /login : returns { token, user } (200), 400 if email/password are missing, or 401 for bad credentials */
 export const login = async (req: Request, res: Response) => {
@@ -25,12 +26,22 @@ export const logout = (_req: Request, res: Response) => {
     res.status(204).send();
 };
 
-/** POST /change-password : changes the logged-in user's password (204), 400 if a field is missing, or 403 if the old password is wrong */
+/** POST /change-password : changes the logged-in user's password (204), 400 if a field is missing, the new password is shorter than MIN_PASSWORD_LENGTH, or it equals the old or default password, or 403 if the old password is wrong */
 export const changePassword = async (req: Request, res: Response) => {
     console.log("[AUTH CONTROLLER] Attempting to change password...");
     const { oldPassword, newPassword } = req.body ?? {};
     if (typeof oldPassword !== "string" || typeof newPassword !== "string" || !newPassword) {
         return res.status(400).json({ error: "Old and new passwords are required" });
+    }
+    if (newPassword.length < MIN_PASSWORD_LENGTH) {
+        return res.status(400).json({ error: `New password must be at least ${MIN_PASSWORD_LENGTH} characters` });
+    }
+    if (newPassword === oldPassword) {
+        return res.status(400).json({ error: "New password must be different from the old password" });
+    }
+    // Invited users start on the default password, so it must not be reusable as a "new" one
+    if (process.env.DEFAULT_PASSWORD && newPassword === process.env.DEFAULT_PASSWORD) {
+        return res.status(400).json({ error: "New password must not be the default password" });
     }
     if (!(await service.changePassword(res.locals.user.id, oldPassword, newPassword))) {
         return res.status(403).json({ error: "Old password is incorrect" });

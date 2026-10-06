@@ -1,9 +1,8 @@
 <script setup lang="ts">
 // Admin-only activity log page: table of recorded events with their type, user id and JSON data
-import { computed, onMounted, ref, watchEffect } from "vue";
+import { computed, onMounted, ref, watch, watchEffect } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ActivityType } from "@commons/activity";
-import { UserRoles } from "@commons/user";
 import { useAuthStore } from "@src/stores/auth";
 import { useUserStore } from "@src/stores/user";
 import { useActivityStore } from "@src/stores/activity";
@@ -24,7 +23,10 @@ const headers = [
 // Selected filter values; an empty list means no filter on that field
 const typeFilter = ref<ActivityType[]>([]);
 // The user filter can be preset with a ?user=<id> query param (e.g. from the User Management page)
-const userFilter = ref<string[]>(typeof route.query.user === "string" ? [route.query.user] : []);
+const userFromQuery = () => (typeof route.query.user === "string" ? [route.query.user] : []);
+const userFilter = ref<string[]>(userFromQuery());
+// The router reuses this component when only the query changes, so re-apply the preset whenever ?user= changes
+watch(() => route.query.user, () => (userFilter.value = userFromQuery()));
 const typeOptions = Object.values(ActivityType);
 
 // Shows the user's name, falling back to the id if the user isn't loaded

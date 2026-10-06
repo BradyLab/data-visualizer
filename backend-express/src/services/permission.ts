@@ -16,7 +16,7 @@ export const getById = (user_id: string, dataset_id: string) => {
     return Permissions.findOne({ where: { user_id, dataset_id } });
 };
 
-// Re-activates a previously soft-deleted permission instead of violating the composite primary key
+// Creates a permission; fails on the composite primary key if the user already has one for this dataset (deleted rows are gone for good)
 export const create = async (data: Partial<IPermission>) => {
     console.log("[PERMISSION SERVICE] Creating permission...");
     return Permissions.create(data as IPermission);
@@ -33,7 +33,7 @@ export const update = async (user_id: string, dataset_id: string, body: Partial<
     return permission.update(body);
 };
 
-/** Soft-deletes a permission; returns false if not found */
+/** Hard-deletes a permission (the row is removed, not flagged); returns false if not found */
 export const remove = async (user_id: string, dataset_id: string) => {
     console.log("[PERMISSION SERVICE] Deleting permission...");
     const permission = await getById(user_id, dataset_id);

@@ -7,7 +7,7 @@ import { Datasets } from "@src/models/dataset.ts";
 
 export type { IPermission };
 
-// Maps this class to the "Permissions" table and enables createdAt/updatedAt timestamps (paranoid: true = soft deletes via deletedAt)
+// Maps this class to the "Permissions" table and enables createdAt/updatedAt timestamps
 @Table({
     tableName: "Permissions",
     timestamps: true,
