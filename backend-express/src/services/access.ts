@@ -27,7 +27,7 @@ export const caller = (res: Response): Users | null => res.locals.user ?? null;
 /**
  * The access level a user (null = guest) has on a dataset:
  * - ADMIN: OWNER on everything
- * - the dataset's owner: OWNER while still a LAB_MEMBER; any other role keeps at least VIEW on their own dataset
+ * - the dataset's owner: OWNER whatever their role, so former lab members keep control of their datasets
  * - LAB_MEMBER: at least VIEW on everything, including PRIVATE; more only through a permission row
  * - EXTERNAL: the level of their permission row, capped at VIEW
  * - anyone, guests included: VIEW on PUBLIC datasets
@@ -36,10 +36,10 @@ export const getAccess = async (user: Users | null, dataset: Datasets): Promise<
     let level: Access = dataset.visibility === DatasetVisibility.PUBLIC ? PermissionOptions.VIEW : null;
     if (!user) return level;
     if (user.role === UserRoles.ADMIN) return PermissionOptions.OWNER;
-    if (user.role === UserRoles.LAB_MEMBER && dataset.owner === user.id) return PermissionOptions.OWNER;
+    if (dataset.owner === user.id) return PermissionOptions.OWNER;
     const row = await Permissions.findOne({ where: { user_id: user.id, dataset_id: dataset.id } });
     if (row) level = higher(level, user.role === UserRoles.EXTERNAL ? PermissionOptions.VIEW : row.perm);
-    if (user.role === UserRoles.LAB_MEMBER || dataset.owner === user.id) level = higher(level, PermissionOptions.VIEW);
+    if (user.role === UserRoles.LAB_MEMBER) level = higher(level, PermissionOptions.VIEW);
     return level;
 };
 

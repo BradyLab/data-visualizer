@@ -3,7 +3,6 @@ import { computed, ref } from "vue";
 import { defineStore } from "pinia";
 import { PermissionOptions, type IPermission } from "@commons/permissions";
 import type { IDataset } from "@commons/dataset";
-import { UserRoles } from "@commons/user";
 import { permissionApi } from "@src/api/permission";
 import { type CreatePermissionPayload } from "@src/interfaces/permission";
 import { useAuthStore } from "@src/stores/auth";
@@ -46,16 +45,12 @@ export const usePermissionStore = defineStore("permission", () => {
 
     /**
      * True if the viewer may manage this dataset: change its visibility, delete it, and see or change who it is shared with.
-     * Admins always can; the dataset's owner can while still a lab member; others need an OWNER permission row.
+     * Admins always can; the dataset's owner can whatever their role; others need an OWNER permission row.
      * This mirrors the backend rules and only decides what the UI offers, the backend enforces them.
      */
     function canManage(dataset: IDataset) {
         if (!auth.isLoggedIn) return false;
-        return (
-            auth.isAdmin ||
-            (dataset.owner === auth.user.id && auth.user.role === UserRoles.LAB_MEMBER) ||
-            ownedDatasetIds.value.includes(dataset.id)
-        );
+        return auth.isAdmin || dataset.owner === auth.user.id || ownedDatasetIds.value.includes(dataset.id);
     }
 
     /** True if the viewer may edit this dataset and its files: anyone who can manage it, or with an EDIT permission row */
