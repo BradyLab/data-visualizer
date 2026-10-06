@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Permission management page: table of who holds which permission on which dataset.
-// Admins (implicit edit access) see every dataset and permission; other users only see datasets they hold EDIT permission on,
-// and are redirected home if they have none.
+// Admins see every dataset and permission; other users only see datasets they own (as the dataset's owner or through an
+// OWNER permission), since only owners may see who a dataset is shared with, and are redirected home if they own none.
 import { computed, ref, watch, watchEffect } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "@src/stores/auth";
@@ -29,13 +29,11 @@ const headers = [
 const userFilter = ref<string[]>(typeof route.query.user === "string" ? [route.query.user] : []);
 const datasetFilter = ref<string[]>([]);
 
-// Datasets the viewer may see: all for admins, otherwise only those they can edit
-const visibleDatasets = computed(() =>
-    auth.isAdmin ? datasetStore.datasets : datasetStore.datasets.filter((d) => permissionStore.editableDatasetIds.includes(d.id))
-);
+// Datasets the viewer may manage: all for admins, otherwise only those they own
+const visibleDatasets = computed(() => datasetStore.datasets.filter((d) => permissionStore.canManage(d)));
 
 // Permission rows joined with user and dataset details, limited to the selected filters.
-// Admins have implicit edit access everywhere, so they see every permission; others only see permissions on visible datasets.
+// Admins see every permission; others only see permissions on the datasets they manage.
 const rows = computed(() => {
     return permissionStore.adminPermissions
         .filter(
@@ -47,7 +45,7 @@ const rows = computed(() => {
             key: `${p.user_id}:${p.dataset_id}`,
             userId: p.user_id,
             datasetId: p.dataset_id,
-            userName: userStore.getById(p.user_id)?.name ?? p.user_id,
+            userName: userStore.nameOf(p.user_id),
             email: "",
             datasetName: visibleDatasets.value.find((d) => d.id === p.dataset_id)?.name ?? p.dataset_id,
             perm: p.perm,
@@ -56,7 +54,7 @@ const rows = computed(() => {
 
 // Display names for the filter chips
 // They fall back to the raw id if the user or dataset isn't in the loaded lists
-const userName = (id: string) => userStore.getById(id)?.name ?? id;
+const userName = (id: string) => userStore.nameOf(id);
 const datasetName = (id: string) => visibleDatasets.value.find((d) => d.id === id)?.name ?? id;
 
 // Logged-out visitors are sent home. A saved token with no user yet means the session is still being restored.
@@ -75,19 +73,23 @@ watch(
         error.value = null;
         try {
             await Promise.all([
-                // Only used for names and the user filter, so a failure just leaves ids showing instead of names.
-                // Non-admins load the whole user list too, because there is no endpoint for just the names they need
-                userStore.fetchUsers().catch(() => {}),
+                // Only used for names and the user filter, so a failure just leaves ids showing instead of names
+                userStore.fetchNames().catch(() => {}),
                 datasetStore.fetchDatasets(),
-                permissionStore.fetchEditable(id, auth.isAdmin),
+                permissionStore.fetchMine(id),
             ]);
+            // Needs the datasets and the viewer's own permissions, which decide which datasets they manage
+            await permissionStore.fetchManaged(
+                visibleDatasets.value.map((d) => d.id),
+                auth.isAdmin
+            );
         } catch {
-            // No redirect here: an empty editable list after a failure doesn't mean the viewer lacks access
+            // No redirect here: an empty list after a failure doesn't mean the viewer lacks access
             error.value = "Unable to load permissions. Please try again.";
             return;
         }
-        // Non-admins without edit access to any dataset have nothing to manage here
-        if (!auth.isAdmin && !permissionStore.editableDatasetIds.length) router.replace("/home");
+        // Non-admins who own no dataset have nothing to manage here
+        if (!auth.isAdmin && !visibleDatasets.value.length) router.replace("/home");
     },
     { immediate: true }
 );
@@ -121,7 +123,7 @@ function edit(userId: string, datasetId: string) {
                         <v-list-item-title>User</v-list-item-title>
                         <v-menu activator="parent" submenu open-on-hover :close-on-content-click="false" location="end">
                             <v-list v-model:selected="userFilter" select-strategy="leaf">
-                                <v-list-item v-for="user in userStore.users" :key="user.id" :title="user.name" :value="user.id">
+                                <v-list-item v-for="user in userStore.names" :key="user.id" :title="user.name" :value="user.id">
                                     <template #prepend="{ isSelected }">
                                         <v-icon
                                             :icon="isSelected ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'"

@@ -2,7 +2,11 @@
 import { Request, Response } from "express";
 import * as service from "@src/services/dataset.ts";
 import { IDataset } from "@src/models/dataset.ts";
+import * as userService from "@src/services/user.ts";
+import { authorizeDataset, caller, getAccess, hasAccess } from "@src/services/access.ts";
 import { pick } from "@src/utils/pick.ts";
+import { PermissionOptions } from "@commons/permissions.ts";
+import { UserRoles } from "@commons/user.ts";
 
 // Whitelist of columns clients may set (see utils/pick.ts)
 const DATASET_FIELDS = [
@@ -18,57 +22,72 @@ const DATASET_FIELDS = [
 ] as const;
 // Same whitelist minus owner, which is set when the dataset is created and cannot be changed afterwards
 const DATASET_UPDATE_FIELDS = DATASET_FIELDS.filter((f) => f !== "owner");
-/** GET / : returns all datasets (200) */
+/** GET / : returns the datasets the caller may see (200); guests get only PUBLIC ones */
 export const list = async (req: Request, res: Response) => {
     console.log("[DATASET CONTROLLER] Attempting to list datasets...");
-    res.status(200).json(await service.getAll());
+    res.status(200).json(await service.getVisibleTo(caller(res)));
 };
 
-/** GET /:id : returns one dataset (200), or 404 if it does not exist */
+/** GET /:id : returns one dataset (200), or 404 if it does not exist or the caller cannot see it */
 export const get = async (req: Request, res: Response) => {
     console.log("[DATASET CONTROLLER] Attempting to get dataset...");
-    const item = await service.getById(req.params.id as string);
-    if (!item) {
-        console.log("[DATASET CONTROLLER] Dataset not found");
-        return res.status(404).json({ error: "Dataset not found" });
-    }
-    res.status(200).json(item);
+    const found = await authorizeDataset(res, req.params.id as string, PermissionOptions.VIEW);
+    if (found) res.status(200).json(found.dataset);
 };
 
-/** GET /byURL/:url : returns the dataset with this url slug (200), or 404 if it does not exist */
+/** GET /byURL/:url : returns the dataset with this url slug (200), or 404 if it does not exist or the caller cannot see it */
 export const getByUrl = async (req: Request, res: Response) => {
     console.log("[DATASET CONTROLLER] Attempting to get dataset by url...");
     const item = await service.getByUrl(req.params.url as string);
-    if (!item) {
-        console.log("[DATASET CONTROLLER] Dataset not found");
+    if (!item || !hasAccess(await getAccess(caller(res), item), PermissionOptions.VIEW)) {
+        console.log("[DATASET CONTROLLER] Dataset not found or not visible to the caller");
         return res.status(404).json({ error: "Dataset not found" });
     }
     res.status(200).json(item);
 };
 
-/** POST / : creates a dataset from the request body (201) */
+/**
+ * POST / : creates a dataset from the request body (201).
+ * The owner is the caller; only an admin may name a different owner, who must be an admin or lab member (else 400)
+ */
 export const create = async (req: Request, res: Response) => {
     console.log("[DATASET CONTROLLER] Attempting to create dataset...");
-    res.status(201).json(await service.create(pick<IDataset>(req.body, DATASET_FIELDS)));
+    const user = caller(res)!;
+    const fields = pick<IDataset>(req.body, DATASET_FIELDS);
+    const owner = user.role === UserRoles.ADMIN && fields.owner ? fields.owner : user.id;
+    if (owner !== user.id) {
+        const target = await userService.getById(owner);
+        if (!target || (target.role !== UserRoles.ADMIN && target.role !== UserRoles.LAB_MEMBER))
+            return res.status(400).json({ error: "The owner must be an admin or lab member" });
+    }
+    res.status(201).json(await service.create({ ...fields, owner }));
 };
 
-/** PUT /:id : updates an existing dataset (200), or 404 if it does not exist */
+/**
+ * PUT /:id : updates an existing dataset (200). Needs EDIT access, and changing visibility needs OWNER.
+ * 404 if the dataset does not exist or is not visible to the caller, 403 if they lack the access
+ */
 export const update = async (req: Request, res: Response) => {
     console.log("[DATASET CONTROLLER] Attempting to update dataset...");
-    const item = await service.update(req.params.id as string, pick<IDataset>(req.body, DATASET_UPDATE_FIELDS));
-    if (!item) {
-        console.log("[DATASET CONTROLLER] Dataset not found");
-        return res.status(404).json({ error: "Dataset not found" });
+    const found = await authorizeDataset(res, req.params.id as string, PermissionOptions.EDIT);
+    if (!found) return;
+    const fields = pick<IDataset>(req.body, DATASET_UPDATE_FIELDS);
+    if (
+        fields.visibility !== undefined &&
+        fields.visibility !== found.dataset.visibility &&
+        !hasAccess(found.access, PermissionOptions.OWNER)
+    ) {
+        console.log("[DATASET CONTROLLER] Only an owner may change visibility");
+        return res.status(403).json({ error: "Forbidden" });
     }
-    res.status(200).json(item);
+    res.status(200).json(await service.update(found.dataset.id, fields));
 };
 
-/** DELETE /:id : deletes a dataset (204 with no body), or 404 if it does not exist */
+/** DELETE /:id : deletes a dataset (204 with no body); needs OWNER access (404 if not found or not visible, 403 if not an owner) */
 export const remove = async (req: Request, res: Response) => {
     console.log("[DATASET CONTROLLER] Attempting to delete dataset...");
-    if (!(await service.remove(req.params.id as string))) {
-        console.log("[DATASET CONTROLLER] Dataset not found");
-        return res.status(404).json({ error: "Dataset not found" });
-    }
+    const found = await authorizeDataset(res, req.params.id as string, PermissionOptions.OWNER);
+    if (!found) return;
+    await service.remove(found.dataset.id);
     res.status(204).send();
 };

@@ -43,16 +43,20 @@ const loading = ref(false);
 const saving = ref(false);
 const error = ref<string | null>(null);
 
-// Owner choices: active admins and lab members, plus the dataset's current owner if they fall outside that group
-const ownerOptions = computed(() =>
-    userStore.users
-        .filter(
-            (u) =>
-                u.id === dataset.value.owner ||
-                ((u.role === UserRoles.ADMIN || u.role === UserRoles.LAB_MEMBER) && u.status === UserStatus.ACTIVE)
-        )
-        .map((u) => ({ title: u.name, value: u.id }))
-);
+// Owner choices. Admins pick from the active admins and lab members, plus the dataset's current owner if they fall
+// outside that group. Everyone else can only create datasets they own themselves, so the only choice is the current owner
+const ownerOptions = computed(() => {
+    if (auth.isAdmin)
+        return userStore.users
+            .filter(
+                (u) =>
+                    u.id === dataset.value.owner ||
+                    ((u.role === UserRoles.ADMIN || u.role === UserRoles.LAB_MEMBER) && u.status === UserStatus.ACTIVE)
+            )
+            .map((u) => ({ title: u.name, value: u.id }));
+    const owner = dataset.value.owner;
+    return [{ title: owner === auth.user.id ? auth.user.name : userStore.nameOf(owner), value: owner }];
+});
 
 // Plot options the backend accepts (value is the stored enum value)
 const plotOptions = Object.values(DatasetPlots);
@@ -84,26 +88,25 @@ const canSave = computed(
 );
 
 // In edit mode, loads the dataset with the url from the route and fills the form, but only for viewers who may edit it
-// (admin, owner or EDIT permission, same rule as the edit button in DatasetView); everyone else is sent to the dataset page.
+// (admin, owner or an EDIT/OWNER permission, same rule as the edit button in DatasetView); everyone else is sent to the dataset page.
 // This is a usability check only: the backend must enforce edit access itself
 onMounted(async () => {
-    // Owner options are needed in both modes; a failure here just leaves the dropdown empty
-    const usersLoaded = userStore.fetchUsers().catch(() => {});
+    // Owner options are needed in both modes; a failure here just leaves the dropdown empty.
+    // Only admins may list full user records; others just need the name of an existing dataset's owner
+    const usersLoaded = (auth.isAdmin ? userStore.fetchUsers() : userStore.fetchNames()).catch(() => {});
     if (!isEdit.value) return;
     loading.value = true;
     try {
         const [found] = await Promise.all([
             datasetStore.getByUrl(editingUrl.value!),
-            permissionStore.fetchEditable(auth.user.id, auth.isAdmin),
+            permissionStore.fetchMine(auth.user.id),
             usersLoaded,
         ]);
         if (!found) {
             error.value = "Dataset not found";
             return;
         }
-        const mayEdit =
-            auth.isAdmin || found.owner === auth.user.id || permissionStore.editableDatasetIds.includes(found.id);
-        if (!mayEdit) {
+        if (!permissionStore.canEdit(found)) {
             await router.replace(`/dataset/${found.url}`);
             return;
         }
@@ -165,13 +168,13 @@ async function save() {
         ></v-text-field>
         <v-divider class="mb-4"></v-divider>
 
-        <!-- Owner (defaults to the current user when creating; fixed once the dataset exists) -->
+        <!-- Owner (defaults to the current user when creating, and only admins may pick someone else; fixed once the dataset exists) -->
         <v-row class="text-body-medium mb-1 mx-4">Owner</v-row>
         <v-select
             v-model="dataset.owner"
             :items="ownerOptions"
             placeholder="Select an owner"
-            :disabled="isEdit"
+            :disabled="isEdit || !auth.isAdmin"
             density="compact"
             hide-details
             class="mb-4 mx-4"

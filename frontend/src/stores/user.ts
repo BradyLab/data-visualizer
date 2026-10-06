@@ -3,15 +3,28 @@ import { ref } from "vue";
 import { defineStore } from "pinia";
 import type { IUser } from "@commons/user";
 import { userApi } from "@src/api/user";
-import { type UpdateUserPayload, type InviteUserPayload } from "@src/interfaces/user";
+import { type UpdateUserPayload, type InviteUserPayload, type UserName } from "@src/interfaces/user";
 
 export const useUserStore = defineStore("user", () => {
     // Reactive state (cached list of all users, filled by fetchUsers)
     const users = ref<IUser[]>([]);
 
-    /** Loads all users from the backend into the store */
+    // Id/name pairs of every user, for pages that only need names and are open to non-admins (see fetchNames)
+    const names = ref<UserName[]>([]);
+
+    /** Loads all users from the backend into the store (admins only) */
     async function fetchUsers() {
         users.value = await userApi.getUsers();
+    }
+
+    /** Loads just the id and name of every user (admins and lab members) */
+    async function fetchNames() {
+        names.value = await userApi.getNames();
+    }
+
+    /** Returns the name of the user with this id from the loaded names, or the id itself if not loaded */
+    function nameOf(id: string) {
+        return names.value.find((u) => u.id === id)?.name ?? id;
     }
 
     /** Returns the cached user with this id, or null if not loaded */
@@ -45,7 +58,10 @@ export const useUserStore = defineStore("user", () => {
 
     return {
         users,
+        names,
         fetchUsers,
+        fetchNames,
+        nameOf,
         getById,
         addUser,
         editUser,

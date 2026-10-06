@@ -2,13 +2,19 @@
 import axios from "axios";
 import type { IUser } from "@commons/user";
 import { apis } from "@commons/general";
-import { type UpdateUserPayload, type InviteUserPayload } from "@src/interfaces/user";
+import { type UpdateUserPayload, type InviteUserPayload, type UserName } from "@src/interfaces/user";
 import { baseURL } from "@src/interfaces/general";
 
 export const userApi = {
     /** GET /users : returns all users */
     async getUsers(): Promise<IUser[]> {
         const response = await axios.get<IUser[]>(`${baseURL}/${apis.USER}`);
+        return response.data;
+    },
+
+    /** GET /users/names : returns just the id and name of every user (admins and lab members only) */
+    async getNames(): Promise<UserName[]> {
+        const response = await axios.get<UserName[]>(`${baseURL}/${apis.USER}/names`);
         return response.data;
     },
 

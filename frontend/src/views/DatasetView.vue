@@ -22,14 +22,9 @@ const error = ref<string | null>(null);
 const selectedTreatments = ref<string[]>([]);
 const selectedPlots = ref<string[]>([]);
 
-// Edit is offered to admins, the dataset's owner, and users with EDIT permission on the dataset
-// This hides the button; EditDatasetView repeats the check client-side and redirects, and the backend must enforce it
-const canEdit = computed(
-    () =>
-        !!datasetStore.currentDataset &&
-        auth.isLoggedIn &&
-        (auth.isAdmin || datasetStore.currentDataset.owner === auth.user.id || permissionStore.editableDatasetIds.includes(datasetStore.currentDataset.id))
-);
+// Edit is offered to admins, the dataset's owner (a lab member), and users with an EDIT or OWNER permission on the dataset
+// This hides the button; EditDatasetView repeats the check client-side and redirects, and the backend enforces it
+const canEdit = computed(() => !!datasetStore.currentDataset && permissionStore.canEdit(datasetStore.currentDataset));
 
 // DOI as a link: bare DOIs (10.xxxx/...) are resolved through doi.org
 // Values already starting with http(s):// are used as-is
@@ -50,7 +45,7 @@ watch(
         try {
             const [found] = await Promise.all([
                 datasetStore.getByUrl(url),
-                auth.isLoggedIn ? permissionStore.fetchEditable(auth.user.id, auth.isAdmin) : Promise.resolve(),
+                auth.isLoggedIn ? permissionStore.fetchMine(auth.user.id) : Promise.resolve(),
             ]);
             selectedTreatments.value = [];
             selectedPlots.value = [];

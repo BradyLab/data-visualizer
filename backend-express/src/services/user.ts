@@ -1,7 +1,10 @@
 // Database access for Users; the password hash is never returned to callers
+import { Op } from "sequelize";
 import { Users, IUserPass } from "@src/models/user.ts";
+import { Permissions } from "@src/models/permission.ts";
 import { hashPassword } from "@src/utils/password.ts";
-import { UserStatus } from "@commons/user.ts";
+import { PermissionOptions } from "@commons/permissions.ts";
+import { UserRoles, UserStatus } from "@commons/user.ts";
 
 // Query option that keeps the password hash out of query results
 const PUBLIC_ATTRIBUTES = { exclude: ["password"] };
@@ -43,7 +46,14 @@ export const create = async (data: Partial<IUserPass>) => {
     );
 };
 
-/** Updates a user's email, name, role or status (any password in the body is ignored); returns null if not found */
+/** True if some other ACTIVE admin exists, i.e. this user can lose admin access without locking everyone out */
+export const hasOtherActiveAdmin = async (id: string) =>
+    (await Users.count({ where: { role: UserRoles.ADMIN, status: UserStatus.ACTIVE, id: { [Op.ne]: id } } })) > 0;
+
+/**
+ * Updates a user's email, name, role or status (any password in the body is ignored); returns null if not found.
+ * Becoming EXTERNAL downgrades all of the user's permissions to VIEW, since external users are read-only
+ */
 export const update = async (id: string, body: Partial<IUserPass>) => {
     console.log("[USER SERVICE] Updating user...");
     const user = await Users.findByPk(id);
@@ -51,7 +61,10 @@ export const update = async (id: string, body: Partial<IUserPass>) => {
         console.log("[USER SERVICE] User to update not found");
         return null;
     }
+    const wasExternal = user.role === UserRoles.EXTERNAL;
     await user.update(body);
+    if (!wasExternal && user.role === UserRoles.EXTERNAL)
+        await Permissions.update({ perm: PermissionOptions.VIEW }, { where: { user_id: id } });
     return toPublic(user);
 };
 

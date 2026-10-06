@@ -1,21 +1,24 @@
 // Routes for Permissions, mounted at /permissions in index.ts (identified by user id + dataset id)
 import { Router } from "express";
 import * as controller from "@src/controllers/permission.ts";
+import { requireAuth, requireRole, requireSelfOrAdmin } from "@src/middleware/auth.ts";
+import { UserRoles } from "@commons/user.ts";
 
 // Express router for the permission CRUD endpoints
 const router = Router();
 
-// Request flow: router -> controller (HTTP in/out) -> service (database). No requireAuth is applied to these routes
+// Request flow: router (who is calling) -> controller (HTTP in/out, access checks) -> service (database)
+// Who a dataset is shared with is visible and editable only to its owner and admins (checked in the controller);
+// every route needs a login
 
-// TODO: reads are unauthenticated too, so anyone can see which users can access which datasets
-router.get("/", controller.list);
-// TODO: permission routes have no requireAuth or role check, so anyone can grant themselves access to any dataset
-router.post("/", controller.create);
+// Listing every permission is admin-only
+router.get("/", requireAuth, requireRole(UserRoles.ADMIN), controller.list);
+router.post("/", requireAuth, controller.create);
 // Must be registered before "/:userId/:datasetId", which would otherwise match "/byUser/<id>" and "/byDataset/<id>"
-router.get("/byUser/:userId", controller.listByUser);
-router.get("/byDataset/:datasetId", controller.listByDataset);
-router.get("/:userId/:datasetId", controller.get);
-router.put("/:userId/:datasetId", controller.update);
-router.delete("/:userId/:datasetId", controller.remove);
+router.get("/byUser/:userId", requireAuth, requireSelfOrAdmin("userId"), controller.listByUser);
+router.get("/byDataset/:datasetId", requireAuth, controller.listByDataset);
+router.get("/:userId/:datasetId", requireAuth, controller.get);
+router.put("/:userId/:datasetId", requireAuth, controller.update);
+router.delete("/:userId/:datasetId", requireAuth, controller.remove);
 
 export default router;

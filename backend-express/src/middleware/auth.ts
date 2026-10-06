@@ -1,18 +1,22 @@
-// Express middleware that requires a valid "Authorization: Bearer <token>" header
+// Express middleware that checks the "Authorization: Bearer <token>" header and the caller's role
 import { NextFunction, Request, Response } from "express";
 import { verifyToken } from "@src/services/auth.ts";
 import { Users } from "@src/models/user.ts";
-import { UserStatus } from "@commons/user.ts";
+import { UserRoles, UserStatus } from "@commons/user.ts";
 import { PASSWORD_CHANGE_REQUIRED } from "@commons/general.ts";
+
+// Resolves the Bearer token to a user reloaded from the DB (so deleted users are rejected even if their token has
+// not expired), or null if the token is missing, invalid, or its user no longer exists
+const findUser = async (req: Request) => {
+    const header = req.headers.authorization;
+    const id = header?.startsWith("Bearer ") ? verifyToken(header.slice(7)) : null;
+    return id ? await Users.findByPk(id, { attributes: { exclude: ["password"] } }) : null;
+};
 
 // Builds the middleware; allowInvited lets INVITED users (still on the default password) through
 const authenticate = (allowInvited: boolean) => async (req: Request, res: Response, next: NextFunction) => {
     console.log("[AUTH MIDDLEWARE] Checking authorization...");
-    // Steps: extract the Bearer token -> verify signature/expiry to get the user id -> reload the user from the DB,
-    // so deleted users are rejected even if their token has not expired
-    const header = req.headers.authorization;
-    const id = header?.startsWith("Bearer ") ? verifyToken(header.slice(7)) : null;
-    const user = id ? await Users.findByPk(id, { attributes: { exclude: ["password"] } }) : null;
+    const user = await findUser(req);
     if (!user) {
         console.log("[AUTH MIDDLEWARE] Unauthorized: missing or invalid token");
         return res.status(401).json({ error: "Unauthorized" });
@@ -37,3 +41,35 @@ export const requireAuth = authenticate(false);
 
 /** Like requireAuth but lets INVITED users through; for the routes they need to finish setup (/me, /change-password, /logout) */
 export const requireAuthAllowInvited = authenticate(true);
+
+/**
+ * For routes that logged-out users may call (e.g. reading public datasets): sets res.locals.user to the logged-in
+ * user, or to null for a guest. A request with no Authorization header is a guest; one with a bad or expired token
+ * gets 401 so the client drops its stale session instead of silently seeing the guest view.
+ * INVITED users (still on the default password) are treated as guests here, since they cannot use anything else yet.
+ */
+export const optionalAuth = async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.headers.authorization) {
+        res.locals.user = null;
+        return next();
+    }
+    const user = await findUser(req);
+    if (!user || user.status == UserStatus.INACTIVE) return res.status(401).json({ error: "Unauthorized" });
+    res.locals.user = user.status == UserStatus.INVITED ? null : user;
+    next();
+};
+
+/** Rejects with 403 unless the logged-in user has one of the given roles; must run after requireAuth */
+export const requireRole =
+    (...roles: UserRoles[]) =>
+    (req: Request, res: Response, next: NextFunction) => {
+        if (!roles.includes(res.locals.user.role)) return res.status(403).json({ error: "Forbidden" });
+        next();
+    };
+
+/** Rejects with 403 unless the logged-in user is an admin or the user named by the route param; must run after requireAuth */
+export const requireSelfOrAdmin = (param: string) => (req: Request, res: Response, next: NextFunction) => {
+    const user = res.locals.user;
+    if (user.role !== UserRoles.ADMIN && user.id !== req.params[param]) return res.status(403).json({ error: "Forbidden" });
+    next();
+};

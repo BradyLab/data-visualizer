@@ -46,10 +46,10 @@ onMounted(() => {
     datasetStore.fetchDatasets().catch(() => {});
 });
 
-// Admins see every management page; others only see Permissions, and only if they can edit some dataset
-const canManagePermissions = computed(() => auth.isAdmin || permissionStore.editableDatasetIds.length > 0);
+// Admins see every management page; others only see Permissions, and only if they own some dataset
+const canManagePermissions = computed(() => auth.isAdmin || datasetStore.datasets.some((d) => permissionStore.canManage(d)));
 
-// Load the user's edit access and fill the name field once the real user is known
+// Load the user's own permissions and fill the name field once the real user is known
 // (the id is empty until login / session restore finishes)
 const name = ref("");
 watch(
@@ -57,7 +57,7 @@ watch(
     (id) => {
         if (!id) return;
         name.value = auth.user.name;
-        permissionStore.fetchEditable(id, auth.isAdmin);
+        permissionStore.fetchMine(id).catch(() => {});
     },
     { immediate: true }
 );

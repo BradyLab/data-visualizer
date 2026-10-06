@@ -2,57 +2,74 @@
 import { Request, Response } from "express";
 import * as service from "@src/services/file.ts";
 import { IFile } from "@src/models/file.ts";
+import { authorizeDataset, caller } from "@src/services/access.ts";
 import { pick } from "@src/utils/pick.ts";
+import { PermissionOptions } from "@commons/permissions.ts";
+import { UserRoles } from "@commons/user.ts";
 
-// Whitelist of columns clients may set (see utils/pick.ts)
-const FILE_FIELDS = ["dataset_id", "user_id", "type", "sizeBytes", "ogName"] as const;
-// GET /files?dataset_id=... lists files, optionally for one dataset
+// Whitelist of columns clients may set when creating a file; user_id is always the caller (see create)
+const FILE_FIELDS = ["dataset_id", "type", "sizeBytes", "ogName"] as const;
+// A file cannot move to another dataset or change uploader after creation
+const FILE_UPDATE_FIELDS = ["type", "sizeBytes", "ogName"] as const;
+
+// Files follow the access rules of their dataset: VIEW to read, EDIT to create, change or delete.
+// Loads a file and checks the caller's access to its dataset; on failure it sends 404/403 and returns null
+const authorizeFile = async (res: Response, id: string, min: PermissionOptions) => {
+    const file = await service.getById(id);
+    if (!file) {
+        console.log("[FILE CONTROLLER] File not found");
+        res.status(404).json({ error: "File not found" });
+        return null;
+    }
+    return (await authorizeDataset(res, file.dataset_id, min, "File not found")) ? file : null;
+};
+
+// GET /files?dataset_id=... lists the files of one dataset the caller may view; without dataset_id only admins may list every file
 export const list = async (req: Request, res: Response) => {
     console.log("[FILE CONTROLLER] Attempting to list files...");
     const datasetId = typeof req.query.dataset_id === "string" ? req.query.dataset_id : undefined;
+    if (datasetId) {
+        if (!(await authorizeDataset(res, datasetId, PermissionOptions.VIEW))) return;
+    } else if (caller(res)?.role !== UserRoles.ADMIN) {
+        return res.status(caller(res) ? 403 : 401).json({ error: caller(res) ? "Forbidden" : "Unauthorized" });
+    }
     res.status(200).json(await service.getAll(datasetId));
 };
 
-/** GET /byDataset/:datasetId : lists the files of one dataset (200) */
+/** GET /byDataset/:datasetId : lists the files of one dataset (200); 404 if it does not exist or the caller cannot view it */
 export const listByDataset = async (req: Request, res: Response) => {
     console.log("[FILE CONTROLLER] Attempting to list files by dataset...");
+    if (!(await authorizeDataset(res, req.params.datasetId as string, PermissionOptions.VIEW))) return;
     res.status(200).json(await service.getAll(req.params.datasetId as string));
 };
 
-/** GET /:id : returns one file (200), or 404 if it does not exist */
+/** GET /:id : returns one file (200), or 404 if it does not exist or its dataset is not visible to the caller */
 export const get = async (req: Request, res: Response) => {
     console.log("[FILE CONTROLLER] Attempting to get file...");
-    const item = await service.getById(req.params.id as string);
-    if (!item) {
-        console.log("[FILE CONTROLLER] File not found");
-        return res.status(404).json({ error: "File not found" });
-    }
-    res.status(200).json(item);
+    const item = await authorizeFile(res, req.params.id as string, PermissionOptions.VIEW);
+    if (item) res.status(200).json(item);
 };
 
-/** POST / : creates a file from the request body (201) */
+/** POST / : creates a file on the body's dataset (201), uploaded by the caller; needs EDIT access to that dataset */
 export const create = async (req: Request, res: Response) => {
     console.log("[FILE CONTROLLER] Attempting to create file...");
-    res.status(201).json(await service.create(pick<IFile>(req.body, FILE_FIELDS)));
+    const fields = pick<IFile>(req.body, FILE_FIELDS);
+    if (typeof fields.dataset_id !== "string") return res.status(400).json({ error: "dataset_id is required" });
+    if (!(await authorizeDataset(res, fields.dataset_id, PermissionOptions.EDIT))) return;
+    res.status(201).json(await service.create({ ...fields, user_id: caller(res)!.id }));
 };
 
-/** PUT /:id : updates an existing file (200), or 404 if it does not exist */
+/** PUT /:id : updates an existing file (200); needs EDIT access to its dataset (404 if not found or not visible, 403 otherwise) */
 export const update = async (req: Request, res: Response) => {
     console.log("[FILE CONTROLLER] Attempting to update file...");
-    const item = await service.update(req.params.id as string, pick<IFile>(req.body, FILE_FIELDS));
-    if (!item) {
-        console.log("[FILE CONTROLLER] File not found");
-        return res.status(404).json({ error: "File not found" });
-    }
-    res.status(200).json(item);
+    if (!(await authorizeFile(res, req.params.id as string, PermissionOptions.EDIT))) return;
+    res.status(200).json(await service.update(req.params.id as string, pick<IFile>(req.body, FILE_UPDATE_FIELDS)));
 };
 
-/** DELETE /:id : deletes a file (204 with no body), or 404 if it does not exist */
+/** DELETE /:id : deletes a file (204 with no body); needs EDIT access to its dataset (404 if not found or not visible, 403 otherwise) */
 export const remove = async (req: Request, res: Response) => {
     console.log("[FILE CONTROLLER] Attempting to delete file...");
-    if (!(await service.remove(req.params.id as string))) {
-        console.log("[FILE CONTROLLER] File not found");
-        return res.status(404).json({ error: "File not found" });
-    }
+    if (!(await authorizeFile(res, req.params.id as string, PermissionOptions.EDIT))) return;
+    await service.remove(req.params.id as string);
     res.status(204).send();
 };

@@ -1,9 +1,10 @@
 // Request handlers for Users; thin wrappers that call the user service and shape the HTTP response
 import { Request, Response } from "express";
 import * as service from "@src/services/user.ts";
+import * as datasetService from "@src/services/dataset.ts";
 import { IUserPass } from "@src/models/user.ts";
 import { pick } from "@src/utils/pick.ts";
-import { UserRoles } from "@commons/user.ts";
+import { ASSIGNABLE_ROLES, UserRoles, UserStatus } from "@commons/user.ts";
 
 // Whitelist of columns clients may set (see utils/pick.ts)
 const USER_FIELDS = ["email", "password", "name", "role", "status"] as const;
@@ -18,13 +19,13 @@ export const list = async (req: Request, res: Response) => {
     res.status(200).json(await service.getAll());
 };
 
-/** GET /names : returns just the id and name of every user (200) */
+/** GET /names : returns just the id and name of every user (200); the router limits it to admins and lab members */
 export const listNames = async (req: Request, res: Response) => {
     console.log("[USER CONTROLLER] Attempting to list user names...");
     res.status(200).json(await service.getNames());
 };
 
-/** GET /:id : returns one user (200), or 404 if it does not exist */
+/** GET /:id : returns one user (200), or 404 if it does not exist; the router limits it to that user or an admin */
 export const get = async (req: Request, res: Response) => {
     console.log("[USER CONTROLLER] Attempting to get user...");
     const item = await service.getById(req.params.id as string);
@@ -50,23 +51,54 @@ export const create = async (req: Request, res: Response) => {
     );
 };
 
-/** PUT /:id : updates an existing user (200), or 404 if it does not exist */
+/**
+ * PUT /:id : updates an existing user (200), or 404 if it does not exist, 400 for a bad name or role.
+ * Admins may change any field; a user editing themselves may only change their name (403 if the body would change
+ * their email, role or status). 409 if it would remove the last active admin
+ */
 export const update = async (req: Request, res: Response) => {
     console.log("[USER CONTROLLER] Attempting to update user...");
-    const item = await service.update(req.params.id as string, pick<IUserPass>(req.body, UPDATE_FIELDS));
-    if (!item) {
+    const id = req.params.id as string;
+    const fields = pick<IUserPass>(req.body, UPDATE_FIELDS);
+    if (fields.name !== undefined) {
+        if (typeof fields.name !== "string" || !fields.name.trim())
+            return res.status(400).json({ error: "Name cannot be empty" });
+        fields.name = fields.name.trim();
+    }
+    if (fields.role !== undefined && !ASSIGNABLE_ROLES.includes(fields.role))
+        return res.status(400).json({ error: "A valid role is required" });
+    const target = await service.getById(id);
+    if (!target) {
         console.log("[USER CONTROLLER] User not found");
         return res.status(404).json({ error: "User not found" });
     }
-    res.status(200).json(item);
+    // The router lets non-admins through only for their own record; they may not change anything but the name
+    if (res.locals.user.role !== UserRoles.ADMIN) {
+        const { name: _name, ...restricted } = fields;
+        if (Object.entries(restricted).some(([key, value]) => target[key as keyof typeof target] !== value))
+            return res.status(403).json({ error: "Forbidden" });
+    }
+    const losesAdmin =
+        target.role === UserRoles.ADMIN &&
+        ((fields.role !== undefined && fields.role !== UserRoles.ADMIN) || fields.status === UserStatus.INACTIVE);
+    if (losesAdmin && !(await service.hasOtherActiveAdmin(id)))
+        return res.status(409).json({ error: "There must be at least one active admin" });
+    res.status(200).json(await service.update(id, fields));
 };
 
-/** DELETE /:id : deletes a user (204 with no body), or 404 if it does not exist */
+/** DELETE /:id : deletes a user (204 with no body), or 404 if it does not exist, 409 if it is the last active admin or still owns datasets */
 export const remove = async (req: Request, res: Response) => {
     console.log("[USER CONTROLLER] Attempting to delete user...");
-    if (!(await service.remove(req.params.id as string))) {
+    const id = req.params.id as string;
+    const target = await service.getById(id);
+    if (!target) {
         console.log("[USER CONTROLLER] User not found");
         return res.status(404).json({ error: "User not found" });
     }
+    if (target.role === UserRoles.ADMIN && !(await service.hasOtherActiveAdmin(id)))
+        return res.status(409).json({ error: "There must be at least one active admin" });
+    if (await datasetService.countOwnedBy(id))
+        return res.status(409).json({ error: "This user owns datasets; reassign them first or deactivate the user instead" });
+    await service.remove(id);
     res.status(204).send();
 };
