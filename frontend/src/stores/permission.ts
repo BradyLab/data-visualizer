@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 import { defineStore } from "pinia";
 import { PermissionOptions, type IPermission } from "@commons/permissions";
 import type { IDataset } from "@commons/dataset";
+import { UserRoles } from "@commons/user";
 import { permissionApi } from "@src/api/permission";
 import { type CreatePermissionPayload } from "@src/interfaces/permission";
 import { useAuthStore } from "@src/stores/auth";
@@ -13,9 +14,15 @@ export const usePermissionStore = defineStore("permission", () => {
     const myPermissions = ref<IPermission[]>([]);
     // The permission rows shown on the management page: every row for admins, otherwise the rows on datasets the viewer manages
     const adminPermissions = ref<IPermission[]>([]);
+    // Ids of the datasets the viewer holds a DOWNLOAD, EDIT or OWNER permission row on (each level includes the ones below it)
+    const downloadableDatasetIds = computed(() =>
+        myPermissions.value.filter((p) => p.perm !== PermissionOptions.VIEW).map((p) => p.dataset_id)
+    );
     // Ids of the datasets the viewer holds an EDIT or OWNER permission row on (OWNER includes edit access)
     const editableDatasetIds = computed(() =>
-        myPermissions.value.filter((p) => p.perm !== PermissionOptions.VIEW).map((p) => p.dataset_id)
+        myPermissions.value
+            .filter((p) => p.perm === PermissionOptions.EDIT || p.perm === PermissionOptions.OWNER)
+            .map((p) => p.dataset_id)
     );
     // Ids of the datasets the viewer holds an OWNER permission row on
     const ownedDatasetIds = computed(() =>
@@ -58,6 +65,17 @@ export const usePermissionStore = defineStore("permission", () => {
         return canManage(dataset) || (auth.isLoggedIn && editableDatasetIds.value.includes(dataset.id));
     }
 
+    /**
+     * True if the viewer may download the dataset's RDS file: anyone who can edit it, any lab member, or anyone with a
+     * DOWNLOAD permission row. PUBLIC datasets only give view access, so guests never can.
+     */
+    function canDownload(dataset: IDataset) {
+        return (
+            canEdit(dataset) ||
+            (auth.isLoggedIn && (auth.user.role === UserRoles.LAB_MEMBER || downloadableDatasetIds.value.includes(dataset.id)))
+        );
+    }
+
     /** Grants a permission (or re-grants/updates an existing one) and puts it in the store */
     async function addPermission(payload: CreatePermissionPayload) {
         const permission = await permissionApi.createPermission(payload);
@@ -92,6 +110,7 @@ export const usePermissionStore = defineStore("permission", () => {
 
     return {
         permissions: myPermissions,
+        downloadableDatasetIds,
         editableDatasetIds,
         ownedDatasetIds,
         adminPermissions,
@@ -100,6 +119,7 @@ export const usePermissionStore = defineStore("permission", () => {
         clear,
         canManage,
         canEdit,
+        canDownload,
         addPermission,
         editPermission,
         removePermission,

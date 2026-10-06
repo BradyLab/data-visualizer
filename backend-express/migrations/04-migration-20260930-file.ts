@@ -41,7 +41,7 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 onUpdate: "CASCADE",
                 onDelete: "CASCADE",
             },
-            // Kind of file (cover image, RDS, or raw data); values come from FileTypes
+            // Kind of file (cover image or RDS); values come from FileTypes
             type: {
                 type: DataTypes.ENUM(...Object.values(FileTypes)),
                 allowNull: false,

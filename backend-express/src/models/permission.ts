@@ -31,7 +31,7 @@ export class Permissions extends Model<IPermission> {
     })
     declare dataset_id: string;
 
-    // Access level; values come from the PermissionOptions enum (defaults to VIEW)
+    // Access level (VIEW, DOWNLOAD, EDIT or OWNER); values come from the PermissionOptions enum (defaults to VIEW)
     @Column({
         type: DataType.ENUM(...Object.values(PermissionOptions)),
         allowNull: false,

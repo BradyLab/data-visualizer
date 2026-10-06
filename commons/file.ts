@@ -4,7 +4,6 @@
 export enum FileTypes {
     COVER = "COVER",
     RDS = "RDS",
-    RAW = "RAW",
 }
 
 // A file record as stored in the Files table

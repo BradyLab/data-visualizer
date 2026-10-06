@@ -12,11 +12,15 @@ export type Access = PermissionOptions | null;
 
 const RANK: Record<PermissionOptions, number> = {
     [PermissionOptions.VIEW]: 1,
-    [PermissionOptions.EDIT]: 2,
-    [PermissionOptions.OWNER]: 3,
+    [PermissionOptions.DOWNLOAD]: 2,
+    [PermissionOptions.EDIT]: 3,
+    [PermissionOptions.OWNER]: 4,
 };
 
 const higher = (a: Access, b: Access): Access => (a && b ? (RANK[a] >= RANK[b] ? a : b) : (a ?? b));
+
+// The lower of two levels
+const atMost = (level: PermissionOptions, max: PermissionOptions) => (RANK[level] <= RANK[max] ? level : max);
 
 /** True if the level is at least `min` */
 export const hasAccess = (level: Access, min: PermissionOptions) => level !== null && RANK[level] >= RANK[min];
@@ -28,8 +32,8 @@ export const caller = (res: Response): Users | null => res.locals.user ?? null;
  * The access level a user (null = guest) has on a dataset:
  * - ADMIN: OWNER on everything
  * - the dataset's owner: OWNER whatever their role, so former lab members keep control of their datasets
- * - LAB_MEMBER: at least VIEW on everything, including PRIVATE; more only through a permission row
- * - EXTERNAL: the level of their permission row, capped at VIEW
+ * - LAB_MEMBER: at least DOWNLOAD on everything, including PRIVATE; more only through a permission row
+ * - EXTERNAL: the level of their permission row, capped at DOWNLOAD
  * - anyone, guests included: VIEW on PUBLIC datasets
  */
 export const getAccess = async (user: Users | null, dataset: Datasets): Promise<Access> => {
@@ -38,8 +42,8 @@ export const getAccess = async (user: Users | null, dataset: Datasets): Promise<
     if (user.role === UserRoles.ADMIN) return PermissionOptions.OWNER;
     if (dataset.owner === user.id) return PermissionOptions.OWNER;
     const row = await Permissions.findOne({ where: { user_id: user.id, dataset_id: dataset.id } });
-    if (row) level = higher(level, user.role === UserRoles.EXTERNAL ? PermissionOptions.VIEW : row.perm);
-    if (user.role === UserRoles.LAB_MEMBER) level = higher(level, PermissionOptions.VIEW);
+    if (row) level = higher(level, user.role === UserRoles.EXTERNAL ? atMost(row.perm, PermissionOptions.DOWNLOAD) : row.perm);
+    if (user.role === UserRoles.LAB_MEMBER) level = higher(level, PermissionOptions.DOWNLOAD);
     return level;
 };
 

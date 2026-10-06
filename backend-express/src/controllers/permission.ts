@@ -12,14 +12,16 @@ import { UserRoles } from "@commons/user.ts";
 const PERMISSION_FIELDS = ["user_id", "dataset_id", "perm"] as const;
 // Only a dataset's OWNER (or an admin) may see or change who it is shared with, so these checks are all OWNER-level.
 // Checks that perm is a valid level for the user receiving it; returns the error message, or null if fine:
-// EXTERNAL users only ever get VIEW, and admins/lab members already see every dataset so a VIEW row would be redundant
+// EXTERNAL users only ever get VIEW or DOWNLOAD, and admins/lab members already view and download every dataset,
+// so only EDIT and OWNER rows make sense for them
 const grantError = async (userId: string, perm: unknown) => {
     if (!Object.values(PermissionOptions).includes(perm as PermissionOptions)) return "A valid perm is required";
     const target = await userService.getById(userId);
     if (!target) return "User not found";
-    if (target.role === UserRoles.EXTERNAL && perm !== PermissionOptions.VIEW) return "External users can only be granted VIEW";
-    if (target.role !== UserRoles.EXTERNAL && perm === PermissionOptions.VIEW)
-        return "Admins and lab members can already view every dataset";
+    const external = perm === PermissionOptions.VIEW || perm === PermissionOptions.DOWNLOAD;
+    if (target.role === UserRoles.EXTERNAL && !external) return "External users can only be granted VIEW or DOWNLOAD";
+    if (target.role !== UserRoles.EXTERNAL && external)
+        return "Admins and lab members can already view and download every dataset";
     return null;
 };
 
