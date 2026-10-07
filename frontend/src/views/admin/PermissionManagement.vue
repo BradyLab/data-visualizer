@@ -19,7 +19,7 @@ const userStore = useUserStore();
 const datasetStore = useDatasetStore();
 const permissionStore = usePermissionStore();
 
-// Table columns: user, dataset, and permission level (changed in place with a dropdown)
+// Table columns: user, role, status, dataset, permission level (changed in place with a dropdown), and an actions column for the delete button
 const headers = [
     { title: "USER", key: "userName" },
     { title: "ROLE", key: "role" },
@@ -307,6 +307,7 @@ async function confirmDelete() {
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
+                    <!-- TODOC05: color="white" is likely invisible on a light card background -->
                     <v-btn :disabled="deleting" color="white" @click="toDelete = null">Cancel</v-btn>
                     <v-btn :loading="deleting" color="error" variant="tonal" @click="confirmDelete">Delete</v-btn>
                 </v-card-actions>

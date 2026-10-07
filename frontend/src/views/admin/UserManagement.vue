@@ -62,6 +62,7 @@ function viewActivityLogs(userId: string) {
     router.push({ name: "activity-logs", query: { user: userId } });
 }
 
+// Whether the invite popup is open
 const inviteDialogOpen = ref(false);
 
 // Opens the invite popup

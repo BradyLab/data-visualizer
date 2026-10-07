@@ -6,11 +6,26 @@ import { authorizeDataset, caller } from "@src/services/access.ts";
 import { pick } from "@src/utils/pick.ts";
 import { PermissionOptions } from "@commons/permissions.ts";
 import { UserRoles } from "@commons/user.ts";
+import { FileTypes } from "@commons/file.ts";
 
 // Whitelist of columns clients may set when creating a file; user_id is always the caller (see create)
 const FILE_FIELDS = ["dataset_id", "type", "sizeBytes", "ogName"] as const;
 // A file cannot move to another dataset or change uploader after creation
 const FILE_UPDATE_FIELDS = ["type", "sizeBytes", "ogName"] as const;
+
+// Returns an error message for the first client-supplied field that is present but invalid, or null if all are fine.
+// Changing type on update (or creating a second file of a kind) can violate the one-file-per-kind unique constraint;
+// that surfaces as a UniqueConstraintError, which the global error handler in index.ts maps to 409
+const validateFileFields = (fields: Partial<IFile>) => {
+    if (fields.type !== undefined && !Object.values(FileTypes).includes(fields.type))
+        return `type must be one of: ${Object.values(FileTypes).join(", ")}`;
+    if (fields.sizeBytes !== undefined && !(Number.isSafeInteger(fields.sizeBytes) && fields.sizeBytes >= 0))
+        return "sizeBytes must be a non-negative integer";
+    // 255 matches the STRING column length of ogName
+    if (fields.ogName !== undefined && (typeof fields.ogName !== "string" || !fields.ogName.trim() || fields.ogName.length > 255))
+        return "ogName must be a non-empty string of at most 255 characters";
+    return null;
+};
 
 // Files follow the access rules of their dataset: VIEW to read, EDIT to create, change or delete.
 // Loads a file and checks the caller's access to its dataset; on failure it sends 404/403 and returns null
@@ -56,6 +71,11 @@ export const create = async (req: Request, res: Response) => {
     const fields = pick<IFile>(req.body, FILE_FIELDS);
     if (typeof fields.dataset_id !== "string") return res.status(400).json({ error: "dataset_id is required" });
     if (!(await authorizeDataset(res, fields.dataset_id, PermissionOptions.EDIT))) return;
+    // All three are NOT NULL columns, so they are required on create
+    if (fields.type === undefined || fields.sizeBytes === undefined || fields.ogName === undefined)
+        return res.status(400).json({ error: "type, sizeBytes and ogName are required" });
+    const invalid = validateFileFields(fields);
+    if (invalid) return res.status(400).json({ error: invalid });
     res.status(201).json(await service.create({ ...fields, user_id: caller(res)!.id }));
 };
 
@@ -63,7 +83,10 @@ export const create = async (req: Request, res: Response) => {
 export const update = async (req: Request, res: Response) => {
     console.log("[FILE CONTROLLER] Attempting to update file...");
     if (!(await authorizeFile(res, req.params.id as string, PermissionOptions.EDIT))) return;
-    res.status(200).json(await service.update(req.params.id as string, pick<IFile>(req.body, FILE_UPDATE_FIELDS)));
+    const fields = pick<IFile>(req.body, FILE_UPDATE_FIELDS);
+    const invalid = validateFileFields(fields);
+    if (invalid) return res.status(400).json({ error: invalid });
+    res.status(200).json(await service.update(req.params.id as string, fields));
 };
 
 /** DELETE /:id : deletes a file (204 with no body); needs EDIT access to its dataset (404 if not found or not visible, 403 otherwise) */

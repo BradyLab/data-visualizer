@@ -16,8 +16,9 @@ const UPDATE_FIELDS = ["email", "name", "role", "status"] as const;
 // Same pattern as the invite dialog's frontend check: something@something.something with no whitespace
 const EMAIL_FORMAT = /^\S+@\S+\.\S+$/;
 
-// Returns the trimmed email, or null if the value is not a string or is blank; used for the email in both create and update
-const cleanEmail = (value: unknown) => (typeof value === "string" && value.trim() ? value.trim() : null);
+// Returns the trimmed, lowercased email, or null if the value is not a string or is blank; used for the email in both create and update.
+// Stored in one canonical form because login and the rate limiter treat different casings as the same account
+const cleanEmail = (value: unknown) => (typeof value === "string" && value.trim() ? value.trim().toLowerCase() : null);
 
 /** GET / : returns all users (200) */
 export const list = async (req: Request, res: Response) => {
@@ -90,6 +91,7 @@ export const update = async (req: Request, res: Response) => {
     }
     const losesAdmin =
         target.role === UserRoles.ADMIN &&
+        target.status === UserStatus.ACTIVE &&
         ((fields.role !== undefined && fields.role !== UserRoles.ADMIN) || fields.status === UserStatus.INACTIVE);
     if (losesAdmin && !(await service.hasOtherActiveAdmin(id)))
         return res.status(409).json({ error: "There must be at least one active admin" });
@@ -105,7 +107,8 @@ export const remove = async (req: Request, res: Response) => {
         console.log("[USER CONTROLLER] User not found");
         return res.status(404).json({ error: "User not found" });
     }
-    if (target.role === UserRoles.ADMIN && !(await service.hasOtherActiveAdmin(id)))
+    // Only an active admin counts toward the "at least one active admin" rule, so removing an inactive one is always safe
+    if (target.role === UserRoles.ADMIN && target.status === UserStatus.ACTIVE && !(await service.hasOtherActiveAdmin(id)))
         return res.status(409).json({ error: "There must be at least one active admin" });
     if (await datasetService.countOwnedBy(id))
         return res.status(409).json({ error: "This user owns datasets; reassign them first or deactivate the user instead" });

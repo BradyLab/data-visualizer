@@ -32,10 +32,19 @@ export const useUserStore = defineStore("user", () => {
         return users.value.find((u) => u.id === id) ?? null;
     }
 
+    // Keeps the names list in step with a created or edited user, so nameOf and the role/status-based choices stay current
+    function syncName(user: IUser) {
+        const entry: UserName = { id: user.id, name: user.name, role: user.role, status: user.status };
+        const i = names.value.findIndex((u) => u.id === user.id);
+        if (i === -1) names.value.push(entry);
+        else names.value[i] = entry;
+    }
+
     /** Creates a user and adds it to the store */
     async function addUser(payload: InviteUserPayload) {
         const user = await userApi.createUser(payload);
         users.value.push(user);
+        syncName(user);
         return user;
     }
 
@@ -46,14 +55,16 @@ export const useUserStore = defineStore("user", () => {
         // Replace in place if cached, otherwise add it
         if (i === -1) users.value.push(user);
         else users.value[i] = user;
+        syncName(user);
         return user;
     }
 
-    // Note: editUser/removeUser only touch this local cache after the backend call succeeds
+    // Note: editUser/removeUser only touch these local caches after the backend call succeeds
     /** Deletes a user and removes it from the store */
     async function removeUser(id: string) {
         await userApi.deleteUser(id);
         users.value = users.value.filter((u) => u.id !== id);
+        names.value = names.value.filter((u) => u.id !== id);
     }
 
     return {

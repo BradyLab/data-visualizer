@@ -1,11 +1,7 @@
 // Request handlers for Activities; thin wrappers that call the activity service and shape the HTTP response
 import { Request, Response } from "express";
 import * as service from "@src/services/activity.ts";
-import { IActivity } from "@src/models/activity.ts";
-import { pick } from "@src/utils/pick.ts";
 
-// Whitelist of columns clients may set (see utils/pick.ts)
-const ACTIVITY_FIELDS = ["user_id", "type", "data"] as const;
 // Reads a query param only if it was sent as a single string
 const str = (v: unknown) => (typeof v === "string" ? v : undefined);
 
@@ -31,9 +27,3 @@ export const get = async (req: Request, res: Response) => {
     }
     res.status(200).json(item);
 };
-
-/** POST / : creates an activity from the request body (201) */
-// export const create = async (req: Request, res: Response) => {
-//     console.log("[ACTIVITY CONTROLLER] Attempting to create activity...");
-//     res.status(201).json(await service.create(pick<IActivity>(req.body, ACTIVITY_FIELDS)));
-// };

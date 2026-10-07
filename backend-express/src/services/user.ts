@@ -2,6 +2,7 @@
 import { Op } from "sequelize";
 import { Users, IUserPass } from "@src/models/user.ts";
 import { Permissions } from "@src/models/permission.ts";
+import { sequelize } from "@src/database.ts";
 import { hashPassword } from "@src/utils/password.ts";
 import { PermissionOptions } from "@commons/permissions.ts";
 import { UserRoles, UserStatus } from "@commons/user.ts";
@@ -42,7 +43,7 @@ export const create = async (data: Partial<IUserPass>) => {
     const defaultPassword = process.env.DEFAULT_PASSWORD;
     if (!defaultPassword) throw new Error("DEFAULT_PASSWORD is not set");
     return toPublic(
-        await Users.create({ ...data, status: UserStatus.INVITED, password: hashPassword(defaultPassword) } as IUserPass)
+        await Users.create({ ...data, status: UserStatus.INVITED, password: await hashPassword(defaultPassword) } as IUserPass)
     );
 };
 
@@ -64,9 +65,16 @@ export const update = async (id: string, body: Partial<IUserPass>) => {
     const wasExternal = user.role === UserRoles.EXTERNAL;
     // Drop any password so it can't be saved unhashed (passwords change only through the auth service)
     const { password: _password, ...fields } = body;
-    await user.update(fields);
-    if (!wasExternal && user.role === UserRoles.EXTERNAL)
-        await Permissions.update({ perm: PermissionOptions.DOWNLOAD }, { where: { user_id: id, perm: PermissionOptions.EDIT } });
+    // One transaction so a failure in the permission downgrade also rolls back the user update,
+    // instead of leaving an EXTERNAL user who still holds EDIT permissions
+    await sequelize.transaction(async (transaction) => {
+        await user.update(fields, { transaction });
+        if (!wasExternal && user.role === UserRoles.EXTERNAL)
+            await Permissions.update(
+                { perm: PermissionOptions.DOWNLOAD },
+                { where: { user_id: id, perm: PermissionOptions.EDIT }, transaction }
+            );
+    });
     return toPublic(user);
 };
 

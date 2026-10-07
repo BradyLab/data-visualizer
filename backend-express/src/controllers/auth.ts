@@ -20,7 +20,7 @@ export const login = async (req: Request, res: Response) => {
     res.status(200).json(result);
 };
 
-/** POST /logout : returns 204; tokens are stateless JWTs, so the client discards its token (set by requireAuth) */
+/** POST /logout : returns 204; tokens are stateless JWTs, so the client discards its token (user set by requireAuthAllowInvited) */
 export const logout = (_req: Request, res: Response) => {
     console.log("[AUTH CONTROLLER] Logging out user", res.locals.user?.id);
     res.status(204).send();
@@ -49,7 +49,7 @@ export const changePassword = async (req: Request, res: Response) => {
     res.status(204).send();
 };
 
-/** GET /me : returns the logged-in user (set by requireAuth) */
+/** GET /me : returns the logged-in user (set by requireAuthAllowInvited) */
 export const me = (req: Request, res: Response) => {
     console.log("[AUTH CONTROLLER] Fetching the logged-in user...");
     res.status(200).json(res.locals.user);

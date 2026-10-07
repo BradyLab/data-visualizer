@@ -6,6 +6,7 @@ import { sequelize } from "@src/database.ts";
 // Row shape returned by the increment/get queries
 type Row = { hits: number; reset_time: Date };
 
+// Rate limit store backed by Postgres; implements express-rate-limit's Store interface
 export class PostgresStore implements Store {
     // Keys live in a shared table, so each limiter needs its own prefix or they would count each other's hits
     readonly prefix: string;
@@ -64,6 +65,7 @@ export class PostgresStore implements Store {
         });
     }
 
+    // Forgets one client's counter
     async resetKey(key: string) {
         await sequelize.query(`DELETE FROM "RateLimits" WHERE key = :key`, { replacements: { key: this.key(key) } });
     }
@@ -75,6 +77,7 @@ export class PostgresStore implements Store {
         });
     }
 
+    // Stops the cleanup timer
     shutdown() {
         clearInterval(this.cleanupTimer);
     }

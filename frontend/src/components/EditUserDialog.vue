@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // Popup for an admin to edit a user's role and status; saves through the user store
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { ASSIGNABLE_ROLES, UserRoles, UserStatus, type IUser } from "@commons/user";
+import { useAuthStore } from "@src/stores/auth";
 import { useUserStore } from "@src/stores/user";
 
 const props = defineProps<{ user: IUser | null }>();
@@ -9,6 +10,10 @@ const props = defineProps<{ user: IUser | null }>();
 const open = defineModel<boolean>({ default: false });
 
 const userStore = useUserStore();
+const auth = useAuthStore();
+
+// Admins can't change their own role or status here, so they can't demote or deactivate themselves by accident
+const isSelf = computed(() => !!props.user && props.user.id === auth.user.id);
 
 // GUEST is the logged-out placeholder role, so it isn't offered for real users
 const roleOptions = ASSIGNABLE_ROLES;
@@ -27,9 +32,9 @@ watch(open, (isOpen) => {
     error.value = null;
 });
 
-// Saves the changed fields and closes the popup; shows an error and stays open if the request fails
+// Saves the role and status (both are always sent, even if unchanged) and closes the popup; shows an error and stays open if the request fails
 async function save() {
-    if (!props.user) return;
+    if (!props.user || isSelf.value) return;
     saving.value = true;
     error.value = null;
     try {
@@ -48,7 +53,10 @@ async function save() {
         <v-card v-if="user" class="pa-4">
             <v-card-title>{{ user.name }} ({{ user.email }})</v-card-title>
             <v-card-text class="px-4 pb-0">
-                <v-select v-model="role" :items="roleOptions" label="Role" :clearable="false"></v-select>
+                <v-alert v-if="isSelf" type="info" variant="tonal" density="compact" class="mb-4">
+                    You can't change your own role or status.
+                </v-alert>
+                <v-select v-model="role" :items="roleOptions" label="Role" :clearable="false" :disabled="isSelf"></v-select>
                 <!-- Status of invited users is hidden: they become ACTIVE by changing their password -->
                 <v-select
                     v-if="status !== UserStatus.INVITED"
@@ -56,13 +64,14 @@ async function save() {
                     :items="statusOptions"
                     label="Status"
                     :clearable="false"
+                    :disabled="isSelf"
                 ></v-select>
                 <v-alert v-if="error" type="error" variant="tonal" density="compact">{{ error }}</v-alert>
             </v-card-text>
             <v-card-actions>
                 <v-spacer></v-spacer>
                 <v-btn :disabled="saving" color="white" @click="open = false">Cancel</v-btn>
-                <v-btn :loading="saving" color="white" variant="tonal" @click="save">Save</v-btn>
+                <v-btn :loading="saving" :disabled="isSelf" color="white" variant="tonal" @click="save">Save</v-btn>
             </v-card-actions>
         </v-card>
     </v-dialog>

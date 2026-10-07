@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Root component: wraps the page layout in Vuetify's v-app
-import { watch } from "vue";
+import { onMounted, watch } from "vue";
 import Default from "@src/layouts/Default.vue";
 import { useAuthStore } from "@src/stores/auth";
 import { useDatasetStore } from "@src/stores/dataset";
@@ -19,6 +19,11 @@ watch(
         datasetStore.fetchDatasets().catch(() => {});
     }
 );
+
+onMounted(() => {
+    permissionStore.clear();
+    datasetStore.fetchDatasets().catch(() => {});
+})
 </script>
 
 <template>

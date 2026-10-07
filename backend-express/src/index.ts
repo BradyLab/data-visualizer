@@ -26,8 +26,11 @@ export const get = () => {
     // Parses URL-encoded form bodies
     app.use(express.urlencoded({ extended: true }));
 
-    // Only allow cross-origin requests from the frontend
-    app.use(cors({ origin: process.env.FRONTEND_URL }));
+    // Only allow cross-origin requests from the frontend. Fail loudly if FRONTEND_URL is unset, since an undefined
+    // origin makes the cors package allow every origin
+    const frontendUrl = process.env.FRONTEND_URL;
+    if (!frontendUrl) throw new Error("FRONTEND_URL is not set; refusing to allow all cross-origin requests.");
+    app.use(cors({ origin: frontendUrl }));
 
     //health API call
     app.get("/health", (req: Request, res: Response) => {
@@ -67,7 +70,7 @@ export const start = async () => {
     // Refuse to start without a signing secret, since every login would otherwise fail (see signToken in services/auth.ts)
     if (!process.env.JWT_SECRET) {
         console.error("[SERVER]: JWT_SECRET is not set; refusing to start.");
-        return;
+        process.exit(1);
     }
 
     try {
@@ -75,7 +78,7 @@ export const start = async () => {
         console.log("[DATABASE]: Connection has been established successfully.");
     } catch (err) {
         console.error("[DATABASE]: Unable to connect to the database:", err);
-        return;
+        process.exit(1);
     }
 
     // listen() reports failures (e.g. port in use) through the server's "error" event, not by throwing,

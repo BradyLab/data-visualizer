@@ -1,9 +1,10 @@
 // Login logic: checks credentials and issues/verifies JWTs
-import { scryptSync, timingSafeEqual } from "node:crypto";
+import { timingSafeEqual } from "node:crypto";
 import jwt from "jsonwebtoken";
+import { fn, col, where } from "sequelize";
 import { Users } from "@src/models/user.ts";
 import { UserStatus } from "@commons/user.ts";
-import { hashPassword } from "@src/utils/password.ts";
+import { hashPassword, scryptAsync } from "@src/utils/password.ts";
 
 // Payload stored in the token
 export interface TokenPayload {
@@ -11,16 +12,18 @@ export interface TokenPayload {
 }
 
 // Checks a password against a stored "salt:hash" (hex) value produced by the user service
-const verifyPassword = (password: string, stored: string) => {
+const verifyPassword = async (password: string, stored: string) => {
     // Stored format is "salt:hash"; re-derive with the same salt and compare in constant time to avoid timing leaks
     const [salt, hash] = stored.split(":");
     if (!salt || !hash) return false;
     const expected = Buffer.from(hash, "hex");
-    const actual = scryptSync(password, salt, expected.length);
+    // A non-hex hash decodes to an empty buffer, and scrypt rejects a key length of 0; treat it as a failed login instead of a 500
+    if (expected.length === 0) return false;
+    const actual = await scryptAsync(password, salt, expected.length);
     return timingSafeEqual(expected, actual);
 };
 
-// Hash of a throwaway password, checked when the email is unknown so login takes about as long as for a real account
+// Hash (a promise, since hashing is async) of a throwaway password, checked when the email is unknown so login takes about as long as for a real account
 const DUMMY_HASH = hashPassword("not-a-real-password");
 
 /** Signs a token for the user id; lifetime comes from JWT_EXPIRES_IN (default 8h), signed with JWT_SECRET. Throws if JWT_SECRET is not set */
@@ -48,13 +51,13 @@ export const verifyToken = (token: string) => {
 export const changePassword = async (id: string, oldPassword: string, newPassword: string) => {
     console.log("[AUTH SERVICE] Changing password...");
     const user = await Users.findByPk(id);
-    if (!user || !verifyPassword(oldPassword, user.password)) {
+    if (!user || !(await verifyPassword(oldPassword, user.password))) {
         console.log("[AUTH SERVICE] Old password did not match");
         return false;
     }
     // An invited user becomes active once they replace the default password
     await user.update({
-        password: hashPassword(newPassword),
+        password: await hashPassword(newPassword),
         status: user.status === UserStatus.INVITED ? UserStatus.ACTIVE : user.status,
     });
     return true;
@@ -63,9 +66,9 @@ export const changePassword = async (id: string, oldPassword: string, newPasswor
 /** Returns a token and the user (without password) for valid credentials of an active user, otherwise null */
 export const login = async (email: string, password: string) => {
     console.log("[AUTH SERVICE] Looking up user to log in...");
-    const user = await Users.findOne({ where: { email } });
+    const user = await Users.findOne({ where: where(fn("lower", col("email")), email.trim().toLowerCase()) });
     // Always run scrypt, even for an unknown email, so response time doesn't reveal whether an account exists
-    const passwordOk = verifyPassword(password, user?.password ?? DUMMY_HASH);
+    const passwordOk = await verifyPassword(password, user?.password ?? (await DUMMY_HASH));
     var success = true;
     // Callers get the same result for unknown email, wrong password, and inactive account so they can't tell which;
     // the logs say which, but they stay server-side

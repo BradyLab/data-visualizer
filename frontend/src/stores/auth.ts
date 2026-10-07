@@ -22,7 +22,8 @@ const loadToken = () => {
 // can remove the old one instead of stacking a duplicate that still points at the old store's state
 let interceptorId: number | null = null;
 
-const guestUser: IUser = {
+// Builds a fresh logged-out placeholder user, so each use gets its own object and current timestamps
+const makeGuestUser = (): IUser => ({
     id: "",
     email: "",
     name: "GUEST USER",
@@ -30,12 +31,12 @@ const guestUser: IUser = {
     status: UserStatus.ACTIVE,
     createdAt: new Date(),
     updatedAt: new Date(),
-};
+});
 
 export const useAuthStore = defineStore("auth", () => {
     // State: login token, current user (a GUEST placeholder when logged out), and login request status
     const token = ref<string | null>(loadToken());
-    const user = ref<IUser>(guestUser);
+    const user = ref<IUser>(makeGuestUser());
     const loading = ref(false);
     // True when the saved session could not be restored because the server was unreachable or failed (the token is kept)
     const restoreFailed = ref(false);
@@ -103,10 +104,15 @@ export const useAuthStore = defineStore("auth", () => {
         }
     }
 
-    // Clears the token and resets the user to the same guest placeholder used as the initial state
+    // Marks an invited user as active after they change the default password (the backend does the same on its side)
+    function markPasswordChanged() {
+        if (user.value.status === UserStatus.INVITED) user.value = { ...user.value, status: UserStatus.ACTIVE };
+    }
+
+    // Clears the token and resets the user to a fresh guest placeholder like the initial state
     function clearSession() {
         setToken(null);
-        user.value = guestUser;
+        user.value = makeGuestUser();
         restoreFailed.value = false;
     }
 
@@ -152,5 +158,6 @@ export const useAuthStore = defineStore("auth", () => {
         login,
         restore,
         logout,
+        markPasswordChanged,
     };
 });

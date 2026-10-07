@@ -30,7 +30,8 @@ export const update = async (user_id: string, dataset_id: string, body: Partial<
         console.log("[PERMISSION SERVICE] Permission to update not found");
         return null;
     }
-    return permission.update(body);
+    // Enforce the rule here rather than trusting the caller: user_id/dataset_id in body are ignored
+    return permission.update(body.perm === undefined ? {} : { perm: body.perm });
 };
 
 /** Hard-deletes a permission (the row is removed, not flagged); returns false if not found */

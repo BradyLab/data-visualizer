@@ -30,12 +30,20 @@ export const usePermissionStore = defineStore("permission", () => {
 
     /**
      * Loads the permissions the viewer may see on the management page: every permission for admins, otherwise the
-     * permissions on the given datasets (the ones they own; only owners may see who a dataset is shared with)
+     * permissions on the given datasets (the ones they own; only owners may see who a dataset is shared with).
+     * If some of those requests fail, the rows that did load are kept and the first error is thrown
      */
     async function fetchManaged(datasetIds: string[], isAdmin: boolean) {
-        adminPermissions.value = isAdmin
-            ? await permissionApi.getPermissions()
-            : (await Promise.all(datasetIds.map((id) => permissionApi.getByDataset(id)))).flat();
+        if (isAdmin) {
+            adminPermissions.value = await permissionApi.getPermissions();
+            return;
+        }
+        // Keep the rows of the datasets that loaded even if another request fails, instead of leaving the old list in place;
+        // the failure is still thrown afterwards so the caller can tell the user the list is incomplete
+        const results = await Promise.allSettled(datasetIds.map((id) => permissionApi.getByDataset(id)));
+        adminPermissions.value = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+        const failed = results.find((r) => r.status === "rejected");
+        if (failed) throw failed.reason;
     }
 
     /** Forgets everything loaded for the previous viewer (call on login and logout) */

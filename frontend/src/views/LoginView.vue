@@ -48,7 +48,7 @@ onMounted(() => {
 
             <v-form @submit.prevent="submit">
                 <!-- Email input -->
-                <v-row class="mt-2 mb-0" cols="12">
+                <v-row class="mt-2 mb-0" >
                     <v-col>
                         <div class="text-body-medium">Email Address</div>
                         <v-text-field
@@ -63,7 +63,7 @@ onMounted(() => {
                     </v-col>
                 </v-row>
                 <!-- Password input with show/hide toggle -->
-                <v-row class="my-0" cols="12">
+                <v-row class="my-0">
                     <v-col>
                         <div class="text-body-medium">Password</div>
                         <v-text-field

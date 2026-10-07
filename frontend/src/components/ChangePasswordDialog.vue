@@ -55,7 +55,7 @@ async function submit() {
         await authApi.changePassword(oldPassword.value, newPassword.value);
         success.value = true;
         // The backend activates invited users on their first password change
-        if (auth.user.status === UserStatus.INVITED) auth.user = { ...auth.user, status: UserStatus.ACTIVE };
+        auth.markPasswordChanged();
     } catch (err) {
         const response = axios.isAxiosError(err) ? err.response : undefined;
         // 400 and 429 carry the backend's reason (e.g. new password is the default password, too many attempts)

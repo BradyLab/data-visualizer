@@ -21,13 +21,13 @@ const authenticate = (allowInvited: boolean) => async (req: Request, res: Respon
         console.log("[AUTH MIDDLEWARE] Unauthorized: missing or invalid token");
         return res.status(401).json({ error: "Unauthorized" });
     }
-    if (user.status == UserStatus.INACTIVE) {
+    if (user.status === UserStatus.INACTIVE) {
         console.log("[AUTH MIDDLEWARE] Unauthorized: user is inactive");
         return res.status(401).json({ error: "Unauthorized" });
     }
     // INVITED users are still on the default password; they get 403 (not 401, since the token is fine and the
     // client should not log them out) until they change it, except on routes that opt in via allowInvited
-    if (user.status == UserStatus.INVITED && !allowInvited) {
+    if (user.status === UserStatus.INVITED && !allowInvited) {
         console.log("[AUTH MIDDLEWARE] Forbidden: invited user must change the default password first");
         return res.status(403).json({ error: "Password change required", code: PASSWORD_CHANGE_REQUIRED });
     }
