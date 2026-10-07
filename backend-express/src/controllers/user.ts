@@ -2,8 +2,10 @@
 import { Request, Response } from "express";
 import * as service from "@src/services/user.ts";
 import * as datasetService from "@src/services/dataset.ts";
+import { diff, logActivity, toPlain } from "@src/services/activity.ts";
 import { IUserPass } from "@src/models/user.ts";
 import { pick } from "@src/utils/pick.ts";
+import { ActivityType } from "@commons/activity.ts";
 import { ASSIGNABLE_ROLES, UserRoles, UserStatus } from "@commons/user.ts";
 
 // Whitelist of columns clients may set (see utils/pick.ts)
@@ -51,9 +53,9 @@ export const create = async (req: Request, res: Response) => {
     if (typeof name !== "string" || !name.trim() || !email) return res.status(400).json({ error: "Name and email are required" });
     if (!EMAIL_FORMAT.test(email)) return res.status(400).json({ error: "Enter a valid email address" });
     if (!ASSIGNABLE_ROLES.includes(role)) return res.status(400).json({ error: "A valid role is required" });
-    res.status(201).json(
-        await service.create(pick<IUserPass>({ name: name.trim(), email, role }, ["email", "name", "role"] as const))
-    );
+    const created = await service.create(pick<IUserPass>({ name: name.trim(), email, role }, ["email", "name", "role"] as const));
+    await logActivity(res, ActivityType.INVITE_USER, toPlain(created));
+    res.status(201).json(created);
 };
 
 /**
@@ -95,7 +97,20 @@ export const update = async (req: Request, res: Response) => {
         ((fields.role !== undefined && fields.role !== UserRoles.ADMIN) || fields.status === UserStatus.INACTIVE);
     if (losesAdmin && !(await service.hasOtherActiveAdmin(id)))
         return res.status(409).json({ error: "There must be at least one active admin" });
-    res.status(200).json(await service.update(id, fields));
+    const updated = await service.update(id, fields);
+    // One entry per request: a status change takes the more specific type, other changed fields ride along in the same entry
+    const changes = updated && diff(target, updated, UPDATE_FIELDS);
+    if (changes) {
+        const status = changes.status;
+        const type =
+            status?.after === UserStatus.INACTIVE
+                ? ActivityType.USER_DEACTIVATED
+                : status?.before === UserStatus.INACTIVE && status.after === UserStatus.ACTIVE
+                  ? ActivityType.USER_REACTIVATED
+                  : ActivityType.USER_UPDATED;
+        await logActivity(res, type, { user_id: id, changes });
+    }
+    res.status(200).json(updated);
 };
 
 /** DELETE /:id : deletes a user (204 with no body), or 404 if it does not exist, 409 if it is the last active admin or still owns datasets */
@@ -112,6 +127,8 @@ export const remove = async (req: Request, res: Response) => {
         return res.status(409).json({ error: "There must be at least one active admin" });
     if (await datasetService.countOwnedBy(id))
         return res.status(409).json({ error: "This user owns datasets; reassign them first or deactivate the user instead" });
+    const deleted = toPlain(target);
     await service.remove(id);
+    await logActivity(res, ActivityType.USER_DELETED, deleted);
     res.status(204).send();
 };

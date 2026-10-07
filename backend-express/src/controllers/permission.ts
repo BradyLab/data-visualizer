@@ -3,9 +3,11 @@ import { Request, Response } from "express";
 import * as service from "@src/services/permission.ts";
 import { IPermission } from "@src/models/permission.ts";
 import * as userService from "@src/services/user.ts";
+import { diff, logActivity, toPlain } from "@src/services/activity.ts";
 import { authorizeDataset, caller, OWNER } from "@src/services/access.ts";
 import { Datasets } from "@src/models/dataset.ts";
 import { pick } from "@src/utils/pick.ts";
+import { ActivityType } from "@commons/activity.ts";
 import { grantError, PermissionOptions } from "@commons/permissions.ts";
 
 // Whitelist of columns clients may set (see utils/pick.ts)
@@ -74,7 +76,9 @@ export const create = async (req: Request, res: Response) => {
     const perm = fields.perm ?? PermissionOptions.VIEW;
     const problem = await checkGrant(found.dataset, fields.user_id, perm);
     if (problem) return res.status(400).json({ error: problem });
-    res.status(201).json(await service.create({ ...fields, perm }));
+    const created = await service.create({ ...fields, perm });
+    await logActivity(res, ActivityType.PERM_GRANTED, toPlain(created));
+    res.status(201).json(created);
 };
 
 /** PUT /:userId/:datasetId : updates an existing permission (200), or 404 if it does not exist; needs OWNER access and a perm that suits the user's role (400) */
@@ -84,6 +88,7 @@ export const update = async (req: Request, res: Response) => {
     if (!found) return;
     const problem = await checkGrant(found.dataset, req.params.userId as string, req.body?.perm);
     if (problem) return res.status(400).json({ error: problem });
+    const before = await service.getById(req.params.userId as string, req.params.datasetId as string);
     const item = await service.update(
         req.params.userId as string,
         req.params.datasetId as string,
@@ -93,6 +98,9 @@ export const update = async (req: Request, res: Response) => {
         console.log("[PERMISSION CONTROLLER] Permission not found");
         return res.status(404).json({ error: "Permission not found" });
     }
+    const changes = before && diff(before, item, ["perm"]);
+    if (changes)
+        await logActivity(res, ActivityType.PERM_GRANTED, { user_id: item.user_id, dataset_id: item.dataset_id, changes });
     res.status(200).json(item);
 };
 
@@ -100,9 +108,11 @@ export const update = async (req: Request, res: Response) => {
 export const remove = async (req: Request, res: Response) => {
     console.log("[PERMISSION CONTROLLER] Attempting to delete permission...");
     if (!(await authorizeDataset(res, req.params.datasetId as string, OWNER))) return;
-    if (!(await service.remove(req.params.userId as string, req.params.datasetId as string))) {
+    const existing = await service.getById(req.params.userId as string, req.params.datasetId as string);
+    if (!existing || !(await service.remove(req.params.userId as string, req.params.datasetId as string))) {
         console.log("[PERMISSION CONTROLLER] Permission not found");
         return res.status(404).json({ error: "Permission not found" });
     }
+    await logActivity(res, ActivityType.PERM_REVOKED, toPlain(existing));
     res.status(204).send();
 };

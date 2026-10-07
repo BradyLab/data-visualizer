@@ -31,6 +31,24 @@ watch(
 );
 const typeOptions = Object.values(ActivityType);
 
+// Display names for the activity types; a Record over the whole enum, so adding a type without a label fails type-checking
+const typeLabels: Record<ActivityType, string> = {
+    [ActivityType.INVITE_USER]: "User Invited",
+    [ActivityType.USER_JOINED]: "User Joined",
+    [ActivityType.USER_UPDATED]: "User Updated",
+    [ActivityType.USER_DEACTIVATED]: "User Deactivated",
+    [ActivityType.USER_REACTIVATED]: "User Reactivated",
+    [ActivityType.USER_DELETED]: "User Deleted",
+    [ActivityType.PERM_GRANTED]: "Permission Granted",
+    [ActivityType.PERM_REVOKED]: "Permission Revoked",
+    [ActivityType.DATASET_CREATED]: "Dataset Created",
+    [ActivityType.DATASET_UPDATED]: "Dataset Updated",
+    [ActivityType.DATASET_DELETED]: "Dataset Deleted",
+    [ActivityType.FILE_UPLOADED]: "File Uploaded",
+    [ActivityType.FILE_DOWNLOADED]: "File Downloaded",
+    [ActivityType.FILE_DELETED]: "File Deleted",
+};
+
 // Shows the user's name, falling back to the id if the user isn't loaded
 const userName = (id: string | null) => (id ? (userStore.getById(id)?.name ?? id) : "Deleted user");
 
@@ -82,7 +100,7 @@ onMounted(async () => {
                         <v-list-item-title>Activity Type</v-list-item-title>
                         <v-menu activator="parent" submenu open-on-hover :close-on-content-click="false" location="end">
                             <v-list v-model:selected="typeFilter" select-strategy="leaf">
-                                <v-list-item v-for="type in typeOptions" :key="type" :title="type" :value="type">
+                                <v-list-item v-for="type in typeOptions" :key="type" :title="typeLabels[type]" :value="type">
                                     <template #prepend="{ isSelected }">
                                         <v-icon
                                             :icon="isSelected ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'"
@@ -119,7 +137,7 @@ onMounted(async () => {
                 color="primary"
                 @click:close="typeFilter = typeFilter.filter((t) => t !== type)"
             >
-                Type: {{ type }}
+                Type: {{ typeLabels[type] }}
             </v-chip>
             <v-chip
                 v-for="id in userFilter"
@@ -133,6 +151,9 @@ onMounted(async () => {
         </div>
 
         <v-data-table :headers="headers" :items="filteredActivities" item-value="id">
+            <!-- Type shown by its display name -->
+            <template #item.type="{ item }">{{ typeLabels[item.type] }}</template>
+
             <!-- JSON data: shows the first few lines; click to expand or collapse when there is more -->
             <template #item.data="{ item }">
                 <pre

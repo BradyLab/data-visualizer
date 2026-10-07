@@ -3,8 +3,10 @@ import { Request, Response } from "express";
 import * as service from "@src/services/dataset.ts";
 import { IDataset } from "@src/models/dataset.ts";
 import * as userService from "@src/services/user.ts";
+import { diff, logActivity, toPlain } from "@src/services/activity.ts";
 import { authorizeDataset, caller, getAccess, hasAccess, OWNER } from "@src/services/access.ts";
 import { pick } from "@src/utils/pick.ts";
+import { ActivityType } from "@commons/activity.ts";
 import { PermissionOptions } from "@commons/permissions.ts";
 import { UserRoles } from "@commons/user.ts";
 
@@ -60,7 +62,9 @@ export const create = async (req: Request, res: Response) => {
         if (!target || (target.role !== UserRoles.ADMIN && target.role !== UserRoles.LAB_MEMBER))
             return res.status(400).json({ error: "The owner must be an admin or lab member" });
     }
-    res.status(201).json(await service.create({ ...fields, owner }));
+    const created = await service.create({ ...fields, owner });
+    await logActivity(res, ActivityType.DATASET_CREATED, toPlain(created));
+    res.status(201).json(created);
 };
 
 /**
@@ -76,7 +80,10 @@ export const update = async (req: Request, res: Response) => {
         console.log("[DATASET CONTROLLER] Only an owner may change visibility");
         return res.status(403).json({ error: "Forbidden" });
     }
-    res.status(200).json(await service.update(found.dataset.id, fields));
+    const updated = await service.update(found.dataset.id, fields);
+    const changes = updated && diff(found.dataset, updated, DATASET_UPDATE_FIELDS);
+    if (changes) await logActivity(res, ActivityType.DATASET_UPDATED, { dataset_id: found.dataset.id, changes });
+    res.status(200).json(updated);
 };
 
 /** DELETE /:id : deletes a dataset (204 with no body); needs OWNER access (404 if not found or not visible, 403 if not an owner) */
@@ -85,5 +92,6 @@ export const remove = async (req: Request, res: Response) => {
     const found = await authorizeDataset(res, req.params.id as string, OWNER);
     if (!found) return;
     await service.remove(found.dataset.id);
+    await logActivity(res, ActivityType.DATASET_DELETED, toPlain(found.dataset));
     res.status(204).send();
 };

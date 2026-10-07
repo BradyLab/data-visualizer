@@ -1,12 +1,12 @@
 <script setup lang="ts">
 // Top app bar: logo, DATASETS menu, HELP/ABOUT/FEEDBACK links, and account menu
-import { onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import BradyLabLogo from "@src/components/BradyLabLogo.vue";
 import LayoutHelper from "@src/components/LayoutHelper.vue";
 import { useAuthStore } from "@src/stores/auth";
 import { useDatasetStore } from "@src/stores/dataset";
 import { HELP_URL } from "@src/interfaces/general";
+import { UserRoles } from "@commons/user";
 
 // Router instance used for programmatic navigation
 const router = useRouter();
@@ -51,6 +51,14 @@ async function logout() {
                             @click="navTo('/dataset/' + dataset.url)"
                         >
                             {{ dataset.name }}
+                        </v-list-item>
+                        <v-divider></v-divider>
+                        <v-list-item
+                            v-if="auth.user.role === UserRoles.LAB_MEMBER || auth.user.role === UserRoles.ADMIN"
+                            @click="navTo('/dataset/new')"
+                            class="pb-0 pt-2"
+                        >
+                            <template #prepend><v-icon size="small">mdi-plus</v-icon> New Dataset</template>
                         </v-list-item>
                     </v-list>
                 </v-menu>

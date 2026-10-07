@@ -1,7 +1,10 @@
 // Request handlers for authentication
 import { Request, Response } from "express";
 import * as service from "@src/services/auth.ts";
+import { logActivity } from "@src/services/activity.ts";
+import { ActivityType } from "@commons/activity.ts";
 import { MIN_PASSWORD_LENGTH } from "@commons/general.ts";
+import { UserStatus } from "@commons/user.ts";
 
 /** POST /login : returns { token, user } (200), 400 if email/password are missing, or 401 for bad credentials */
 export const login = async (req: Request, res: Response) => {
@@ -43,9 +46,15 @@ export const changePassword = async (req: Request, res: Response) => {
     if (process.env.DEFAULT_PASSWORD && newPassword === process.env.DEFAULT_PASSWORD) {
         return res.status(400).json({ error: "New password must not be the default password" });
     }
+    // An invited user becomes active by changing the default password; that is when they have joined
+    const wasInvited = res.locals.user.status === UserStatus.INVITED;
     if (!(await service.changePassword(res.locals.user.id, oldPassword, newPassword))) {
         return res.status(403).json({ error: "Old password is incorrect" });
     }
+    if (wasInvited)
+        await logActivity(res, ActivityType.USER_JOINED, {
+            changes: { status: { before: UserStatus.INVITED, after: UserStatus.ACTIVE } },
+        });
     res.status(204).send();
 };
 

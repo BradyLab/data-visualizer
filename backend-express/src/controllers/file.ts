@@ -2,10 +2,12 @@
 import { Request, Response } from "express";
 import * as service from "@src/services/file.ts";
 import { IFile } from "@src/models/file.ts";
+import { diff, logActivity, toPlain } from "@src/services/activity.ts";
 import { authorizeDataset, caller } from "@src/services/access.ts";
 import { pick } from "@src/utils/pick.ts";
 import { PermissionOptions } from "@commons/permissions.ts";
 import { UserRoles } from "@commons/user.ts";
+import { ActivityType } from "@commons/activity.ts";
 import { FileTypes } from "@commons/file.ts";
 
 // Whitelist of columns clients may set when creating a file; user_id is always the caller (see create)
@@ -76,23 +78,32 @@ export const create = async (req: Request, res: Response) => {
         return res.status(400).json({ error: "type, sizeBytes and ogName are required" });
     const invalid = validateFileFields(fields);
     if (invalid) return res.status(400).json({ error: invalid });
-    res.status(201).json(await service.create({ ...fields, user_id: caller(res)!.id }));
+    const created = await service.create({ ...fields, user_id: caller(res)!.id });
+    await logActivity(res, ActivityType.FILE_UPLOADED, toPlain(created));
+    res.status(201).json(created);
 };
 
 /** PUT /:id : updates an existing file (200); needs EDIT access to its dataset (404 if not found or not visible, 403 otherwise) */
 export const update = async (req: Request, res: Response) => {
     console.log("[FILE CONTROLLER] Attempting to update file...");
-    if (!(await authorizeFile(res, req.params.id as string, PermissionOptions.EDIT))) return;
+    const file = await authorizeFile(res, req.params.id as string, PermissionOptions.EDIT);
+    if (!file) return;
     const fields = pick<IFile>(req.body, FILE_UPDATE_FIELDS);
     const invalid = validateFileFields(fields);
     if (invalid) return res.status(400).json({ error: invalid });
-    res.status(200).json(await service.update(req.params.id as string, fields));
+    const updated = await service.update(file.id, fields);
+    // There is no FILE_UPDATED type, so a changed file record (e.g. a replaced upload) is logged as FILE_UPLOADED
+    const changes = updated && diff(file, updated, FILE_UPDATE_FIELDS);
+    if (changes) await logActivity(res, ActivityType.FILE_UPLOADED, { file_id: file.id, dataset_id: file.dataset_id, changes });
+    res.status(200).json(updated);
 };
 
 /** DELETE /:id : deletes a file (204 with no body); needs EDIT access to its dataset (404 if not found or not visible, 403 otherwise) */
 export const remove = async (req: Request, res: Response) => {
     console.log("[FILE CONTROLLER] Attempting to delete file...");
-    if (!(await authorizeFile(res, req.params.id as string, PermissionOptions.EDIT))) return;
-    await service.remove(req.params.id as string);
+    const file = await authorizeFile(res, req.params.id as string, PermissionOptions.EDIT);
+    if (!file) return;
+    await service.remove(file.id);
+    await logActivity(res, ActivityType.FILE_DELETED, toPlain(file));
     res.status(204).send();
 };
