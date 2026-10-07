@@ -19,16 +19,25 @@ export class PostgresStore implements Store {
         this.prefix = prefix;
     }
 
+    // Namespaces a client key with this limiter's prefix
     private key(key: string) {
         return `${this.prefix}:${key}`;
     }
 
-    // Takes the window length from the limiter and starts deleting expired rows once per window
+    // LIKE pattern matching every key of this limiter, with the prefix's LIKE wildcards escaped
+    private get pattern() {
+        return `${this.prefix.replace(/[\\%_]/g, "\\$&")}:%`;
+    }
+
+    // Takes the window length from the limiter and starts deleting this limiter's expired rows once per window
     init(options: Options) {
         this.windowMs = options.windowMs;
+        // Each limiter only cleans its own keys, so the timers do not repeat each other's work
         this.cleanupTimer = setInterval(() => {
             sequelize
-                .query(`DELETE FROM "RateLimits" WHERE reset_time <= NOW()`)
+                .query(`DELETE FROM "RateLimits" WHERE key LIKE :pattern AND reset_time <= NOW()`, {
+                    replacements: { pattern: this.pattern },
+                })
                 .catch((e) => console.error("[RATE LIMIT STORE] Cleanup failed", e));
         }, this.windowMs);
         this.cleanupTimer.unref(); // do not keep the process alive just for cleanup
@@ -73,7 +82,7 @@ export class PostgresStore implements Store {
     // Clears only this limiter's counters, not the other limiters' (they share the table)
     async resetAll() {
         await sequelize.query(`DELETE FROM "RateLimits" WHERE key LIKE :pattern`, {
-            replacements: { pattern: `${this.prefix.replace(/[\\%_]/g, "\\$&")}:%` },
+            replacements: { pattern: this.pattern },
         });
     }
 

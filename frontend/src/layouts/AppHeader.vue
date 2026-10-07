@@ -6,7 +6,6 @@ import LayoutHelper from "@src/components/LayoutHelper.vue";
 import { useAuthStore } from "@src/stores/auth";
 import { useDatasetStore } from "@src/stores/dataset";
 import { HELP_URL } from "@src/interfaces/general";
-import { UserRoles } from "@commons/user";
 
 // Router instance used for programmatic navigation
 const router = useRouter();
@@ -53,11 +52,7 @@ async function logout() {
                             {{ dataset.name }}
                         </v-list-item>
                         <v-divider></v-divider>
-                        <v-list-item
-                            v-if="auth.user.role === UserRoles.LAB_MEMBER || auth.user.role === UserRoles.ADMIN"
-                            @click="navTo('/dataset/new')"
-                            class="pb-0 pt-2"
-                        >
+                        <v-list-item v-if="auth.canCreateDatasets" @click="navTo('/dataset/new')" class="pb-0 pt-2">
                             <template #prepend><v-icon size="small">mdi-plus</v-icon> New Dataset</template>
                         </v-list-item>
                     </v-list>

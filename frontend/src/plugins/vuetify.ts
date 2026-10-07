@@ -7,6 +7,7 @@ import type { ThemeDefinition } from "vuetify";
 import "vuetify/styles";
 import "@mdi/font/css/materialdesignicons.css";
 
+// Plugin function: installed through app.use(vuetify) in main.ts, it builds the Vuetify instance and installs it on the app
 export default (app: App) => {
     //themes
     const themes: Record<string, ThemeDefinition> = {
@@ -33,6 +34,12 @@ export default (app: App) => {
 
     // Global default props for components, so individual views do not repeat them
     //defaults
+    const tableDefaults = {
+        style: "background-color: rgba(var(--v-theme-primary), 0.12); color: rgb(var(--v-theme-primary)); --v-theme-on-surface: var(--v-theme-primary);",
+        VBtn: {
+            color: "primary",
+        },
+    };
     const defaults = {
         VBtn: {
             color: "primary",
@@ -63,12 +70,9 @@ export default (app: App) => {
             },
         },
         // Tables match a tonal chip: translucent primary background with primary text (VDataTable has no color prop, so use theme variables)
-        VDataTable: {
-            style: "background-color: rgba(var(--v-theme-primary), 0.12); color: rgb(var(--v-theme-primary)); --v-theme-on-surface: var(--v-theme-primary);",
-            VBtn: {
-                color: "primary",
-            },
-        },
+        // VDataTableServer (server-side paging) is a separate component, so it gets the same defaults
+        VDataTable: tableDefaults,
+        VDataTableServer: tableDefaults,
     };
 
     //creation

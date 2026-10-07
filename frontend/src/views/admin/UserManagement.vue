@@ -36,10 +36,8 @@ const filteredUsers = computed(() =>
     )
 );
 
-// Load the users once we know the viewer is an admin (the router guard keeps everyone else off this page)
-onMounted(async () => {
-    if (auth.isAdmin) await userStore.fetchUsers();
-});
+// Load the users (the router guard keeps everyone but admins off this page)
+onMounted(() => userStore.fetchUsers());
 
 // User currently being edited in the popup
 // (the dialog stays mounted and receives the selected user as a prop)
@@ -142,10 +140,20 @@ function inviteUser() {
         </div>
 
         <v-data-table :headers="headers" :items="filteredUsers" item-value="id">
-            <template #item.actions="{ item }">
-                <v-btn class="mr-2" prepend-icon="mdi-pencil" @click="edit(item)"> Edit </v-btn>
-                <v-btn class="mr-2" prepend-icon="mdi-shield-key-outline" @click="viewPermissions(item.id)"> Permissions </v-btn>
-                <v-btn prepend-icon="mdi-history" @click="viewActivityLogs(item.id)">Activity Logs</v-btn>
+            <template v-slot:item="{ item: user }">
+                <tr>
+                    <td>{{ user.name }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.role }}</td>
+                    <td>{{ user.status }}</td>
+                    <td>
+                        <v-btn class="mr-2" prepend-icon="mdi-pencil" @click="edit(user)"> Edit </v-btn>
+                        <v-btn class="mr-2" prepend-icon="mdi-shield-key-outline" @click="viewPermissions(user.id)">
+                            Permissions
+                        </v-btn>
+                        <v-btn prepend-icon="mdi-history" @click="viewActivityLogs(user.id)">Activity Logs</v-btn>
+                    </td>
+                </tr>
             </template>
         </v-data-table>
 

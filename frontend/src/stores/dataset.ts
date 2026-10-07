@@ -3,6 +3,7 @@ import { ref } from "vue";
 import { defineStore } from "pinia";
 import type { IDataset } from "@commons/dataset";
 import { datasetApi } from "@src/api/dataset";
+import { usePermissionStore } from "@src/stores/permission";
 import { type CreateDatasetPayload, type UpdateDatasetPayload } from "@src/interfaces/dataset";
 
 export const useDatasetStore = defineStore("dataset", () => {
@@ -12,9 +13,18 @@ export const useDatasetStore = defineStore("dataset", () => {
     // Counts lookups so a slow earlier one can't overwrite currentDataset after a newer lookup has started
     let latestLookup = 0;
 
-    /** Loads all datasets from the backend into the store */
+    // True while the latest fetchDatasets failed, so the layout can tell the viewer the dataset list may be missing or stale
+    const loadFailed = ref(false);
+
+    /** Loads all datasets from the backend into the store; records a failure in loadFailed and still rejects so callers can react */
     async function fetchDatasets() {
-        datasets.value = await datasetApi.getDatasets();
+        try {
+            datasets.value = await datasetApi.getDatasets();
+            loadFailed.value = false;
+        } catch (error) {
+            loadFailed.value = true;
+            throw error;
+        }
     }
 
     /** Fetches the dataset with this id from the backend, or null if there is none; also stores it in currentDataset unless a newer lookup has started */
@@ -57,8 +67,10 @@ export const useDatasetStore = defineStore("dataset", () => {
         await datasetApi.deleteDataset(id);
         // Don't leave the open dataset pointing at one that no longer exists
         if (currentDataset.value?.id === id) currentDataset.value = null;
+        // The backend deletes the dataset's permissions with it, so drop the cached rows too
+        usePermissionStore().removeForDataset(id);
         datasets.value = datasets.value.filter((d) => d.id !== id);
     }
 
-    return { datasets, currentDataset, fetchDatasets, getById, getByUrl, addDataset, editDataset, removeDataset };
+    return { datasets, currentDataset, loadFailed, fetchDatasets, getById, getByUrl, addDataset, editDataset, removeDataset };
 });

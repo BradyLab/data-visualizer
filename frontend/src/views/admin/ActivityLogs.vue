@@ -12,10 +12,10 @@ const auth = useAuthStore();
 const userStore = useUserStore();
 const activityStore = useActivityStore();
 
-// Table columns: activity type, user name, and the JSON data
+// Table columns: activity type, user name, and the JSON data (not sortable: the server returns pages newest first)
 const headers = [
-    { title: "ACTIVITY TYPE", key: "type" },
-    { title: "USER", key: "userName" },
+    { title: "ACTIVITY TYPE", key: "type", sortable: false },
+    { title: "USER", key: "userName", sortable: false },
     { title: "DATA", key: "data", sortable: false },
 ];
 
@@ -52,16 +52,38 @@ const typeLabels: Record<ActivityType, string> = {
 // Shows the user's name, falling back to the id if the user isn't loaded
 const userName = (id: string | null) => (id ? (userStore.getById(id)?.name ?? id) : "Deleted user");
 
-// Activities matching any selected type and any selected user, where set, with the user's name added for display and sorting
-const filteredActivities = computed(() =>
-    activityStore.activities
-        .filter(
-            (a) =>
-                (!typeFilter.value.length || typeFilter.value.includes(a.type)) &&
-                (!userFilter.value.length || (a.user_id !== null && userFilter.value.includes(a.user_id)))
-        )
-        .map((a) => ({ ...a, userName: userName(a.user_id) }))
-);
+// The current page of activities (already filtered by the server), with the user's name added for display
+const pageActivities = computed(() => activityStore.activities.map((a) => ({ ...a, userName: userName(a.user_id) })));
+
+// Paging state; the server returns one page at a time since the log grows without bound
+const page = ref(1);
+const itemsPerPage = ref(25);
+const loading = ref(false);
+// Counts requests so a slow, outdated response never overwrites a newer one
+let latestRequest = 0;
+
+// Loads the current page for the selected filters
+async function load() {
+    const request = ++latestRequest;
+    loading.value = true;
+    try {
+        await activityStore.fetchActivities({
+            user_id: userFilter.value,
+            type: typeFilter.value,
+            limit: itemsPerPage.value,
+            offset: (page.value - 1) * itemsPerPage.value,
+        });
+    } finally {
+        if (request === latestRequest) loading.value = false;
+    }
+}
+
+// Changing a filter or the page size starts again from the first page; changing the page only reloads
+watch([typeFilter, userFilter, itemsPerPage], () => {
+    if (page.value === 1) load();
+    else page.value = 1;
+});
+watch(page, load);
 
 // Ids of activities whose JSON data is expanded past the preview
 const expanded = ref<string[]>([]);
@@ -77,10 +99,8 @@ function toggleExpanded(id: string) {
     expanded.value = expanded.value.includes(id) ? expanded.value.filter((e) => e !== id) : [...expanded.value, id];
 }
 
-// Load the log (and users, for the filter names) once we know the viewer is an admin
-onMounted(async () => {
-    if (auth.isAdmin) await Promise.all([activityStore.fetchActivities(), userStore.fetchUsers()]);
-});
+// Load the first page (and users, for the filter names); the router guard keeps everyone but admins off this page
+onMounted(() => Promise.all([load(), userStore.fetchUsers()]));
 </script>
 
 <template>
@@ -150,29 +170,40 @@ onMounted(async () => {
             </v-chip>
         </div>
 
-        <v-data-table :headers="headers" :items="filteredActivities" item-value="id">
-            <!-- Type shown by its display name -->
-            <template #item.type="{ item }">{{ typeLabels[item.type] }}</template>
-
-            <!-- JSON data: shows the first few lines; click to expand or collapse when there is more -->
-            <template #item.data="{ item }">
-                <pre
-                    class="py-2"
-                    :style="{
-                        cursor: lineCount(item.data) > PREVIEW_LINES ? 'pointer' : 'default',
-                        ...(expanded.includes(item.id)
-                            ? {}
-                            : {
-                                  display: '-webkit-box',
-                                  '-webkit-box-orient': 'vertical',
-                                  '-webkit-line-clamp': PREVIEW_LINES,
-                                  overflow: 'hidden',
-                              }),
-                    }"
-                    :title="lineCount(item.data) > PREVIEW_LINES ? 'Click to expand or collapse' : undefined"
-                    @click="lineCount(item.data) > PREVIEW_LINES && toggleExpanded(item.id)"
-                    >{{ formatData(item.data) }}</pre>
+        <!-- Server-side paging: each page and filter change fetches from the backend -->
+        <v-data-table-server
+            v-model:page="page"
+            v-model:items-per-page="itemsPerPage"
+            :headers="headers"
+            :items="pageActivities"
+            :items-length="activityStore.total"
+            :loading="loading"
+            item-value="id"
+        >
+            <template v-slot:item="{ item: activity }">
+                <tr>
+                    <td>{{ typeLabels[activity.type] }}</td>
+                    <td>{{ activity.userName }}</td>
+                    <td>
+                        <pre
+                            class="py-2"
+                            :style="{
+                                cursor: lineCount(activity.data) > PREVIEW_LINES ? 'pointer' : 'default',
+                                ...(expanded.includes(activity.id)
+                                    ? {}
+                                    : {
+                                          display: '-webkit-box',
+                                          '-webkit-box-orient': 'vertical',
+                                          '-webkit-line-clamp': PREVIEW_LINES,
+                                          overflow: 'hidden',
+                                      }),
+                            }"
+                            :title="lineCount(activity.data) > PREVIEW_LINES ? 'Click to expand or collapse' : undefined"
+                            @click="lineCount(activity.data) > PREVIEW_LINES && toggleExpanded(activity.id)"
+                            >{{ formatData(activity.data) }}</pre>
+                    </td>
+                </tr>
             </template>
-        </v-data-table>
+        </v-data-table-server>
     </v-container>
 </template>

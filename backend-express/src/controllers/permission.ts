@@ -99,6 +99,7 @@ export const update = async (req: Request, res: Response) => {
         return res.status(404).json({ error: "Permission not found" });
     }
     const changes = before && diff(before, item, ["perm"]);
+    // There is no PERM_UPDATED type, so a changed permission level is logged as PERM_GRANTED
     if (changes)
         await logActivity(res, ActivityType.PERM_GRANTED, { user_id: item.user_id, dataset_id: item.dataset_id, changes });
     res.status(200).json(item);

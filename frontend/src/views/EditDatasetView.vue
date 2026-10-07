@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Create/edit dataset page: the same form is used for /new and /dataset/:datasetURL/edit (file uploads are not wired up yet)
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 import { DatasetPlots, DatasetVisibility, datasetUrlError, slugify, type IDataset } from "@commons/dataset";
@@ -25,7 +25,7 @@ const isEdit = computed(() => editingUrl.value !== null);
 const dataset = ref<IDataset>({
     id: "",
     name: "",
-    // Defaults to the viewer; "" if this page is loaded directly before the session is restored (see the watch below)
+    // Defaults to the viewer (the route requires a login); in edit mode it is replaced by the loaded dataset's owner
     owner: auth.user.id,
     url: "",
     description: "",
@@ -39,15 +39,6 @@ const dataset = ref<IDataset>({
     createdAt: new Date(),
     updatedAt: null,
 });
-
-// When creating, fill in the default owner once the session restore finishes; non-admins can't change the owner field,
-// so without this canSave would stay false for them
-watch(
-    () => auth.user.id,
-    (id) => {
-        if (!isEdit.value && !dataset.value.owner) dataset.value.owner = id;
-    }
-);
 
 // Busy flags: loading while the dataset is fetched (edit mode), saving while the save request is in flight
 const loading = ref(false);

@@ -48,7 +48,7 @@ onMounted(() => {
 
             <v-form @submit.prevent="submit">
                 <!-- Email input -->
-                <v-row class="mt-2 mb-0" >
+                <v-row class="mt-2 mb-0">
                     <v-col>
                         <div class="text-body-medium">Email Address</div>
                         <v-text-field

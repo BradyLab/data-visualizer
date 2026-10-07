@@ -47,12 +47,15 @@ export class Files extends Model<IFile> {
     })
     declare type: FileTypes;
 
-    // File size in bytes (typed as string because Postgres BIGINT values are returned as strings)
+    // File size in bytes; Postgres returns BIGINT as a string, so the getter converts it to a number (sizes are validated as safe integers on write)
     @Column({
         type: DataType.BIGINT,
         allowNull: false,
+        get(this: Files) {
+            return Number(this.getDataValue("sizeBytes"));
+        },
     })
-    declare sizeBytes: string;
+    declare sizeBytes: number;
 
     // Original file name as uploaded
     @Column({

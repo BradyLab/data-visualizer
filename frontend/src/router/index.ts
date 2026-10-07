@@ -29,7 +29,7 @@ const router = createRouter({
         {
             path: "/home",
             name: "home",
-            component: async () => await import("@src/views/HomeView.vue"),
+            component: async () => import("@src/views/HomeView.vue"),
             meta: { hideFooter: false },
         },
         {

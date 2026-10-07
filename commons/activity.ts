@@ -18,6 +18,12 @@ export enum ActivityType {
     FILE_DELETED = "FILE_DELETED",
 }
 
+// One page of the activity list: the rows on this page and how many activities match the filters in total
+export interface IActivityPage {
+    rows: IActivity[];
+    total: number;
+}
+
 // An activity record as stored in the Activities table
 export interface IActivity {
     id: string;

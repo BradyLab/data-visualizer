@@ -40,10 +40,11 @@ export const useAuthStore = defineStore("auth", () => {
     const loading = ref(false);
     // True when the saved session could not be restored because the server was unreachable or failed (the token is kept)
     const restoreFailed = ref(false);
+    // Message from the latest failed login (null when there is none)
     const error = ref<string | null>(null);
 
     // Logged in once there is a token and the user it belongs to has been loaded (id is "" for the GUEST placeholder),
-    // so this is false while restore() is still pending; an expired token is caught by the 401 handler below
+    // so this stays false if restore() failed with the token kept; an expired token is caught by the 401 handler below
     const isLoggedIn = computed(() => !!token.value && !!user.value.id);
 
     //misc information to avoid recalculations
@@ -90,7 +91,7 @@ export const useAuthStore = defineStore("auth", () => {
 
     /**
      * Restores the user from a saved token (call on app start). Logs out only if the server rejects the token (401);
-     * on a network error or 5xx the token is kept, so a reload can retry, and the user shows as logged out meanwhile
+     * on a network error or 5xx the token is kept, so a reload can retry, and the user shows as logged out until then
      */
     async function restore() {
         if (!token.value) return;

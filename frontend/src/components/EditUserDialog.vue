@@ -38,7 +38,10 @@ async function save() {
     saving.value = true;
     error.value = null;
     try {
-        await userStore.editUser(props.user.id, { role: role.value, status: status.value });
+        await userStore.editUser(
+            props.user.id,
+            status.value === UserStatus.INVITED ? { role: role.value } : { role: role.value, status: status.value }
+        );
         open.value = false;
     } catch {
         error.value = "Unable to save changes. Please try again.";

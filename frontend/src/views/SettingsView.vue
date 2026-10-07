@@ -39,28 +39,16 @@ function navTo(route: string) {
     router.push(route);
 }
 
-// Settings requires a login; guests are redirected to the login page
+// Dataset list for the admin section; if the request fails the list is simply empty (the login requirement is the route guard's job)
 onMounted(() => {
-    if (!auth.isLoggedIn) navTo("/login");
-    // Dataset list for the admin section; if the request fails the list is simply empty
     datasetStore.fetchDatasets().catch(() => {});
 });
 
 // Admins see every management page; others only see Permissions, and only if they own some dataset
 const canManagePermissions = computed(() => auth.isAdmin || datasetStore.datasets.some((d) => permissionStore.canManage(d)));
 
-// Load the user's own permissions and fill the name field once the real user is known
-// (the id is empty until login / session restore finishes)
+// Load the user's own permissions and fill the name field for the current user (the id is empty once they log out)
 const name = ref("");
-watch(
-    () => auth.user.id,
-    (id) => {
-        if (!id) return;
-        name.value = auth.user.name;
-        permissionStore.fetchMine(id).catch(() => {});
-    },
-    { immediate: true }
-);
 
 // Vuetify validation rule factory: fails on empty or whitespace-only input
 const required = (label: string) => (v: string) => !!v?.trim() || `${label} is required`;
@@ -87,8 +75,7 @@ async function saveName() {
 
 // --- Password ---
 const passwordDialogOpen = ref(false);
-// Invited users must replace their default password, so the popup opens as soon as the real user is known
-// (also covers a page reload, where the user is restored after the page mounts)
+// Invited users must replace their default password, so the popup opens whenever the user is INVITED
 watch(
     () => auth.user.status,
     (status) => {
@@ -144,7 +131,6 @@ watch(
 
         <!-- One row per dataset: name (links to the dataset), private/public switch, and edit button -->
         <!-- Only admins see this list and the visibility error above it -->
-        <!-- TODO: v-if and v-for on the same element is discouraged (v-if is evaluated first in Vue 3); wrap in a <template v-if> instead -->
         <v-alert
             v-if="auth.isAdmin && visibilityError"
             type="error"
@@ -155,24 +141,28 @@ watch(
         >
             {{ visibilityError }}
         </v-alert>
-        <v-row v-if="auth.isAdmin" v-for="dataset in datasetStore.datasets" :key="dataset.url" align="center" class="mx-4">
-            <v-col @click="navTo('/dataset/' + dataset.url)">{{ dataset.name }}</v-col>
-            <v-col cols="auto" class="d-flex align-center">
-                <span class="mr-2">Private</span>
-                <v-switch
-                    :model-value="dataset.visibility === DatasetVisibility.PUBLIC"
-                    @update:model-value="(value) => setVisibility(dataset, value)"
-                    color="primary"
-                    density="compact"
-                    inset
-                    hide-details
-                ></v-switch>
-                <span class="ml-2">Public</span>
-            </v-col>
-            <v-col cols="auto">
-                <v-btn prepend-icon="mdi-pencil-outline" @click="router.push(`/dataset/${dataset.url}/edit`)">Edit Dataset</v-btn>
-            </v-col>
-        </v-row>
+        <template v-if="auth.isAdmin">
+            <v-row v-for="dataset in datasetStore.datasets" :key="dataset.url" align="center" class="mx-4">
+                <v-col @click="navTo('/dataset/' + dataset.url)">{{ dataset.name }}</v-col>
+                <v-col cols="auto" class="d-flex align-center">
+                    <span class="mr-2">Private</span>
+                    <v-switch
+                        :model-value="dataset.visibility === DatasetVisibility.PUBLIC"
+                        @update:model-value="(value) => setVisibility(dataset, value)"
+                        color="primary"
+                        density="compact"
+                        inset
+                        hide-details
+                    ></v-switch>
+                    <span class="ml-2">Public</span>
+                </v-col>
+                <v-col cols="auto">
+                    <v-btn prepend-icon="mdi-pencil-outline" @click="router.push(`/dataset/${dataset.url}/edit`)">
+                        Edit Dataset
+                    </v-btn>
+                </v-col>
+            </v-row>
+        </template>
 
         <ChangePasswordDialog v-model="passwordDialogOpen" />
     </v-container>

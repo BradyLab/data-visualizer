@@ -1,16 +1,26 @@
 // Database access for Activities (event log rows; soft-deleted since the Activities table is paranoid)
 import { Response } from "express";
-import { Model } from "sequelize";
+import { Model, Op, type WhereOptions } from "sequelize";
 import { Activities, IActivity } from "@src/models/activity.ts";
 import { ActivityType } from "@commons/activity.ts";
 
-// Optional filters to list one user's activity and/or one activity type, newest first
-export const getAll = (filters: { user_id?: string | undefined; type?: string | undefined } = {}) => {
+// Optional filters to list the activity of any of the given users and/or of any of the given activity types, newest first.
+// Returns one page (limit rows after skipping offset) plus the total number of matches, since the log grows without bound
+export const getAll = async (
+    filters: { user_id?: string[] | undefined; type?: string[] | undefined } = {},
+    page: { limit: number; offset: number }
+) => {
     console.log("[ACTIVITY SERVICE] Fetching activities...");
-    const where: Record<string, string> = {};
-    if (filters.user_id) where.user_id = filters.user_id;
-    if (filters.type) where.type = filters.type;
-    return Activities.findAll({ where, order: [["createdAt", "DESC"]] });
+    const where: WhereOptions = {};
+    if (filters.user_id?.length) where.user_id = { [Op.in]: filters.user_id };
+    if (filters.type?.length) where.type = { [Op.in]: filters.type };
+    const { rows, count } = await Activities.findAndCountAll({
+        where,
+        order: [["createdAt", "DESC"]],
+        limit: page.limit,
+        offset: page.offset,
+    });
+    return { rows, total: count };
 };
 
 /** Finds an activity record by primary key, or null */

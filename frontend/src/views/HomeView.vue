@@ -4,7 +4,6 @@ import { onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@src/stores/auth";
 import { useDatasetStore } from "@src/stores/dataset";
-import { UserRoles } from "@commons/user";
 
 // Router instance used for programmatic navigation
 const router = useRouter();
@@ -29,15 +28,15 @@ function navTo(route: string) {
     <!-- Landing page: grid of dataset cards -->
     <v-container class="py-6">
         <!-- Welcome {{ auth.user.name }} -->
-         <v-row class="align-center mt-5">
+        <v-row class="align-center mt-5">
             <h1 class="text-h6 font-weight-bold my-0">BRADY LAB DATASETS</h1>
-            <v-spacer/>
-            <v-btn v-if="auth.user.role === UserRoles.LAB_MEMBER || auth.user.role === UserRoles.ADMIN" class="align-center">
+            <v-spacer />
+            <v-btn v-if="auth.canCreateDatasets" class="align-center" @click="navTo('/dataset/new')">
                 <template #prepend><v-icon>mdi-plus</v-icon></template>
                 New Dataset
             </v-btn>
-         </v-row>
-        
+        </v-row>
+
         <v-row>
             <!-- One card per dataset; clicking opens the dataset page -->
             <!-- The url slug is the unique key and the route param -->

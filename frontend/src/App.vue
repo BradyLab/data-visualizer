@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Root component: wraps the page layout in Vuetify's v-app
 import { onMounted, watch } from "vue";
-import Default from "@src/layouts/Default.vue";
+import AppDefault from "@src/layouts/AppDefault.vue";
 import { useAuthStore } from "@src/stores/auth";
 import { useDatasetStore } from "@src/stores/dataset";
 import { usePermissionStore } from "@src/stores/permission";
@@ -20,17 +20,19 @@ watch(
     }
 );
 
+// Initial load: the watch above only fires when the user changes, so load the dataset list once on startup
+// A failed load is reported by the alert in the Default layout (datasetStore.loadFailed), so the rejection is ignored here and in the watch above
 onMounted(() => {
     permissionStore.clear();
     datasetStore.fetchDatasets().catch(() => {});
-})
+});
 </script>
 
 <template>
     <!-- v-app is required by Vuetify for theming and layout -->
     <v-app>
         <!-- Default layout contains the header, routed page content, and footer -->
-        <Default></Default>
+        <AppDefault></AppDefault>
     </v-app>
 </template>
 

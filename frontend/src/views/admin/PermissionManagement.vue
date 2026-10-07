@@ -2,7 +2,7 @@
 // Permission management page: table of who holds which permission on which dataset.
 // Admins see every dataset and permission; other users only see datasets they own (the dataset's owner column), since
 // only owners may see who a dataset is shared with, and are redirected home if they own none.
-import { computed, ref, watch, watchEffect } from "vue";
+import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "@src/stores/auth";
 import { useUserStore } from "@src/stores/user";
@@ -87,21 +87,12 @@ const rows = computed(() => {
 });
 
 // Users offered in the user filter: deactivated users only when they are being shown
-const filterUsers = computed(() =>
-    userStore.names.filter((u) => showInactive.value || u.status !== UserStatus.INACTIVE)
-);
+const filterUsers = computed(() => userStore.names.filter((u) => showInactive.value || u.status !== UserStatus.INACTIVE));
 
 // Display names for the filter chips
 // They fall back to the raw id if the user or dataset isn't in the loaded lists
 const userName = (id: string) => userStore.nameOf(id);
 const datasetName = (id: string) => visibleDatasets.value.find((d) => d.id === id)?.name ?? id;
-
-// Visitors without a login are sent home (also covers logging out while on this page).
-// Checks the token rather than isLoggedIn, which is also false while a saved session is still being restored
-// (token set, user id empty); the route guard already keeps logged-out visitors from getting here at all
-watchEffect(() => {
-    if (!auth.token) router.replace("/home");
-});
 
 // Message shown when the datasets or permissions could not be loaded
 const error = ref<string | null>(null);
@@ -149,7 +140,10 @@ const optionsFor = (userId: string) => {
 const savingKey = ref<string | null>(null);
 
 // Saves a new level for a row; on failure the dropdown snaps back to the stored level (the store is only updated on success)
-async function changePerm(row: { key: string; userId: string; datasetId: string; perm: PermissionOptions }, perm: PermissionOptions) {
+async function changePerm(
+    row: { key: string; userId: string; datasetId: string; perm: PermissionOptions },
+    perm: PermissionOptions
+) {
     if (perm === row.perm) return;
     savingKey.value = row.key;
     error.value = null;
@@ -266,35 +260,42 @@ async function confirmDelete() {
         </div>
 
         <v-data-table :headers="headers" :items="rows" item-value="key">
-            <template #item.status="{ item }">
-                <v-chip v-if="item.status" size="small" :color="statusColor(item.status)">
-                    {{ item.status }}
-                </v-chip>
-            </template>
-            <template #item.perm="{ item }">
-                <v-select
-                    v-if="optionsFor(item.userId).length"
-                    :model-value="item.perm"
-                    :items="optionsFor(item.userId)"
-                    :disabled="savingKey === item.key"
-                    :loading="savingKey === item.key"
-                    :clearable="false"
-                    density="compact"
-                    variant="outlined"
-                    hide-details
-                    max-width="180"
-                    @update:model-value="changePerm(item, $event)"
-                ></v-select>
-                <span v-else>{{ item.perm }}</span>
-            </template>
-            <template #item.actions="{ item }">
-                <v-btn
-                    icon="mdi-delete"
-                    variant="text"
-                    aria-label="Delete permission"
-                    :disabled="savingKey === item.key"
-                    @click="toDelete = item"
-                ></v-btn>
+            <template v-slot:item="{ item: perm }">
+                <tr>
+                    <td>{{ perm.userName }}</td>
+                    <td>{{ perm.role }}</td>
+                    <td>
+                        <v-chip v-if="perm.status" size="small" :color="statusColor(perm.status)">
+                            {{ perm.status }}
+                        </v-chip>
+                    </td>
+                    <td>{{ perm.datasetName }}</td>
+                    <td>
+                        <v-select
+                            v-if="optionsFor(perm.userId).length"
+                            :model-value="perm.perm"
+                            :items="optionsFor(perm.userId)"
+                            :disabled="savingKey === perm.key"
+                            :loading="savingKey === perm.key"
+                            :clearable="false"
+                            density="compact"
+                            variant="outlined"
+                            hide-details
+                            max-width="180"
+                            @update:model-value="changePerm(perm, $event)"
+                        ></v-select>
+                        <span v-else>{{ perm.perm }}</span>
+                    </td>
+                    <td>
+                        <v-btn
+                            icon="mdi-delete"
+                            variant="text"
+                            aria-label="Delete permission"
+                            :disabled="savingKey === perm.key"
+                            @click="toDelete = perm"
+                        ></v-btn>
+                    </td>
+                </tr>
             </template>
         </v-data-table>
 
@@ -307,7 +308,6 @@ async function confirmDelete() {
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <!-- TODOC05: color="white" is likely invisible on a light card background -->
                     <v-btn :disabled="deleting" color="white" @click="toDelete = null">Cancel</v-btn>
                     <v-btn :loading="deleting" color="error" variant="tonal" @click="confirmDelete">Delete</v-btn>
                 </v-card-actions>

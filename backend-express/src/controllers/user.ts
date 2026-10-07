@@ -59,7 +59,7 @@ export const create = async (req: Request, res: Response) => {
 };
 
 /**
- * PUT /:id : updates an existing user (200), or 404 if it does not exist, 400 for a bad name, email (blank or badly formatted) or role.
+ * PUT /:id : updates an existing user (200), or 404 if it does not exist, 400 for a bad name, email (blank or badly formatted), role or status.
  * Admins may change any field; a user editing themselves may only change their name (403 if the body would change
  * their email, role or status). 409 if it would remove the last active admin
  */
@@ -85,10 +85,20 @@ export const update = async (req: Request, res: Response) => {
         console.log("[USER CONTROLLER] User not found");
         return res.status(404).json({ error: "User not found" });
     }
+    // Status must be a real UserStatus; INVITED is only accepted as a no-op, since a user cannot be set back to INVITED
+    // (it means "still on the default password") and the edit dialog resends the current status of an invited user
+    if (
+        fields.status !== undefined &&
+        (!Object.values(UserStatus).includes(fields.status) ||
+            (fields.status === UserStatus.INVITED && target.status !== UserStatus.INVITED))
+    )
+        return res.status(400).json({ error: "A valid status is required" });
     // The router lets non-admins through only for their own record; they may not change anything but the name
+    // fields.email was cleaned (trimmed, lowercased) above, so the stored email is cleaned the same way to compare like with like
     if (res.locals.user.role !== UserRoles.ADMIN) {
         const { name: _name, ...restricted } = fields;
-        if (Object.entries(restricted).some(([key, value]) => target[key as keyof typeof target] !== value))
+        const current = { ...target.get({ plain: true }), email: cleanEmail(target.email) };
+        if (Object.entries(restricted).some(([key, value]) => current[key as keyof typeof current] !== value))
             return res.status(403).json({ error: "Forbidden" });
     }
     const losesAdmin =

@@ -78,17 +78,17 @@ export const usePermissionStore = defineStore("permission", () => {
         );
     }
 
-    /** Grants a permission (or re-grants/updates an existing one) and puts it in the store */
+    /** Grants a new permission (rejects with a 409 if the user already has one on the dataset) and puts it in the store */
     async function addPermission(payload: CreatePermissionPayload) {
         const permission = await permissionApi.createPermission(payload);
-        upsert(permission);
+        cachePermission(permission);
         return permission;
     }
 
     /** Changes the access level of a permission and replaces it in the store */
     async function editPermission(userId: string, datasetId: string, perm: PermissionOptions) {
         const permission = await permissionApi.updatePermission(userId, datasetId, perm);
-        upsert(permission);
+        cachePermission(permission);
         return permission;
     }
 
@@ -100,11 +100,17 @@ export const usePermissionStore = defineStore("permission", () => {
         adminPermissions.value = adminPermissions.value.filter(keep);
     }
 
-    //TODO move upsert to backend
-    // Replaces the cached permission for the same user + dataset, or adds it, in both lists it belongs to: the
-    // management list always, and the viewer's own list (which the can* checks use) when the permission is the
-    // viewer's, e.g. an admin editing their own row
-    function upsert(permission: IPermission) {
+    /** Drops every cached permission on a dataset (call after the dataset is deleted, which removes its permissions in the backend) */
+    function removeForDataset(datasetId: string) {
+        const keep = (p: IPermission) => p.dataset_id !== datasetId;
+        myPermissions.value = myPermissions.value.filter(keep);
+        adminPermissions.value = adminPermissions.value.filter(keep);
+    }
+
+    // Cache helper. Replaces the cached permission for the same user + dataset, or adds it (e.g. a new grant),
+    // in both lists it belongs to: the management list always, and the viewer's own list (which the can* checks use)
+    // when the permission is the viewer's, e.g. an admin editing their own row
+    function cachePermission(permission: IPermission) {
         const replace = (list: IPermission[]) => {
             const i = list.findIndex((p) => p.user_id === permission.user_id && p.dataset_id === permission.dataset_id);
             if (i === -1) list.push(permission);
@@ -128,5 +134,6 @@ export const usePermissionStore = defineStore("permission", () => {
         addPermission,
         editPermission,
         removePermission,
+        removeForDataset,
     };
 });

@@ -69,7 +69,7 @@ export const login = async (email: string, password: string) => {
     const user = await Users.findOne({ where: where(fn("lower", col("email")), email.trim().toLowerCase()) });
     // Always run scrypt, even for an unknown email, so response time doesn't reveal whether an account exists
     const passwordOk = await verifyPassword(password, user?.password ?? (await DUMMY_HASH));
-    var success = true;
+    let success = true;
     // Callers get the same result for unknown email, wrong password, and inactive account so they can't tell which;
     // the logs say which, but they stay server-side
     if (!user) {
@@ -80,7 +80,7 @@ export const login = async (email: string, password: string) => {
         console.log("[AUTH SERVICE] Password did not match");
         success = false;
     }
-    if (user && user.status == UserStatus.INACTIVE) {
+    if (user && user.status === UserStatus.INACTIVE) {
         console.log("[AUTH SERVICE] User is inactive");
         success = false;
     }
