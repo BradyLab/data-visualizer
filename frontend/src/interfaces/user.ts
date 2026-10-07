@@ -8,5 +8,5 @@ export type UpdateUserPayload = Partial<Omit<IUser, ServerFields>>;
 // Status is not sent; the backend assigns it (new users start as INVITED)
 export type InviteUserPayload = Pick<IUser, "name" | "email" | "role">;
 
-/** A user reduced to what name lookups need (the shape of GET /users/names) */
-export type UserName = Pick<IUser, "id" | "name">;
+/** A user reduced to what name lookups and role-based choices need (the shape of GET /users/names) */
+export type UserName = Pick<IUser, "id" | "name" | "role" | "status">;

@@ -25,7 +25,7 @@ export const list = async (req: Request, res: Response) => {
     res.status(200).json(await service.getAll());
 };
 
-/** GET /names : returns just the id and name of every user (200); the router limits it to admins and lab members */
+/** GET /names : returns just the id, name, role and status of every user (200); the router limits it to admins and lab members */
 export const listNames = async (req: Request, res: Response) => {
     console.log("[USER CONTROLLER] Attempting to list user names...");
     res.status(200).json(await service.getNames());

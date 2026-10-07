@@ -21,10 +21,10 @@ export const getAll = () => {
     return Users.findAll({ attributes: PUBLIC_ATTRIBUTES });
 };
 
-/** Returns only the id and name of every user */
+/** Returns only the id, name, role and status of every user */
 export const getNames = () => {
     console.log("[USER SERVICE] Fetching user names...");
-    return Users.findAll({ attributes: ["id", "name"] });
+    return Users.findAll({ attributes: ["id", "name", "role", "status"] });
 };
 
 /** Finds a user by primary key without the password, or null */

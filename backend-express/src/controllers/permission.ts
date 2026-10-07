@@ -4,25 +4,20 @@ import * as service from "@src/services/permission.ts";
 import { IPermission } from "@src/models/permission.ts";
 import * as userService from "@src/services/user.ts";
 import { authorizeDataset, caller, OWNER } from "@src/services/access.ts";
+import { Datasets } from "@src/models/dataset.ts";
 import { pick } from "@src/utils/pick.ts";
-import { PermissionOptions } from "@commons/permissions.ts";
-import { UserRoles } from "@commons/user.ts";
+import { grantError, PermissionOptions } from "@commons/permissions.ts";
 
 // Whitelist of columns clients may set (see utils/pick.ts)
 const PERMISSION_FIELDS = ["user_id", "dataset_id", "perm"] as const;
 // Only a dataset's OWNER (or an admin) may see or change who it is shared with, so these checks are all OWNER-level.
-// Checks that perm is a valid level for the user receiving it; returns the error message, or null if fine:
-// EXTERNAL users only ever get VIEW or DOWNLOAD, and admins/lab members already view and download every dataset,
-// so only EDIT rows make sense for them. OWNER is not a permission (it is the dataset's owner column), so it is never valid here
-const grantError = async (userId: string, perm: unknown) => {
-    if (!Object.values(PermissionOptions).includes(perm as PermissionOptions)) return "A valid perm is required";
+// Checks that perm is a valid level for the user receiving it (rules shared with the frontend, see commons/permissions.ts);
+// returns the error message, or null if fine. OWNER is not a permission (it is the dataset's owner column), so it is never valid here
+const checkGrant = async (dataset: Datasets, userId: string, perm: unknown) => {
     const target = await userService.getById(userId);
     if (!target) return "User not found";
-    const external = perm === PermissionOptions.VIEW || perm === PermissionOptions.DOWNLOAD;
-    if (target.role === UserRoles.EXTERNAL && !external) return "External users can only be granted VIEW or DOWNLOAD";
-    if (target.role !== UserRoles.EXTERNAL && external)
-        return "Admins and lab members can already view and download every dataset";
-    return null;
+    if (dataset.owner === userId) return "The owner already has full access to their dataset";
+    return grantError(target.role, perm);
 };
 
 // Returns the value only if it is a string (query params can also be arrays/objects)
@@ -73,10 +68,11 @@ export const create = async (req: Request, res: Response) => {
     const fields = pick<IPermission>(req.body, PERMISSION_FIELDS);
     if (typeof fields.user_id !== "string" || typeof fields.dataset_id !== "string")
         return res.status(400).json({ error: "user_id and dataset_id are required" });
-    if (!(await authorizeDataset(res, fields.dataset_id, OWNER))) return;
+    const found = await authorizeDataset(res, fields.dataset_id, OWNER);
+    if (!found) return;
     // A missing perm defaults to VIEW; the same value is validated and stored so the two can't diverge
     const perm = fields.perm ?? PermissionOptions.VIEW;
-    const problem = await grantError(fields.user_id, perm);
+    const problem = await checkGrant(found.dataset, fields.user_id, perm);
     if (problem) return res.status(400).json({ error: problem });
     res.status(201).json(await service.create({ ...fields, perm }));
 };
@@ -84,8 +80,9 @@ export const create = async (req: Request, res: Response) => {
 /** PUT /:userId/:datasetId : updates an existing permission (200), or 404 if it does not exist; needs OWNER access and a perm that suits the user's role (400) */
 export const update = async (req: Request, res: Response) => {
     console.log("[PERMISSION CONTROLLER] Attempting to update permission...");
-    if (!(await authorizeDataset(res, req.params.datasetId as string, OWNER))) return;
-    const problem = await grantError(req.params.userId as string, req.body?.perm);
+    const found = await authorizeDataset(res, req.params.datasetId as string, OWNER);
+    if (!found) return;
+    const problem = await checkGrant(found.dataset, req.params.userId as string, req.body?.perm);
     if (problem) return res.status(400).json({ error: problem });
     const item = await service.update(
         req.params.userId as string,
