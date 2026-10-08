@@ -103,6 +103,9 @@ const router = createRouter({
 // Returning a route location redirects; returning nothing lets navigation proceed
 router.beforeEach((to) => {
     const auth = useAuthStore();
+    // The saved session could not be checked (server down, token kept): the user is not really logged out, so don't send them to /login
+    // or home. The page opens as requested; the backend still enforces access, and the banner in AppDefault.vue offers a reload to retry
+    if (auth.restoreFailed) return;
     // LoginView sends the user back to the redirect page after they log in
     if (to.meta.requiresAuth && !auth.isLoggedIn) return { name: "login", query: { redirect: to.fullPath } };
     if (to.meta.requiresAdmin && !auth.isAdmin) return { name: "home" };

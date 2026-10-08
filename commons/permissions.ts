@@ -1,5 +1,6 @@
 // Shared permission types used by both the frontend and backend
 import { UserRoles } from "./user.ts";
+import type { Timestamp } from "./general.ts";
 
 // Access levels that can be granted to a user on a dataset, from least to most; each level includes the ones before it:
 // VIEW reads the dataset, DOWNLOAD also downloads its RDS file, EDIT also changes the dataset and its files.
@@ -17,8 +18,8 @@ export interface IPermission {
     user_id: string;
     dataset_id: string;
     perm: PermissionOptions;
-    createdAt: Date;
-    updatedAt: Date | null;
+    createdAt: Timestamp;
+    updatedAt: Timestamp | null;
 }
 
 // Access levels that may be granted to a user with this role. EXTERNAL users only ever get VIEW or DOWNLOAD; lab members

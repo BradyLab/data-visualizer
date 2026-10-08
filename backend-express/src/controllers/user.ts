@@ -10,9 +10,6 @@ import { ASSIGNABLE_ROLES, UserRoles, UserStatus } from "@commons/user.ts";
 import * as fileService from "@src/services/file.ts";
 import { removeStored } from "@src/services/storage.ts";
 
-// Whitelist of columns clients may set (see utils/pick.ts)
-const USER_FIELDS = ["email", "password", "name", "role", "status"] as const;
-
 // Columns clients may change on an existing user; the password is deliberately absent so it can only be
 // changed through POST /auth/change-password (which checks the old password)
 const UPDATE_FIELDS = ["email", "name", "role", "status"] as const;

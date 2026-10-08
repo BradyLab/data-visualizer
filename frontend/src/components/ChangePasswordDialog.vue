@@ -35,6 +35,11 @@ watch(newPassword, () => {
     if (confirmPassword.value) form.value?.validate();
 });
 
+// Likewise, editing the old password changes whether the new one matches it (notSameAsOld), so re-run the rules once a new password is typed
+watch(oldPassword, () => {
+    if (newPassword.value) form.value?.validate();
+});
+
 // Start with an empty form each time the popup opens
 watch(open, (isOpen) => {
     if (!isOpen) return;
@@ -52,8 +57,10 @@ async function submit() {
     saving.value = true;
     error.value = null;
     try {
-        await authApi.changePassword(oldPassword.value, newPassword.value);
+        const newToken = await authApi.changePassword(oldPassword.value, newPassword.value);
         success.value = true;
+        // The old token stopped working with the password change, so switch to the fresh one
+        auth.setToken(newToken);
         // The backend activates invited users on their first password change
         auth.markPasswordChanged();
     } catch (err) {

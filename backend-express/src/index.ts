@@ -91,6 +91,9 @@ export const start = async () => {
         process.exit(1);
     }
 
+    // Create the storage directories before accepting requests, so an early upload can't hit a missing directory
+    await ensureDirs();
+
     // listen() reports failures (e.g. port in use) through the server's "error" event, not by throwing,
     // so a try/catch around it would never fire
     const server = app.listen(PORT, () => {
@@ -107,7 +110,6 @@ export const start = async () => {
         console.log(box);
     });
     // Unfinished uploads expire; sweep them hourly (and once at startup)
-    await ensureDirs();
     void cleanUpExpiredUploads();
     setInterval(cleanUpExpiredUploads, 60 * 60 * 1000).unref();
     // Node's defaults (5 minute request timeout, 2 minute socket timeout) would cut off a multi-GB upload in progress

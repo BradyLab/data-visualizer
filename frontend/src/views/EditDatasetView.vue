@@ -86,7 +86,7 @@ function onUrlInput(value: string) {
     dataset.value.url = value;
 }
 
-// Problem with the url as it will be saved (empty, or a reserved slug such as "new"), shown under the field; null once typing starts out empty
+// Problem with the url as it will be saved (empty, or a reserved slug such as "new"), shown under the field; null while the field is empty
 const urlError = computed(() => (dataset.value.url ? datasetUrlError(slugify(dataset.value.url)) : null));
 
 // Save is blocked while busy, without a name or owner, or with an unusable url; in edit mode the dataset must have loaded (id set)
@@ -290,7 +290,6 @@ async function save() {
                 :multiple="false"
                 hide-details
             ></v-file-upload>
-            <!-- <v-btn color="primary" prepend-icon="mdi-upload">Upload cover photo</v-btn> -->
         </v-row>
         <v-row class="mx-4">
             <v-file-upload
@@ -305,9 +304,9 @@ async function save() {
             <!-- <v-btn color="primary" prepend-icon="mdi-upload">Upload .rds file</v-btn> -->
         </v-row>
         <!-- What changed since the previous version of the .rds file (logged with the file upload) -->
-        <v-row v-if="rdsFile" class="text-body-medium mb-1 mx-4">Updates</v-row>
+        <v-row v-if="firstFile(rdsFile)" class="text-body-medium mb-1 mx-4">Updates</v-row>
         <v-textarea
-            v-if="rdsFile"
+            v-if="firstFile(rdsFile)"
             v-model="rdsUpdates"
             placeholder="Describe what changed since the last version of the .rds file"
             rows="2"

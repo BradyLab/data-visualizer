@@ -1,5 +1,5 @@
 // Sequelize model for the Permissions table (columns must stay in sync with the permission migration)
-import { BelongsTo, Column, DataType, ForeignKey, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
+import { BelongsTo, Column, DataType, ForeignKey, Model, PrimaryKey, Table } from "sequelize-typescript";
 // Shared permission interface and options from the commons package
 import { IPermission, PermissionOptions } from "@commons/permissions.ts";
 import { Users } from "@src/models/user.ts";

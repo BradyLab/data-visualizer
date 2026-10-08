@@ -32,7 +32,7 @@ watch(open, (isOpen) => {
     error.value = null;
 });
 
-// Saves the role and status (both are always sent, even if unchanged) and closes the popup; shows an error and stays open if the request fails
+// Saves the role and status (status is left out for invited users, who are activated by changing their password) and closes the popup; shows an error and stays open if the request fails
 async function save() {
     if (!props.user || isSelf.value) return;
     saving.value = true;

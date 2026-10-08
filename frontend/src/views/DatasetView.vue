@@ -57,14 +57,22 @@ watch(
         // Clear the previous dataset so a stale one is not shown while loading
         datasetStore.currentDataset = null;
         try {
+            // A failed permissions request must not hide a dataset that loaded; it only costs the viewer their extra buttons (Edit, Download)
+            let permissionsFailed = false;
             const [found] = await Promise.all([
                 datasetStore.getByUrl(url),
-                auth.isLoggedIn ? permissionStore.fetchMine(auth.user.id) : Promise.resolve(),
+                auth.isLoggedIn
+                    ? permissionStore.fetchMine(auth.user.id).catch(() => {
+                          permissionsFailed = true;
+                      })
+                    : Promise.resolve(),
             ]);
             if (!isLatest()) return;
             selectedTreatments.value = [];
             selectedPlots.value = [];
             if (!found) error.value = "Dataset not found";
+            else if (permissionsFailed)
+                error.value = "Unable to load your permissions, so some actions may be missing. Reload to try again.";
         } catch {
             if (isLatest()) error.value = "Unable to load the dataset. Please try again.";
         } finally {
@@ -77,6 +85,7 @@ watch(
 
 <!-- Dataset page: name, description, treatments and plots come from the backend; genes and cell types are still placeholders -->
 <template>
+    <!-- Not loaded yet: spinner while loading, otherwise the error -->
     <v-container v-if="!datasetStore.currentDataset" class="px-12">
         <v-progress-circular v-if="loading" indeterminate></v-progress-circular>
         <v-alert v-else type="error" variant="tonal">{{ error }}</v-alert>

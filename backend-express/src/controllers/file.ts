@@ -6,7 +6,8 @@ import { diff, logActivity, toPlain } from "@src/services/activity.ts";
 import { authorizeDataset, caller } from "@src/services/access.ts";
 import { pick } from "@src/utils/pick.ts";
 import { PermissionOptions } from "@commons/permissions.ts";
-import { UserRoles } from "@commons/user.ts";
+import { UserRoles, UserStatus } from "@commons/user.ts";
+import { Users } from "@src/models/user.ts";
 import { ActivityType } from "@commons/activity.ts";
 import { FileTypes } from "@commons/file.ts";
 import * as storage from "@src/services/storage.ts";
@@ -94,7 +95,7 @@ const readAccess = (type: FileTypes) => (type === FileTypes.COVER ? PermissionOp
 /**
  * GET /current/:datasetId/:type/content : sends the current file of that type (cover image inline, other files as a download), with Range support.
  * Needs VIEW access to the dataset for covers and DOWNLOAD for data files (404 if there is no such file or the dataset is not visible, 403 otherwise),
- * or a valid ?token= from the download-token route below, which is how a browser download (no Authorization header) proves access
+ * or a valid ?token= from the download-token route below, which is how a browser download (no Authorization header) proves access; the token acts as the user it was issued to, whose account and access are re-checked on every use
  */
 export const content = async (req: Request, res: Response) => {
     console.log("[FILE CONTROLLER] Attempting to send file...");
@@ -102,12 +103,20 @@ export const content = async (req: Request, res: Response) => {
     const type = parseType(req.params.type);
     if (!type) return res.status(400).json({ error: `type must be one of: ${Object.values(FileTypes).join(", ")}` });
     const token = typeof req.query.token === "string" ? req.query.token : null;
-    const tokenFileId = token ? verifyDownloadToken(token) : null;
-    if (token && !tokenFileId) return res.status(401).json({ error: "The download link has expired" });
-    if (!tokenFileId && !(await authorizeDataset(res, datasetId, readAccess(type)))) return;
+    const tokenInfo = token ? verifyDownloadToken(token) : null;
+    if (token && !tokenInfo) return res.status(401).json({ error: "The download link has expired" });
+    if (tokenInfo) {
+        // Act as the user the link was issued to, as they are now: deleted, deactivated or still-invited users no longer get in
+        const tokenUser = await Users.findByPk(tokenInfo.user, { attributes: { exclude: ["password"] } });
+        if (!tokenUser || tokenUser.status !== UserStatus.ACTIVE)
+            return res.status(401).json({ error: "The download link is no longer valid" });
+        res.locals.user = tokenUser;
+    }
+    // Same check with or without a token, so access revoked since the link was issued also ends the link
+    if (!(await authorizeDataset(res, datasetId, readAccess(type)))) return;
     const file = await service.getCurrent(datasetId, type);
     // A token only opens the file it was issued for (if a newer version has replaced it since, the link no longer works)
-    if (!file || (tokenFileId && tokenFileId !== file.id)) return res.status(404).json({ error: "File not found" });
+    if (!file || (tokenInfo && tokenInfo.file !== file.id)) return res.status(404).json({ error: "File not found" });
     const send =
         type === FileTypes.COVER
             ? res.sendFile.bind(res)
@@ -135,5 +144,5 @@ export const downloadToken = async (req: Request, res: Response) => {
         type: file.type,
         version: file.version,
     });
-    res.status(200).json({ token: signDownloadToken(file.id) });
+    res.status(200).json({ token: signDownloadToken(file.id, res.locals.user.id) });
 };

@@ -1,4 +1,5 @@
 // Shared activity types used by both the frontend and backend
+import type { Timestamp } from "./general.ts";
 
 // Kinds of event recorded in the activity log (also stored in the Activities.type DB enum)
 export enum ActivityType {
@@ -30,7 +31,7 @@ export interface IActivity {
     user_id: string | null; // null once the user has been deleted
     type: ActivityType;
     data: Record<string, unknown>;
-    createdAt: Date;
-    updatedAt: Date | null;
-    deletedAt: Date | null;
+    createdAt: Timestamp;
+    updatedAt: Timestamp | null;
+    deletedAt: Timestamp | null;
 }

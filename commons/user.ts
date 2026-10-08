@@ -1,4 +1,5 @@
 // Shared user types used by both the frontend and backend
+import type { Timestamp } from "./general.ts";
 
 // Roles that determine a user's level of access in the app
 export enum UserRoles {
@@ -26,8 +27,8 @@ export interface IUser {
     name: string;
     role: UserRoles;
     status: UserStatus;
-    createdAt: Date;
-    updatedAt: Date | null;
+    createdAt: Timestamp;
+    updatedAt: Timestamp | null;
 }
 
 // Credentials sent to the login endpoint

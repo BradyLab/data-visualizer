@@ -80,7 +80,7 @@ onMounted(() => {
                     </v-col>
                 </v-row>
 
-                <!-- Submit button and account note -->
+                <!-- Login error message and submit button -->
                 <v-alert v-if="auth.error" type="error" variant="tonal" density="compact" class="mb-3">
                     {{ auth.error }}
                 </v-alert>

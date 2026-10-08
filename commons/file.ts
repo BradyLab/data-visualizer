@@ -1,4 +1,5 @@
 // Shared file types used by both the frontend and backend
+import type { Timestamp } from "./general.ts";
 
 // Kinds of file attached to a dataset (at most one per kind per version per dataset, and exactly one current version)
 export enum FileTypes {
@@ -17,6 +18,6 @@ export interface IFile {
     version: number;
     updates: string | null;
     isCurrent: boolean;
-    createdAt: Date;
-    updatedAt: Date | null;
+    createdAt: Timestamp;
+    updatedAt: Timestamp | null;
 }

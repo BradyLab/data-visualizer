@@ -1,4 +1,5 @@
 // Shared dataset types used by both the frontend and backend
+import type { Timestamp } from "./general.ts";
 
 // Plot types a dataset can offer; values are the display labels (also stored in the DB enum)
 export enum DatasetPlots {
@@ -28,8 +29,8 @@ export interface IDataset {
     treatments: string[];
     plots: DatasetPlots[];
     visibility: DatasetVisibility;
-    createdAt: Date;
-    updatedAt: Date | null;
+    createdAt: Timestamp;
+    updatedAt: Timestamp | null;
 }
 
 // Url slugs that would collide with fixed frontend routes under /dataset/ (e.g. /dataset/new is the create page)

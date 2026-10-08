@@ -160,5 +160,6 @@ export const useAuthStore = defineStore("auth", () => {
         restore,
         logout,
         markPasswordChanged,
+        setToken,
     };
 });

@@ -42,13 +42,14 @@ function navTo(route: string) {
 // Dataset list for the admin section; if the request fails the list is simply empty (the login requirement is the route guard's job)
 onMounted(() => {
     datasetStore.fetchDatasets().catch(() => {});
+    permissionStore.fetchMine(auth.user.id);
 });
 
 // Admins see every management page; others only see Permissions, and only if they own some dataset
 const canManagePermissions = computed(() => auth.isAdmin || datasetStore.datasets.some((d) => permissionStore.canManage(d)));
 
-// Load the user's own permissions and fill the name field for the current user (the id is empty once they log out)
-const name = ref("");
+// Value of the name field in the user settings form
+const name = ref(auth.user.name);
 
 // Vuetify validation rule factory: fails on empty or whitespace-only input
 const required = (label: string) => (v: string) => !!v?.trim() || `${label} is required`;

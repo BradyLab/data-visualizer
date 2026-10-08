@@ -2,6 +2,7 @@
 import { Request, Response } from "express";
 import * as service from "@src/services/activity.ts";
 
+// Page size used when ?limit= is absent, and the most a client may request
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
 

@@ -1,17 +1,23 @@
 // Express middleware that checks the "Authorization: Bearer <token>" header and the caller's role
 import { NextFunction, Request, Response } from "express";
-import { verifyToken } from "@src/services/auth.ts";
+import { passwordVersion, verifyToken } from "@src/services/auth.ts";
 import { Users } from "@src/models/user.ts";
 import { UserRoles, UserStatus } from "@commons/user.ts";
 import { PASSWORD_CHANGE_REQUIRED } from "@commons/general.ts";
 
 // Resolves the Bearer token to a user reloaded from the DB (so deleted users are rejected even if their token has
-// not expired), or null if the token is missing, invalid, or its user no longer exists
+// not expired), or null if the token is missing, invalid, issued before the latest password change, or its user no longer exists
 export const userFromHeader = async (header: string | null | undefined) => {
-    const id = header?.startsWith("Bearer ") ? verifyToken(header.slice(7)) : null;
-    return id ? await Users.findByPk(id, { attributes: { exclude: ["password"] } }) : null;
+    const payload = header?.startsWith("Bearer ") ? verifyToken(header.slice(7)) : null;
+    if (!payload) return null;
+    const user = await Users.findByPk(payload.id);
+    if (!user || passwordVersion(user.password) !== payload.pv) return null;
+    // The hash was only needed for the check above; keep it off the request's user (as if it had not been selected)
+    delete (user.dataValues as Partial<typeof user.dataValues>).password;
+    return user;
 };
 
+// Looks up the user for the request's Authorization header
 const findUser = (req: Request) => userFromHeader(req.headers.authorization);
 
 // Builds the middleware; allowInvited lets INVITED users (still on the default password) through

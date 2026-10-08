@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Admin-only activity log page: table of recorded events with their type, user name and JSON data
+// Admin-only activity log page: table of recorded events with their type, user name, JSON data and date
 import { computed, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { ActivityType } from "@commons/activity";
@@ -13,7 +13,7 @@ const auth = useAuthStore();
 const userStore = useUserStore();
 const activityStore = useActivityStore();
 
-// Table columns: activity type, user name, and the JSON data (not sortable: the server returns pages newest first)
+// Table columns: activity type, user name, JSON data and date (not sortable: the server returns pages newest first)
 const headers = [
     { title: "ACTIVITY TYPE", key: "type", sortable: false },
     { title: "USER", key: "userName", sortable: false },

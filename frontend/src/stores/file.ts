@@ -1,5 +1,5 @@
 // Pinia store for dataset files: cached cover images, the upload in progress, and data file downloads (wraps the file API calls)
-import { ref } from "vue";
+import { reactive, ref } from "vue";
 import { defineStore } from "pinia";
 import { FileTypes } from "@commons/file";
 import { fileApi } from "@src/api/file";
@@ -35,7 +35,10 @@ export const useFileStore = defineStore("file", () => {
             .then((blob) => {
                 if (started === generation) covers.value[datasetId] = blob ? URL.createObjectURL(blob) : null;
             })
-            .finally(() => pendingCovers.delete(datasetId));
+            // Only forget this request: after clear(), the entry may belong to a newer request for the same dataset
+            .finally(() => {
+                if (pendingCovers.get(datasetId) === request) pendingCovers.delete(datasetId);
+            });
         pendingCovers.set(datasetId, request);
         return request;
     }
@@ -45,7 +48,11 @@ export const useFileStore = defineStore("file", () => {
      * as soon as it reloads). The backend assigns the version number; updates (notes on what changed) is only accepted for RDS files
      */
     async function uploadFile(datasetId: string, type: FileTypes, file: File, updates?: string) {
-        const progress = { label: type === FileTypes.COVER ? "Uploading cover photo" : "Uploading .rds file", fraction: 0 };
+        // Reactive, so updating its fraction below notifies whatever shows `uploading` (a plain object would be wrapped in a separate proxy)
+        const progress = reactive({
+            label: type === FileTypes.COVER ? "Uploading cover photo" : "Uploading .rds file",
+            fraction: 0,
+        });
         uploading.value = progress;
         try {
             await fileApi.uploadFile(datasetId, type, file, updates, (fraction) => (progress.fraction = fraction));

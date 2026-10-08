@@ -14,3 +14,6 @@ export const MIN_PASSWORD_LENGTH = 8;
 
 // Error code in the 403 body that requireAuth sends to INVITED users until they change the default password
 export const PASSWORD_CHANGE_REQUIRED = "PASSWORD_CHANGE_REQUIRED";
+
+// A timestamp field: the backend holds a Date, but over JSON the frontend receives an ISO string
+export type Timestamp = Date | string;

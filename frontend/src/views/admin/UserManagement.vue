@@ -73,7 +73,6 @@ function inviteUser() {
     <v-container v-if="auth.isAdmin">
         <div class="d-flex align-center mb-4">
             <h1 class="text-h6 font-weight-bold">USER MANAGEMENT</h1>
-            <v-spacer></v-spacer>
         </div>
 
         <v-row class="align-center mb-2">
