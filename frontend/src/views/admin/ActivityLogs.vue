@@ -6,6 +6,7 @@ import { ActivityType } from "@commons/activity";
 import { useAuthStore } from "@src/stores/auth";
 import { useUserStore } from "@src/stores/user";
 import { useActivityStore } from "@src/stores/activity";
+import { prettyDate } from "@src/utils/prettyDate";
 
 const route = useRoute();
 const auth = useAuthStore();
@@ -17,6 +18,7 @@ const headers = [
     { title: "ACTIVITY TYPE", key: "type", sortable: false },
     { title: "USER", key: "userName", sortable: false },
     { title: "DATA", key: "data", sortable: false },
+    { title: "DATE", key: "createdAt", sortable: false },
 ];
 
 // Selected filter values; an empty list means no filter on that field
@@ -202,6 +204,7 @@ onMounted(() => Promise.all([load(), userStore.fetchUsers()]));
                             @click="lineCount(activity.data) > PREVIEW_LINES && toggleExpanded(activity.id)"
                             >{{ formatData(activity.data) }}</pre>
                     </td>
+                    <td>{{ prettyDate(activity.createdAt) }}</td>
                 </tr>
             </template>
         </v-data-table-server>
