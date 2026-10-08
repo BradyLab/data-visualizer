@@ -7,11 +7,12 @@ import { PASSWORD_CHANGE_REQUIRED } from "@commons/general.ts";
 
 // Resolves the Bearer token to a user reloaded from the DB (so deleted users are rejected even if their token has
 // not expired), or null if the token is missing, invalid, or its user no longer exists
-const findUser = async (req: Request) => {
-    const header = req.headers.authorization;
+export const userFromHeader = async (header: string | null | undefined) => {
     const id = header?.startsWith("Bearer ") ? verifyToken(header.slice(7)) : null;
     return id ? await Users.findByPk(id, { attributes: { exclude: ["password"] } }) : null;
 };
+
+const findUser = (req: Request) => userFromHeader(req.headers.authorization);
 
 // Builds the middleware; allowInvited lets INVITED users (still on the default password) through
 const authenticate = (allowInvited: boolean) => async (req: Request, res: Response, next: NextFunction) => {

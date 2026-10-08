@@ -58,9 +58,13 @@ export const diff = (before: object, after: object, fields: readonly string[]) =
  * Call it after the action succeeded. A failure to log is only reported to the console, so it never turns a
  * successful request into an error
  */
-export const logActivity = async (res: Response, type: ActivityType, data: Record<string, unknown>) => {
+export const logActivity = (res: Response, type: ActivityType, data: Record<string, unknown>) =>
+    logActivityAs(res.locals.user?.id ?? null, type, data);
+
+/** Like logActivity, for code that runs outside a normal request/response (e.g. when a resumable upload finishes) */
+export const logActivityAs = async (user_id: string | null, type: ActivityType, data: Record<string, unknown>) => {
     try {
-        await create({ user_id: res.locals.user?.id ?? null, type, data });
+        await create({ user_id, type, data });
     } catch (error) {
         console.error("[ACTIVITY SERVICE] Failed to log activity", type, error);
     }

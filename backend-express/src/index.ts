@@ -5,6 +5,9 @@ import cors from "cors";
 import express, { Express, Request, Response, NextFunction } from "express";
 import { sequelize } from "@src/database.ts";
 
+import { requireAuth } from "@src/middleware/auth.ts";
+import { cleanUpExpiredUploads, TUS_PATH, tusServer } from "@src/services/tus.ts";
+import { ensureDirs } from "@src/services/storage.ts";
 import { apis } from "@commons/general.ts";
 
 import userRouter from "@src/routers/user.ts";
@@ -22,6 +25,13 @@ const PORT = process.env.API_PORT || 3001;
 // Builds and configures the Express app (kept separate from start() so it can be reused, e.g. in tests)
 export const get = () => {
     const app: Express = express();
+    // Resumable file uploads (tus). Mounted before the body parsers and CORS middleware below because the tus server reads the raw request
+    // itself and sends its own CORS headers; OPTIONS (preflight) carries no token, everything else needs a login
+    app.all(
+        `${TUS_PATH}{/*splat}`,
+        (req, res, next) => (req.method === "OPTIONS" ? next() : requireAuth(req, res, next)),
+        (req, res) => tusServer.handle(req, res)
+    );
     app.use(express.json()); // Parses incoming JSON payloads
     // Parses URL-encoded form bodies
     app.use(express.urlencoded({ extended: true }));
@@ -96,6 +106,13 @@ export const start = async () => {
             `=====================================================================================`;
         console.log(box);
     });
+    // Unfinished uploads expire; sweep them hourly (and once at startup)
+    await ensureDirs();
+    void cleanUpExpiredUploads();
+    setInterval(cleanUpExpiredUploads, 60 * 60 * 1000).unref();
+    // Node's defaults (5 minute request timeout, 2 minute socket timeout) would cut off a multi-GB upload in progress
+    server.requestTimeout = 0;
+    server.timeout = 0;
     server.on("error", (error: Error) => {
         console.error("Error occurred: ", error.message);
     });

@@ -1,6 +1,6 @@
 // Shared file types used by both the frontend and backend
 
-// Kinds of file attached to a dataset (at most one per kind per dataset)
+// Kinds of file attached to a dataset (at most one per kind per version per dataset, and exactly one current version)
 export enum FileTypes {
     COVER = "COVER",
     RDS = "RDS",
@@ -14,6 +14,9 @@ export interface IFile {
     type: FileTypes;
     sizeBytes: number;
     ogName: string;
+    version: number;
+    updates: string | null;
+    isCurrent: boolean;
     createdAt: Date;
     updatedAt: Date | null;
 }

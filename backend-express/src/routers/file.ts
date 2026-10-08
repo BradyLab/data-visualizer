@@ -11,8 +11,8 @@ const router = Router();
 
 // Reads are open to guests so files of PUBLIC datasets can be listed; listing every file (no dataset_id) is admin-only
 router.get("/", optionalAuth, controller.list);
-// Writes need a login; EDIT access to the dataset is checked in the controller
-router.post("/", requireAuth, controller.create);
+// Files are created by resumable (tus) uploads at /files/upload, mounted in index.ts (see services/tus.ts), not by POST here
+// Changes need a login; EDIT access to the dataset is checked in the controller
 // Must be registered before "/:id" or "byDataset" would be treated as an id
 router.get("/byDataset/:datasetId", optionalAuth, controller.listByDataset);
 router.get("/:id", optionalAuth, controller.get);

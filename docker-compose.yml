@@ -5,6 +5,7 @@ services:
     volumes:
       - ./backend-express:/backend-express
       - ./commons:/commons
+      - ./data:/data
     ports:
       - "3001:3001"
     environment:

@@ -11,6 +11,15 @@ export type { IFile };
 @Table({
     tableName: "Files",
     timestamps: true,
+    // At most one current version per dataset and type (matches the partial unique index in the file migration)
+    indexes: [
+        {
+            name: "Files_dataset_id_type_current_unique",
+            unique: true,
+            fields: ["dataset_id", "type"],
+            where: { isCurrent: true },
+        },
+    ],
 })
 export class Files extends Model<IFile> {
     // Unique file identifier, auto-generated as a UUIDv4
@@ -22,8 +31,8 @@ export class Files extends Model<IFile> {
     })
     declare id: string;
 
-    // Part of the composite unique constraint: each dataset has at most one file of each type
-    @Unique("Files_dataset_id_type_unique")
+    // Part of the composite unique constraint: each dataset has at most one file of each type and version
+    @Unique("Files_dataset_id_type_version_unique")
     @ForeignKey(() => Datasets)
     @Column({
         type: DataType.UUID,
@@ -39,8 +48,8 @@ export class Files extends Model<IFile> {
     })
     declare user_id: string;
 
-    // Part of the composite unique constraint with dataset_id
-    @Unique("Files_dataset_id_type_unique")
+    // Part of the composite unique constraint with dataset_id and version
+    @Unique("Files_dataset_id_type_version_unique")
     @Column({
         type: DataType.ENUM(...Object.values(FileTypes)),
         allowNull: false,
@@ -63,6 +72,30 @@ export class Files extends Model<IFile> {
         allowNull: false,
     })
     declare ogName: string;
+
+    // Part of the composite unique constraint with dataset_id and type
+    @Unique("Files_dataset_id_type_version_unique")
+    @Column({
+        type: DataType.INTEGER,
+        allowNull: false,
+        defaultValue: 1,
+    })
+    declare version: number;
+
+    // True for the most recent version of this type in the dataset; only that version is kept on disk
+    @Column({
+        type: DataType.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
+    })
+    declare isCurrent: boolean;
+
+    // Notes on what changed since the previous version; only collected for RDS files
+    @Column({
+        type: DataType.TEXT,
+        allowNull: true,
+    })
+    declare updates: string | null;
 
     // Row creation time
     @Column({

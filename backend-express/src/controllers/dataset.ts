@@ -3,6 +3,8 @@ import { Request, Response } from "express";
 import * as service from "@src/services/dataset.ts";
 import { IDataset } from "@src/models/dataset.ts";
 import * as userService from "@src/services/user.ts";
+import * as fileService from "@src/services/file.ts";
+import { removeStored } from "@src/services/storage.ts";
 import { diff, logActivity, toPlain } from "@src/services/activity.ts";
 import { authorizeDataset, caller, getAccess, hasAccess, OWNER } from "@src/services/access.ts";
 import { pick } from "@src/utils/pick.ts";
@@ -91,7 +93,10 @@ export const remove = async (req: Request, res: Response) => {
     console.log("[DATASET CONTROLLER] Attempting to delete dataset...");
     const found = await authorizeDataset(res, req.params.id as string, OWNER);
     if (!found) return;
+    // The database rows are deleted with the dataset; the stored files must be removed by hand
+    const files = await fileService.getAll(found.dataset.id);
     await service.remove(found.dataset.id);
+    await removeStored(files);
     await logActivity(res, ActivityType.DATASET_DELETED, toPlain(found.dataset));
     res.status(204).send();
 };

@@ -1,10 +1,12 @@
 <script setup lang="ts">
-// Create/edit dataset page: the same form is used for /new and /dataset/:datasetURL/edit (file uploads are not wired up yet)
+// Create/edit dataset page: the same form is used for /new and /dataset/:datasetURL/edit (files are uploaded after the dataset itself is saved)
 import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
+import { FileTypes } from "@commons/file";
 import { DatasetPlots, DatasetVisibility, datasetUrlError, slugify, type IDataset } from "@commons/dataset";
 import { UserRoles, UserStatus } from "@commons/user";
+import { fileApi } from "@src/api/file";
 import { useAuthStore } from "@src/stores/auth";
 import { useDatasetStore } from "@src/stores/dataset";
 import { usePermissionStore } from "@src/stores/permission";
@@ -39,6 +41,17 @@ const dataset = ref<IDataset>({
     createdAt: new Date(),
     updatedAt: null,
 });
+
+// Files picked for upload; they are sent after the dataset is saved. v-file-upload may hand back a single file, a list or nothing
+type Picked = File | File[] | undefined;
+const coverFile = ref<Picked>();
+const rdsFile = ref<Picked>();
+const firstFile = (picked: Picked) => (Array.isArray(picked) ? (picked[0] ?? null) : (picked ?? null));
+// Notes on what changed since the previous version of the .rds file (sent with the .rds upload only)
+const rdsUpdates = ref("");
+
+// Progress of the file being uploaded: its label and how much has been sent (0 to 1); null when nothing is uploading
+const uploading = ref<{ label: string; fraction: number } | null>(null);
 
 // Busy flags: loading while the dataset is fetched (edit mode), saving while the save request is in flight
 const loading = ref(false);
@@ -139,6 +152,33 @@ async function save() {
         const saved = isEdit.value
             ? await datasetStore.editDataset(d.id, fields)
             : await datasetStore.addDataset({ ...fields, owner: d.owner, visibility: d.visibility });
+        // The dataset exists now; from here on a retry must update it rather than create it again
+        dataset.value.id = saved.id;
+        try {
+            const cover = firstFile(coverFile.value);
+            if (cover) {
+                uploading.value = { label: "Uploading cover photo", fraction: 0 };
+                await fileApi.uploadFile(saved.id, FileTypes.COVER, cover, undefined, (f) => (uploading.value!.fraction = f));
+            }
+            coverFile.value = undefined;
+            const rds = firstFile(rdsFile.value);
+            if (rds) {
+                uploading.value = { label: "Uploading .rds file", fraction: 0 };
+                await fileApi.uploadFile(
+                    saved.id,
+                    FileTypes.RDS,
+                    rds,
+                    rdsUpdates.value.trim(),
+                    (f) => (uploading.value!.fraction = f)
+                );
+            }
+            rdsFile.value = undefined;
+        } catch (err) {
+            // Keep the user on the edit page of the saved dataset, with the files that did not upload still selected
+            if (!isEdit.value) await router.replace(`/dataset/${saved.url}/edit`);
+            error.value = `The dataset was saved, but a file could not be uploaded. ${err instanceof Error && err.message ? err.message : "Please try again."}`;
+            return;
+        }
         await router.push(`/dataset/${saved.url}`);
     } catch (err) {
         // 409 is a duplicate url; 400 carries the backend's validation message (e.g. a reserved url)
@@ -150,12 +190,13 @@ async function save() {
                   ? `Unable to save the dataset. ${response.data.error}`
                   : "Unable to save the dataset. Please try again.";
     } finally {
+        uploading.value = null;
         saving.value = false;
     }
 }
 </script>
 
-<!-- Form for creating or editing a dataset; file uploads are UI only for now -->
+<!-- Form for creating or editing a dataset, including its cover photo and .rds file -->
 <template>
     <v-container class="py-6 px-12">
         <!-- Load/save error message -->
@@ -255,12 +296,46 @@ async function save() {
 
         <!-- Cover photo and .rds file uploads -->
         <v-row class="mx-4">
-            <v-file-upload density="compact" title="Upload Cover Photo" clearable :multiple="false" hide-details></v-file-upload>
+            <v-file-upload
+                v-model="coverFile"
+                density="compact"
+                title="Upload Cover Photo"
+                accept="image/*"
+                clearable
+                :multiple="false"
+                hide-details
+            ></v-file-upload>
             <!-- <v-btn color="primary" prepend-icon="mdi-upload">Upload cover photo</v-btn> -->
         </v-row>
         <v-row class="mx-4">
-            <v-file-upload density="compact" title="Upload .rds File" clearable :multiple="false" hide-details></v-file-upload>
+            <v-file-upload
+                v-model="rdsFile"
+                density="compact"
+                title="Upload .rds File"
+                accept=".rds"
+                clearable
+                :multiple="false"
+                hide-details
+            ></v-file-upload>
             <!-- <v-btn color="primary" prepend-icon="mdi-upload">Upload .rds file</v-btn> -->
+        </v-row>
+        <!-- What changed since the previous version of the .rds file (logged with the file upload) -->
+        <v-row v-if="rdsFile" class="text-body-medium mb-1 mx-4">Updates</v-row>
+        <v-textarea
+            v-if="rdsFile"
+            v-model="rdsUpdates"
+            placeholder="Describe what changed since the last version of the .rds file"
+            rows="2"
+            hide-details
+            class="mb-4 mx-4"
+        ></v-textarea>
+
+        <!-- Progress of the file being uploaded after the dataset is saved -->
+        <v-row v-if="uploading" class="mx-4 mb-4">
+            <v-col cols="12" class="pa-0">
+                <div class="text-body-medium mb-1">{{ uploading.label }}: {{ Math.round(uploading.fraction * 100) }}%</div>
+                <v-progress-linear :model-value="uploading.fraction * 100" height="8" rounded></v-progress-linear>
+            </v-col>
         </v-row>
 
         <!-- Submit button -->

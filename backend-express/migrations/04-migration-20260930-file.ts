@@ -56,7 +56,24 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 type: DataTypes.STRING,
                 allowNull: false,
             },
-            // Timestamps (no deletedAt: files are hard-deleted so the unique (dataset_id, type) slot is freed)
+            // Version number of the file; (dataset_id, type, version) is unique
+            version: {
+                type: DataTypes.INTEGER,
+                allowNull: false,
+                defaultValue: 1,
+            },
+            // True for the most recent version of this type in the dataset; older versions stay as rows but their files are deleted from disk
+            isCurrent: {
+                type: DataTypes.BOOLEAN,
+                allowNull: false,
+                defaultValue: true,
+            },
+            // Notes on what changed since the previous version (only collected for RDS files)
+            updates: {
+                type: DataTypes.TEXT,
+                allowNull: true,
+            },
+            // Timestamps (no deletedAt: files are hard-deleted so the unique (dataset_id, type, version) slot is freed)
             createdAt: {
                 type: DataTypes.DATE,
                 allowNull: false,
@@ -67,12 +84,19 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
             },
         });
 
-        // Each dataset can have at most one file of each type
-        // Added as a named constraint after createTable; the Files model declares the same name via @Unique("Files_dataset_id_type_unique")
+        // Each dataset can have at most one file of each type and version
+        // Added as a named constraint after createTable; the Files model declares the same name via @Unique("Files_dataset_id_type_version_unique")
         await queryInterface.addConstraint("Files", {
-            fields: ["dataset_id", "type"],
+            fields: ["dataset_id", "type", "version"],
             type: "unique",
-            name: "Files_dataset_id_type_unique",
+            name: "Files_dataset_id_type_version_unique",
+        });
+
+        // At most one current version per dataset and type (partial unique index; the Files model does not declare it)
+        await queryInterface.addIndex("Files", ["dataset_id", "type"], {
+            unique: true,
+            name: "Files_dataset_id_type_current_unique",
+            where: { isCurrent: true },
         });
     } catch (error) {
         migrationLogger.error(error);

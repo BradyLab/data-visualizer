@@ -7,6 +7,8 @@ import { IUserPass } from "@src/models/user.ts";
 import { pick } from "@src/utils/pick.ts";
 import { ActivityType } from "@commons/activity.ts";
 import { ASSIGNABLE_ROLES, UserRoles, UserStatus } from "@commons/user.ts";
+import * as fileService from "@src/services/file.ts";
+import { removeStored } from "@src/services/storage.ts";
 
 // Whitelist of columns clients may set (see utils/pick.ts)
 const USER_FIELDS = ["email", "password", "name", "role", "status"] as const;
@@ -138,7 +140,10 @@ export const remove = async (req: Request, res: Response) => {
     if (await datasetService.countOwnedBy(id))
         return res.status(409).json({ error: "This user owns datasets; reassign them first or deactivate the user instead" });
     const deleted = toPlain(target);
+    // The user's uploaded file records are deleted with them; the stored files must be removed by hand
+    const files = await fileService.getByUser(id);
     await service.remove(id);
+    await removeStored(files);
     await logActivity(res, ActivityType.USER_DELETED, deleted);
     res.status(204).send();
 };

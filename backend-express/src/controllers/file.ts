@@ -9,27 +9,12 @@ import { PermissionOptions } from "@commons/permissions.ts";
 import { UserRoles } from "@commons/user.ts";
 import { ActivityType } from "@commons/activity.ts";
 import { FileTypes } from "@commons/file.ts";
+import * as storage from "@src/services/storage.ts";
 
-// Whitelist of columns clients may set when creating a file; user_id is always the caller (see create)
-const FILE_FIELDS = ["dataset_id", "type", "sizeBytes", "ogName"] as const;
-// A file cannot move to another dataset or change uploader after creation
-const FILE_UPDATE_FIELDS = ["type", "sizeBytes", "ogName"] as const;
+// Once uploaded, only the update notes can change (the stored file and its version are fixed; upload a new version instead)
+const FILE_UPDATE_FIELDS = ["updates"] as const;
 
-// Returns an error message for the first client-supplied field that is present but invalid, or null if all are fine.
-// Changing type on update (or creating a second file of a kind) can violate the one-file-per-kind unique constraint;
-// that surfaces as a UniqueConstraintError, which the global error handler in index.ts maps to 409
-const validateFileFields = (fields: Partial<IFile>) => {
-    if (fields.type !== undefined && !Object.values(FileTypes).includes(fields.type))
-        return `type must be one of: ${Object.values(FileTypes).join(", ")}`;
-    if (fields.sizeBytes !== undefined && !(Number.isSafeInteger(fields.sizeBytes) && fields.sizeBytes >= 0))
-        return "sizeBytes must be a non-negative integer";
-    // 255 matches the STRING column length of ogName
-    if (fields.ogName !== undefined && (typeof fields.ogName !== "string" || !fields.ogName.trim() || fields.ogName.length > 255))
-        return "ogName must be a non-empty string of at most 255 characters";
-    return null;
-};
-
-// Files follow the access rules of their dataset: VIEW to read, EDIT to create, change or delete.
+// Files follow the access rules of their dataset: VIEW to read, EDIT to upload (see services/tus.ts), change or delete.
 // Loads a file and checks the caller's access to its dataset; on failure it sends 404/403 and returns null
 const authorizeFile = async (res: Response, id: string, min: PermissionOptions) => {
     const file = await service.getById(id);
@@ -67,32 +52,19 @@ export const get = async (req: Request, res: Response) => {
     if (item) res.status(200).json(item);
 };
 
-/** POST / : creates a file on the body's dataset (201), uploaded by the caller; needs EDIT access to that dataset */
-export const create = async (req: Request, res: Response) => {
-    console.log("[FILE CONTROLLER] Attempting to create file...");
-    const fields = pick<IFile>(req.body, FILE_FIELDS);
-    if (typeof fields.dataset_id !== "string") return res.status(400).json({ error: "dataset_id is required" });
-    if (!(await authorizeDataset(res, fields.dataset_id, PermissionOptions.EDIT))) return;
-    // All three are NOT NULL columns, so they are required on create
-    if (fields.type === undefined || fields.sizeBytes === undefined || fields.ogName === undefined)
-        return res.status(400).json({ error: "type, sizeBytes and ogName are required" });
-    const invalid = validateFileFields(fields);
-    if (invalid) return res.status(400).json({ error: invalid });
-    const created = await service.create({ ...fields, user_id: caller(res)!.id });
-    await logActivity(res, ActivityType.FILE_UPLOADED, toPlain(created));
-    res.status(201).json(created);
-};
-
 /** PUT /:id : updates an existing file (200); needs EDIT access to its dataset (404 if not found or not visible, 403 otherwise) */
 export const update = async (req: Request, res: Response) => {
     console.log("[FILE CONTROLLER] Attempting to update file...");
     const file = await authorizeFile(res, req.params.id as string, PermissionOptions.EDIT);
     if (!file) return;
     const fields = pick<IFile>(req.body, FILE_UPDATE_FIELDS);
-    const invalid = validateFileFields(fields);
+    const invalid = service.validateFileFields(fields);
     if (invalid) return res.status(400).json({ error: invalid });
+    // Update notes are only collected for RDS files
+    if (fields.updates && file.type !== FileTypes.RDS)
+        return res.status(400).json({ error: "updates are only allowed on RDS files" });
     const updated = await service.update(file.id, fields);
-    // There is no FILE_UPDATED type, so a changed file record (e.g. a replaced upload) is logged as FILE_UPLOADED
+    // There is no FILE_UPDATED type, so a changed file record (version or update notes) is logged as FILE_UPLOADED
     const changes = updated && diff(file, updated, FILE_UPDATE_FIELDS);
     if (changes) await logActivity(res, ActivityType.FILE_UPLOADED, { file_id: file.id, dataset_id: file.dataset_id, changes });
     res.status(200).json(updated);
@@ -104,6 +76,7 @@ export const remove = async (req: Request, res: Response) => {
     const file = await authorizeFile(res, req.params.id as string, PermissionOptions.EDIT);
     if (!file) return;
     await service.remove(file.id);
+    await storage.removeStored([file]);
     await logActivity(res, ActivityType.FILE_DELETED, toPlain(file));
     res.status(204).send();
 };
