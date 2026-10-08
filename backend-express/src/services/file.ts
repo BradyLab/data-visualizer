@@ -32,6 +32,12 @@ export const getByUser = (user_id: string) => {
     return Files.findAll({ where: { user_id } });
 };
 
+/** The current version of a dataset's file of one type (the only one kept on disk), or null */
+export const getCurrent = (dataset_id: string, type: IFile["type"]) => {
+    console.log("[FILE SERVICE] Fetching current file...");
+    return Files.findOne({ where: { dataset_id, type, isCurrent: true } });
+};
+
 /** Finds a file record by primary key, or null */
 export const getById = (id: string) => {
     console.log("[FILE SERVICE] Fetching file by id...");

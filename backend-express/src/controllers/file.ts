@@ -10,6 +10,7 @@ import { UserRoles } from "@commons/user.ts";
 import { ActivityType } from "@commons/activity.ts";
 import { FileTypes } from "@commons/file.ts";
 import * as storage from "@src/services/storage.ts";
+import { signDownloadToken, verifyDownloadToken } from "@src/services/auth.ts";
 
 // Once uploaded, only the update notes can change (the stored file and its version are fixed; upload a new version instead)
 const FILE_UPDATE_FIELDS = ["updates"] as const;
@@ -79,4 +80,60 @@ export const remove = async (req: Request, res: Response) => {
     await storage.removeStored([file]);
     await logActivity(res, ActivityType.FILE_DELETED, toPlain(file));
     res.status(204).send();
+};
+
+// A file type from a route param, or null if it is not one
+const parseType = (value: unknown) => {
+    const type = String(value).toUpperCase();
+    return (Object.values(FileTypes) as string[]).includes(type) ? (type as FileTypes) : null;
+};
+
+// What a viewer needs on the dataset to read a file: covers are shown to anyone who can see the dataset, data files need DOWNLOAD
+const readAccess = (type: FileTypes) => (type === FileTypes.COVER ? PermissionOptions.VIEW : PermissionOptions.DOWNLOAD);
+
+/**
+ * GET /current/:datasetId/:type/content : sends the current file of that type (cover image inline, other files as a download), with Range support.
+ * Needs VIEW access to the dataset for covers and DOWNLOAD for data files (404 if there is no such file or the dataset is not visible, 403 otherwise),
+ * or a valid ?token= from the download-token route below, which is how a browser download (no Authorization header) proves access
+ */
+export const content = async (req: Request, res: Response) => {
+    console.log("[FILE CONTROLLER] Attempting to send file...");
+    const datasetId = req.params.datasetId as string;
+    const type = parseType(req.params.type);
+    if (!type) return res.status(400).json({ error: `type must be one of: ${Object.values(FileTypes).join(", ")}` });
+    const token = typeof req.query.token === "string" ? req.query.token : null;
+    const tokenFileId = token ? verifyDownloadToken(token) : null;
+    if (token && !tokenFileId) return res.status(401).json({ error: "The download link has expired" });
+    if (!tokenFileId && !(await authorizeDataset(res, datasetId, readAccess(type)))) return;
+    const file = await service.getCurrent(datasetId, type);
+    // A token only opens the file it was issued for (if a newer version has replaced it since, the link no longer works)
+    if (!file || (tokenFileId && tokenFileId !== file.id)) return res.status(404).json({ error: "File not found" });
+    const send =
+        type === FileTypes.COVER
+            ? res.sendFile.bind(res)
+            : (p: string, o: object, cb: (e?: Error) => void) => res.download(p, file.ogName, o, cb);
+    send(storage.storedPath(file), { dotfiles: "allow", headers: { "Cache-Control": "private, no-cache" } }, (err?: Error) => {
+        // The record exists but the file is gone from disk (or the client hung up, which needs no answer)
+        if (err && !res.headersSent) res.status(404).json({ error: "File not found" });
+    });
+};
+
+/**
+ * POST /current/:datasetId/:type/download-token : returns { token } for the current file of that type, valid for a few hours, to open
+ * the content route in a browser download. Needs DOWNLOAD access to the dataset (404 if there is no such file or the dataset is not visible, 403 otherwise)
+ */
+export const downloadToken = async (req: Request, res: Response) => {
+    console.log("[FILE CONTROLLER] Attempting to issue download token...");
+    const type = parseType(req.params.type);
+    if (!type) return res.status(400).json({ error: `type must be one of: ${Object.values(FileTypes).join(", ")}` });
+    if (!(await authorizeDataset(res, req.params.datasetId as string, PermissionOptions.DOWNLOAD))) return;
+    const file = await service.getCurrent(req.params.datasetId as string, type);
+    if (!file) return res.status(404).json({ error: "File not found" });
+    await logActivity(res, ActivityType.FILE_DOWNLOADED, {
+        file_id: file.id,
+        dataset_id: file.dataset_id,
+        type: file.type,
+        version: file.version,
+    });
+    res.status(200).json({ token: signDownloadToken(file.id) });
 };

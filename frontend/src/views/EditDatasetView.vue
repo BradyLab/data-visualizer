@@ -6,8 +6,8 @@ import axios from "axios";
 import { FileTypes } from "@commons/file";
 import { DatasetPlots, DatasetVisibility, datasetUrlError, slugify, type IDataset } from "@commons/dataset";
 import { UserRoles, UserStatus } from "@commons/user";
-import { fileApi } from "@src/api/file";
 import { useAuthStore } from "@src/stores/auth";
+import { useFileStore } from "@src/stores/file";
 import { useDatasetStore } from "@src/stores/dataset";
 import { usePermissionStore } from "@src/stores/permission";
 import { useUserStore } from "@src/stores/user";
@@ -16,6 +16,7 @@ const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
 const datasetStore = useDatasetStore();
+const fileStore = useFileStore();
 const permissionStore = usePermissionStore();
 const userStore = useUserStore();
 
@@ -49,9 +50,6 @@ const rdsFile = ref<Picked>();
 const firstFile = (picked: Picked) => (Array.isArray(picked) ? (picked[0] ?? null) : (picked ?? null));
 // Notes on what changed since the previous version of the .rds file (sent with the .rds upload only)
 const rdsUpdates = ref("");
-
-// Progress of the file being uploaded: its label and how much has been sent (0 to 1); null when nothing is uploading
-const uploading = ref<{ label: string; fraction: number } | null>(null);
 
 // Busy flags: loading while the dataset is fetched (edit mode), saving while the save request is in flight
 const loading = ref(false);
@@ -156,22 +154,10 @@ async function save() {
         dataset.value.id = saved.id;
         try {
             const cover = firstFile(coverFile.value);
-            if (cover) {
-                uploading.value = { label: "Uploading cover photo", fraction: 0 };
-                await fileApi.uploadFile(saved.id, FileTypes.COVER, cover, undefined, (f) => (uploading.value!.fraction = f));
-            }
+            if (cover) await fileStore.uploadFile(saved.id, FileTypes.COVER, cover);
             coverFile.value = undefined;
             const rds = firstFile(rdsFile.value);
-            if (rds) {
-                uploading.value = { label: "Uploading .rds file", fraction: 0 };
-                await fileApi.uploadFile(
-                    saved.id,
-                    FileTypes.RDS,
-                    rds,
-                    rdsUpdates.value.trim(),
-                    (f) => (uploading.value!.fraction = f)
-                );
-            }
+            if (rds) await fileStore.uploadFile(saved.id, FileTypes.RDS, rds, rdsUpdates.value.trim());
             rdsFile.value = undefined;
         } catch (err) {
             // Keep the user on the edit page of the saved dataset, with the files that did not upload still selected
@@ -190,7 +176,6 @@ async function save() {
                   ? `Unable to save the dataset. ${response.data.error}`
                   : "Unable to save the dataset. Please try again.";
     } finally {
-        uploading.value = null;
         saving.value = false;
     }
 }
@@ -331,10 +316,12 @@ async function save() {
         ></v-textarea>
 
         <!-- Progress of the file being uploaded after the dataset is saved -->
-        <v-row v-if="uploading" class="mx-4 mb-4">
+        <v-row v-if="fileStore.uploading" class="mx-4 mb-4">
             <v-col cols="12" class="pa-0">
-                <div class="text-body-medium mb-1">{{ uploading.label }}: {{ Math.round(uploading.fraction * 100) }}%</div>
-                <v-progress-linear :model-value="uploading.fraction * 100" height="8" rounded></v-progress-linear>
+                <div class="text-body-medium mb-1">
+                    {{ fileStore.uploading.label }}: {{ Math.round(fileStore.uploading.fraction * 100) }}%
+                </div>
+                <v-progress-linear :model-value="fileStore.uploading.fraction * 100" height="8" rounded></v-progress-linear>
             </v-col>
         </v-row>
 

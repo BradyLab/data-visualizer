@@ -2,6 +2,7 @@
 // Home page view: lists all datasets as clickable cards
 import { onMounted } from "vue";
 import { useRouter } from "vue-router";
+import DatasetCover from "@src/components/DatasetCover.vue";
 import { useAuthStore } from "@src/stores/auth";
 import { useDatasetStore } from "@src/stores/dataset";
 
@@ -42,8 +43,8 @@ function navTo(route: string) {
             <!-- The url slug is the unique key and the route param -->
             <v-col v-for="dataset in datasetStore.datasets" :key="dataset.url">
                 <v-card @click="navTo('/dataset/' + dataset.url)">
-                    <!-- Placeholder for the dataset's cover image -->
-                    <div class="dataset-thumb"></div>
+                    <!-- Cover image, or a color block when the dataset has none -->
+                    <DatasetCover :dataset-id="dataset.id" :height="110" />
                     <v-card-item>
                         <v-card-title class="text-body-2 font-weight-bold">{{ dataset.name }}</v-card-title>
                         <v-card-subtitle>{{ dataset.description }}</v-card-subtitle>
@@ -53,11 +54,3 @@ function navTo(route: string) {
         </v-row>
     </v-container>
 </template>
-
-<style scoped>
-/* Temporary thumbnail block filled with the theme's primary color */
-.dataset-thumb {
-    height: 110px;
-    background-color: rgb(var(--v-theme-primary));
-}
-</style>

@@ -1,5 +1,5 @@
 // Resumable file uploads to the backend /files/upload endpoint (tus protocol, https://tus.io)
-import axios from "axios";
+import axios, { isAxiosError } from "axios";
 import { DetailedError, Upload } from "tus-js-client";
 import { apis } from "@commons/general";
 import { FileTypes } from "@commons/file";
@@ -46,5 +46,31 @@ export const fileApi = {
             });
             upload.start();
         });
+    },
+
+    /** GET /files/current/:datasetId/COVER/content : the dataset's current cover image, or null if it has none (other errors still reject) */
+    async getCover(datasetId: string): Promise<Blob | null> {
+        try {
+            const response = await axios.get<Blob>(`${baseURL}/${apis.FILE}/current/${datasetId}/${FileTypes.COVER}/content`, {
+                responseType: "blob",
+            });
+            return response.data;
+        } catch (e) {
+            if (isAxiosError(e) && e.response?.status === 404) return null;
+            throw e;
+        }
+    },
+
+    /**
+     * Starts the browser's download of the dataset's current .rds file. A download cannot carry the login header, so a short-lived
+     * token is requested first and put in the link; the browser then streams the file itself (large files never pass through the page).
+     * Rejects with a 404 axios error if there is no .rds file, or 403 without download access
+     */
+    async downloadRds(datasetId: string): Promise<void> {
+        const path = `${baseURL}/${apis.FILE}/current/${datasetId}/${FileTypes.RDS}`;
+        const response = await axios.post<{ token: string }>(`${path}/download-token`);
+        const link = document.createElement("a");
+        link.href = `${path}/content?token=${encodeURIComponent(response.data.token)}`;
+        link.click();
     },
 };

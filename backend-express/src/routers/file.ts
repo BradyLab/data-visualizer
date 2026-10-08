@@ -13,6 +13,9 @@ const router = Router();
 router.get("/", optionalAuth, controller.list);
 // Files are created by resumable (tus) uploads at /files/upload, mounted in index.ts (see services/tus.ts), not by POST here
 // Changes need a login; EDIT access to the dataset is checked in the controller
+// The current file of a type in a dataset: the bytes (also reachable with a ?token= from the route below, for browser downloads) and the token
+router.get("/current/:datasetId/:type/content", optionalAuth, controller.content);
+router.post("/current/:datasetId/:type/download-token", requireAuth, controller.downloadToken);
 // Must be registered before "/:id" or "byDataset" would be treated as an id
 router.get("/byDataset/:datasetId", optionalAuth, controller.listByDataset);
 router.get("/:id", optionalAuth, controller.get);

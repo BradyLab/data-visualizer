@@ -47,6 +47,29 @@ export const verifyToken = (token: string) => {
     }
 };
 
+// How long a download link stays valid. The token is only checked when a request arrives, so a running download is never cut off,
+// but a browser resuming an interrupted download of a very large file re-sends the same link, so it has to outlast a long transfer
+const DOWNLOAD_TOKEN_TTL = "6h";
+
+/**
+ * Signs a short-lived token that lets whoever holds it fetch one file (see GET /files/current/:datasetId/:type/content).
+ * It goes in a link, since a browser download cannot send an Authorization header; the caller must have checked access first
+ */
+export const signDownloadToken = (fileId: string) => {
+    if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET is not set");
+    return jwt.sign({ file: fileId, purpose: "download" }, process.env.JWT_SECRET, { expiresIn: DOWNLOAD_TOKEN_TTL });
+};
+
+/** Returns the file id in a valid download token, or null (login tokens are not download tokens and vice versa) */
+export const verifyDownloadToken = (token: string) => {
+    try {
+        const payload = jwt.verify(token, process.env.JWT_SECRET) as { file?: string; purpose?: string };
+        return payload.purpose === "download" && typeof payload.file === "string" ? payload.file : null;
+    } catch {
+        return null;
+    }
+};
+
 /** Changes a user's password (activating them if invited) if the old one is correct; returns false (and changes nothing) if it is not */
 export const changePassword = async (id: string, oldPassword: string, newPassword: string) => {
     console.log("[AUTH SERVICE] Changing password...");

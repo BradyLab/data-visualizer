@@ -3,19 +3,22 @@
 import { onMounted, watch } from "vue";
 import AppDefault from "@src/layouts/AppDefault.vue";
 import { useAuthStore } from "@src/stores/auth";
+import { useFileStore } from "@src/stores/file";
 import { useDatasetStore } from "@src/stores/dataset";
 import { usePermissionStore } from "@src/stores/permission";
 
 // What a viewer may see depends on who they are, so when they log in or out (the user id changes) drop the
-// permissions loaded for the previous viewer and reload the dataset list. Otherwise private datasets would stay
+// permissions and cover images loaded for the previous viewer and reload the dataset list. Otherwise private datasets would stay
 // visible after logging out, and a new login would keep showing the guest's list
 const auth = useAuthStore();
 const datasetStore = useDatasetStore();
 const permissionStore = usePermissionStore();
+const fileStore = useFileStore();
 watch(
     () => auth.user.id,
     () => {
         permissionStore.clear();
+        fileStore.clear();
         datasetStore.fetchDatasets().catch(() => {});
     }
 );

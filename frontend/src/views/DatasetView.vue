@@ -2,7 +2,9 @@
 // Dataset page view: shows a dataset from the backend (found by the url slug in the route) and lets viewers pick treatments and plots.
 // Gene and cell type selection and plot generation are still static placeholders.
 import { computed, ref, watch } from "vue";
+import axios from "axios";
 import { useRoute, useRouter } from "vue-router";
+import { useFileStore } from "@src/stores/file";
 import { useAuthStore } from "@src/stores/auth";
 import { useDatasetStore } from "@src/stores/dataset";
 import { usePermissionStore } from "@src/stores/permission";
@@ -12,6 +14,7 @@ const router = useRouter();
 const auth = useAuthStore();
 const datasetStore = useDatasetStore();
 const permissionStore = usePermissionStore();
+const fileStore = useFileStore();
 
 // Loading and error state for the page; the dataset itself is datasetStore.currentDataset
 // (null until loaded or when no dataset has that url)
@@ -21,6 +24,19 @@ const error = ref<string | null>(null);
 // Treatments and plots the viewer has ticked (nothing starts selected)
 const selectedTreatments = ref<string[]>([]);
 const selectedPlots = ref<string[]>([]);
+
+// Starts the download of the dataset's .rds file; the browser takes over from there
+async function downloadData() {
+    error.value = null;
+    try {
+        await fileStore.downloadRds(datasetStore.currentDataset!.id);
+    } catch (err) {
+        error.value =
+            axios.isAxiosError(err) && err.response?.status === 404
+                ? "This dataset has no data file yet."
+                : "Unable to start the download. Please try again.";
+    }
+}
 
 // DOI as a link: bare DOIs (10.xxxx/...) are resolved through doi.org
 // Values already starting with http(s):// are used as-is
@@ -66,6 +82,8 @@ watch(
         <v-alert v-else type="error" variant="tonal">{{ error }}</v-alert>
     </v-container>
     <v-container v-else class="px-12">
+        <!-- Download or load errors that appear after the page loaded -->
+        <v-alert v-if="error" type="error" variant="tonal" closable class="mb-4" @click:close="error = null">{{ error }}</v-alert>
         <!-- Title, DOI, and action buttons -->
         <v-row class="mb-4">
             <v-col>
@@ -86,8 +104,8 @@ watch(
                     v-if="permissionStore.canDownload(datasetStore.currentDataset)"
                     color="primary"
                     prepend-icon="mdi-download"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    :loading="fileStore.downloading"
+                    @click="downloadData"
                     >Data</v-btn
                 >
             </v-col>
