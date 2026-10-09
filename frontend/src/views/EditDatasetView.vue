@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Create/edit dataset page: the same form is used for /new and /dataset/:datasetURL/edit (files are uploaded after the dataset itself is saved)
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 import { FileTypes } from "@commons/file";
@@ -51,6 +51,16 @@ const firstFile = (picked: Picked) => (Array.isArray(picked) ? (picked[0] ?? nul
 // Notes on what changed since the previous version of the .rds file (sent with the .rds upload only)
 const rdsUpdates = ref("");
 
+// The fields the form edits; compared (as a snapshot string) to tell whether another user changed the dataset while it is open
+const EDITABLE_FIELDS = ["name", "url", "description", "doi", "attribution", "treatments", "plots"] as const;
+const snapshot = (d: IDataset) => JSON.stringify(EDITABLE_FIELDS.map((field) => d[field]));
+// Snapshot of the saved dataset the form started from; replaced after the user's own save so that is not mistaken for someone else's change
+let baseline = "";
+// Another user saved different values while this form was open (saving now would overwrite them)
+const changedElsewhere = ref(false);
+// The dataset was deleted (or the viewer lost access to it) while this form was open, so it can no longer be saved
+const removed = ref(false);
+
 // Busy flags: loading while the dataset is fetched (edit mode), saving while the save request is in flight
 const loading = ref(false);
 const saving = ref(false);
@@ -94,6 +104,7 @@ const canSave = computed(
     () =>
         !saving.value &&
         !loading.value &&
+        !removed.value &&
         !!dataset.value.name.trim() &&
         !!dataset.value.owner &&
         !datasetUrlError(slugify(dataset.value.url)) &&
@@ -125,12 +136,50 @@ onMounted(async () => {
         }
         // Copy so edits don't change the store's cached dataset before saving
         dataset.value = { ...found, treatments: [...found.treatments], plots: [...found.plots] };
+        baseline = snapshot(found);
     } catch {
         error.value = "Unable to load the dataset. Please try again.";
     } finally {
         loading.value = false;
     }
 });
+
+// Pushed changes land in the store's currentDataset (see the socket handlers in the dataset store). While editing, a change made by
+// someone else raises a warning and a deletion blocks saving. Changes during a save are the user's own and ignored
+watch(
+    () => datasetStore.currentDataset,
+    (current, previous) => {
+        if (!isEdit.value || !dataset.value.id || saving.value) return;
+        if (!current) {
+            if (previous?.id === dataset.value.id) removed.value = true;
+            return;
+        }
+        if (current.id !== dataset.value.id) return;
+        if (snapshot(current) !== baseline) changedElsewhere.value = true;
+        // The url slug was changed by someone else: keep the address bar on the dataset's current url
+        if (current.url !== editingUrl.value) router.replace(`/dataset/${current.url}/edit`);
+    }
+);
+
+// Losing edit access while the form is open (the viewer's permissions are updated by pushed changes): back to the dataset page
+watch(
+    () =>
+        isEdit.value && dataset.value.id && datasetStore.currentDataset
+            ? permissionStore.canEdit(datasetStore.currentDataset)
+            : true,
+    (canEdit) => {
+        if (!canEdit) router.replace(`/dataset/${dataset.value.url}`);
+    }
+);
+
+// Replaces the form with the version someone else saved, discarding the local edits
+function loadTheirVersion() {
+    const theirs = datasetStore.currentDataset;
+    if (!theirs) return;
+    dataset.value = { ...theirs, treatments: [...theirs.treatments], plots: [...theirs.plots] };
+    baseline = snapshot(theirs);
+    changedElsewhere.value = false;
+}
 
 // Creates or updates the dataset, then opens its page
 async function save() {
@@ -152,6 +201,8 @@ async function save() {
             : await datasetStore.addDataset({ ...fields, owner: d.owner, visibility: d.visibility });
         // The dataset exists now; from here on a retry must update it rather than create it again
         dataset.value.id = saved.id;
+        baseline = snapshot(saved);
+        changedElsewhere.value = false;
         try {
             const cover = firstFile(coverFile.value);
             if (cover) await fileStore.uploadFile(saved.id, FileTypes.COVER, cover);
@@ -186,6 +237,18 @@ async function save() {
     <v-container class="py-6 px-12">
         <!-- Load/save error message -->
         <v-alert v-if="error" type="error" variant="tonal" closable class="mb-4" @click:close="error = null">{{ error }}</v-alert>
+        <!-- Pushed from the server while the form is open: the dataset is gone, or someone else changed it -->
+        <v-alert v-if="removed" type="error" variant="tonal" class="mb-4">
+            This dataset was deleted or is no longer available to you, so it can't be saved.
+            <template #append><v-btn variant="text" to="/home">Home</v-btn></template>
+        </v-alert>
+        <v-alert v-else-if="changedElsewhere" type="warning" variant="tonal" class="mb-4">
+            Someone else changed this dataset while you were editing. Saving will overwrite their changes.
+            <template #append>
+                <v-btn variant="text" @click="loadTheirVersion">Load their version</v-btn>
+                <v-btn variant="text" @click="changedElsewhere = false">Keep mine</v-btn>
+            </template>
+        </v-alert>
         <!-- Dataset name -->
         <v-text-field
             :model-value="dataset.name"

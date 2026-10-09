@@ -1,5 +1,5 @@
 // Pinia store holding the viewer's own permissions, the permissions they may manage, and the access rules built on them
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { defineStore } from "pinia";
 import { PermissionOptions, type IPermission } from "@commons/permissions";
 import type { IDataset } from "@commons/dataset";
@@ -7,6 +7,9 @@ import { UserRoles } from "@commons/user";
 import { permissionApi } from "@src/api/permission";
 import { type CreatePermissionPayload } from "@src/interfaces/permission";
 import { useAuthStore } from "@src/stores/auth";
+import { useDatasetStore } from "@src/stores/dataset";
+import { useSocketStore } from "@src/stores/socket";
+import { SocketEvent, type IPermissionChangedEvent } from "@commons/socket";
 
 export const usePermissionStore = defineStore("permission", () => {
     const auth = useAuthStore();
@@ -119,6 +122,31 @@ export const usePermissionStore = defineStore("permission", () => {
         replace(adminPermissions.value);
         if (permission.user_id === auth.user.id) replace(myPermissions.value);
     }
+
+    // Live updates when a permission is granted, changed or revoked. The viewer's own list follows the rows that are theirs; the
+    // management list follows every row, but only if the viewer manages that dataset (the server also sends them to the dataset's owner and admins)
+    function onPermissionChanged({ user_id, dataset_id, permission }: IPermissionChangedEvent) {
+        const isRow = (p: IPermission) => p.user_id === user_id && p.dataset_id === dataset_id;
+        const apply = (list: IPermission[]) => {
+            if (!permission) return list.filter((p) => !isRow(p));
+            return list.some(isRow) ? list.map((p) => (isRow(p) ? permission : p)) : [...list, permission];
+        };
+        const datasetStore = useDatasetStore();
+        if (user_id === auth.user.id) myPermissions.value = apply(myPermissions.value);
+        const dataset = datasetStore.datasets.find((d) => d.id === dataset_id);
+        if (auth.isAdmin || dataset?.owner === auth.user.id) adminPermissions.value = apply(adminPermissions.value);
+        // New or lost access changes which datasets the viewer can see, so reload the list
+        if (user_id === auth.user.id) datasetStore.fetchDatasets().catch(() => {});
+    }
+    const socket = useSocketStore();
+    socket.on(SocketEvent.PERMISSION_CHANGED, onPermissionChanged);
+    // Reload the viewer's own permissions after a reconnect, to catch changes made while offline
+    watch(
+        () => socket.reconnects,
+        () => {
+            if (auth.isLoggedIn) fetchMine(auth.user.id).catch(() => {});
+        }
+    );
 
     return {
         myPermissions,

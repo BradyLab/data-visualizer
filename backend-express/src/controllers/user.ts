@@ -6,8 +6,19 @@ import { diff, logActivity, toPlain } from "@src/services/activity.ts";
 import { IUserPass } from "@src/models/user.ts";
 import { pick } from "@src/utils/pick.ts";
 import { ActivityType } from "@commons/activity.ts";
+import { PermissionOptions } from "@commons/permissions.ts";
 import { ASSIGNABLE_ROLES, UserRoles, UserStatus } from "@commons/user.ts";
 import * as fileService from "@src/services/file.ts";
+import * as permissionService from "@src/services/permission.ts";
+import {
+    emitFileRemoved,
+    emitPermissionsChanged,
+    emitUserChanged,
+    emitUserDeleted,
+    revokeSession,
+    updateRooms,
+} from "@src/services/socket.ts";
+import { SessionRevokedReason } from "@commons/socket.ts";
 import { removeStored } from "@src/services/storage.ts";
 
 // Columns clients may change on an existing user; the password is deliberately absent so it can only be
@@ -54,6 +65,7 @@ export const create = async (req: Request, res: Response) => {
     if (!ASSIGNABLE_ROLES.includes(role)) return res.status(400).json({ error: "A valid role is required" });
     const created = await service.create(pick<IUserPass>({ name: name.trim(), email, role }, ["email", "name", "role"] as const));
     await logActivity(res, ActivityType.INVITE_USER, toPlain(created));
+    await emitUserChanged(created);
     res.status(201).json(created);
 };
 
@@ -106,6 +118,11 @@ export const update = async (req: Request, res: Response) => {
         ((fields.role !== undefined && fields.role !== UserRoles.ADMIN) || fields.status === UserStatus.INACTIVE);
     if (losesAdmin && !(await service.hasOtherActiveAdmin(id)))
         return res.status(409).json({ error: "There must be at least one active admin" });
+    // Becoming EXTERNAL downgrades the user's EDIT permissions (see service.update); remember which rows so they can be announced
+    const downgrading =
+        fields.role === UserRoles.EXTERNAL && target.role !== UserRoles.EXTERNAL
+            ? (await permissionService.getAll({ user_id: id })).filter((p) => p.perm === PermissionOptions.EDIT)
+            : [];
     const updated = await service.update(id, fields);
     // One entry per request: a status change takes the more specific type, other changed fields ride along in the same entry
     const changes = updated && diff(target, updated, UPDATE_FIELDS);
@@ -118,6 +135,18 @@ export const update = async (req: Request, res: Response) => {
                   ? ActivityType.USER_REACTIVATED
                   : ActivityType.USER_UPDATED;
         await logActivity(res, type, { user_id: id, changes });
+        // A role change moves their open sockets to the rooms of the new role; the push below then makes their client reload what it may see
+        if (changes.role) await updateRooms(id, updated.role);
+        await emitUserChanged(updated);
+        if (downgrading.length) {
+            const now = await permissionService.getAll({ user_id: id });
+            await emitPermissionsChanged(
+                now.filter((p) => downgrading.some((d) => d.dataset_id === p.dataset_id)),
+                false
+            );
+        }
+        // A deactivated account can't use its token any more, so its open sessions end
+        if (type === ActivityType.USER_DEACTIVATED) await revokeSession(id, SessionRevokedReason.USER_DEACTIVATED);
     }
     res.status(200).json(updated);
 };
@@ -139,8 +168,15 @@ export const remove = async (req: Request, res: Response) => {
     const deleted = toPlain(target);
     // The user's uploaded file records are deleted with them; the stored files must be removed by hand
     const files = await fileService.getByUser(id);
+    // Their permissions are deleted with them, so announce those rows as removed once the delete went through
+    const permissions = await permissionService.getAll({ user_id: id });
     await service.remove(id);
     await removeStored(files);
     await logActivity(res, ActivityType.USER_DELETED, deleted);
+    await emitUserDeleted(id);
+    await emitPermissionsChanged(permissions, true);
+    // Their uploaded file rows went with them, which can leave a dataset without its current cover or data file
+    await Promise.all(files.map(emitFileRemoved));
+    await revokeSession(id, SessionRevokedReason.USER_DELETED);
     res.status(204).send();
 };

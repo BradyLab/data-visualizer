@@ -12,6 +12,7 @@ import { getAccess, hasAccess } from "@src/services/access.ts";
 import { logActivityAs, toPlain } from "@src/services/activity.ts";
 import * as service from "@src/services/file.ts";
 import * as storage from "@src/services/storage.ts";
+import { emitFileUploaded } from "@src/services/socket.ts";
 import { randomUUID } from "node:crypto";
 
 // Largest accepted upload; 30 GiB unless UPLOAD_MAX_BYTES is set
@@ -116,6 +117,7 @@ export const tusServer = new Server({
             await storage.removeStored(replaced).catch((err) => console.error("[TUS] Failed to remove replaced files:", err));
             console.log(`[TUS] Stored upload at ${storage.storedPath(record)}`);
             await logActivityAs(user_id, ActivityType.FILE_UPLOADED, toPlain(created));
+            await emitFileUploaded(created.get({ plain: true }));
             return { status_code: 200, body: JSON.stringify(toPlain(created)) };
         } catch (err) {
             // The upload is complete but unusable: don't leave gigabytes in the temporary folder

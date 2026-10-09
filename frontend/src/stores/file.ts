@@ -3,6 +3,8 @@ import { reactive, ref } from "vue";
 import { defineStore } from "pinia";
 import { FileTypes } from "@commons/file";
 import { fileApi } from "@src/api/file";
+import { useSocketStore } from "@src/stores/socket";
+import { SocketEvent } from "@commons/socket";
 
 export const useFileStore = defineStore("file", () => {
     // Cover image object URL per dataset id; null means the dataset has no cover, a missing key means not loaded yet
@@ -78,6 +80,17 @@ export const useFileStore = defineStore("file", () => {
         pendingCovers.clear();
         Object.keys(covers.value).forEach(dropCover);
     }
+
+    // Another user uploaded a new cover: drop the cached image, and DatasetCover loads the new one (it watches `covers`).
+    // Data files are not cached here, so there is nothing to refresh for them
+    useSocketStore().on(SocketEvent.FILE_UPLOADED, ({ file }) => {
+        if (file.type === FileTypes.COVER) dropCover(file.dataset_id);
+    });
+
+    // A file was deleted (on its own, or with its uploader): the cached cover may be gone, so drop it and let DatasetCover ask again
+    useSocketStore().on(SocketEvent.FILE_REMOVED, ({ dataset_id, type }) => {
+        if (type === FileTypes.COVER) dropCover(dataset_id);
+    });
 
     return { covers, uploading, downloading, loadCover, uploadFile, downloadRds, clear };
 });

@@ -8,6 +8,7 @@ import { sequelize } from "@src/database.ts";
 import { requireAuth } from "@src/middleware/auth.ts";
 import { cleanUpExpiredUploads, TUS_PATH, tusServer } from "@src/services/tus.ts";
 import { ensureDirs } from "@src/services/storage.ts";
+import { attachSocket } from "@src/services/socket.ts";
 import { apis } from "@commons/general.ts";
 
 import userRouter from "@src/routers/user.ts";
@@ -109,6 +110,8 @@ export const start = async () => {
             `=====================================================================================`;
         console.log(box);
     });
+    // Live updates (websocket) share the HTTP server with the REST API
+    attachSocket(server);
     // Unfinished uploads expire; sweep them hourly (and once at startup)
     void cleanUpExpiredUploads();
     setInterval(cleanUpExpiredUploads, 60 * 60 * 1000).unref();

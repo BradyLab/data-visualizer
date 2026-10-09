@@ -4,10 +4,12 @@ import { computed, ref, watch } from "vue";
 import axios from "axios";
 import { authApi } from "@src/api/auth";
 import { useAuthStore } from "@src/stores/auth";
+import { useSocketStore } from "@src/stores/socket";
 import { UserStatus } from "@commons/user";
 import { MIN_PASSWORD_LENGTH } from "@commons/general";
 
 const auth = useAuthStore();
+const socket = useSocketStore();
 
 // Invited users must change the default password, so the popup cannot be dismissed until they do
 const mustChange = computed(() => auth.user.status === UserStatus.INVITED);
@@ -57,7 +59,7 @@ async function submit() {
     saving.value = true;
     error.value = null;
     try {
-        const newToken = await authApi.changePassword(oldPassword.value, newPassword.value);
+        const newToken = await authApi.changePassword(oldPassword.value, newPassword.value, socket.socketId);
         success.value = true;
         // The old token stopped working with the password change, so switch to the fresh one
         auth.setToken(newToken);

@@ -1,8 +1,11 @@
 // Pinia store holding the list of users and wrapping the user API calls
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import { defineStore } from "pinia";
 import type { IUser } from "@commons/user";
 import { userApi } from "@src/api/user";
+import { useAuthStore } from "@src/stores/auth";
+import { useSocketStore } from "@src/stores/socket";
+import { SocketEvent } from "@commons/socket";
 import { type UpdateUserPayload, type InviteUserPayload, type UserName } from "@src/interfaces/user";
 
 export const useUserStore = defineStore("user", () => {
@@ -33,7 +36,7 @@ export const useUserStore = defineStore("user", () => {
     }
 
     // Keeps the names list in step with a created or edited user, so nameOf and the role/status-based choices stay current
-    function syncName(user: IUser) {
+    function syncName(user: UserName) {
         const entry: UserName = { id: user.id, name: user.name, role: user.role, status: user.status };
         const i = names.value.findIndex((u) => u.id === user.id);
         if (i === -1) names.value.push(entry);
@@ -66,6 +69,35 @@ export const useUserStore = defineStore("user", () => {
         users.value = users.value.filter((u) => u.id !== id);
         names.value = names.value.filter((u) => u.id !== id);
     }
+
+    // Live updates. Admins hear about every user; anyone hears about their own account, which replaces the logged-in user
+    // (a changed name or role shows up without a new login; App.vue reloads what the viewer may see when the role changes)
+    const auth = useAuthStore();
+    const socket = useSocketStore();
+    socket.on(SocketEvent.USER_CHANGED, ({ user }) => {
+        if (user.id === auth.user.id) auth.user = user;
+        if (!auth.isAdmin) return;
+        const i = users.value.findIndex((u) => u.id === user.id);
+        if (i === -1) users.value.push(user);
+        else users.value[i] = user;
+        syncName(user);
+    });
+    // Lab members only get the name, role and status, which is all the names list holds. A list that was never loaded stays empty
+    socket.on(SocketEvent.USER_NAME_CHANGED, ({ user }) => {
+        if (names.value.length) syncName(user);
+    });
+    socket.on(SocketEvent.USER_DELETED, ({ id }) => {
+        users.value = users.value.filter((u) => u.id !== id);
+        names.value = names.value.filter((u) => u.id !== id);
+    });
+    // After a reconnect, reload whichever lists this viewer had loaded to catch changes made while offline
+    watch(
+        () => socket.reconnects,
+        () => {
+            if (users.value.length) fetchUsers().catch(() => {});
+            if (names.value.length) fetchNames().catch(() => {});
+        }
+    );
 
     return {
         users,

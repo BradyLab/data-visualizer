@@ -11,6 +11,7 @@ import { Users } from "@src/models/user.ts";
 import { ActivityType } from "@commons/activity.ts";
 import { FileTypes } from "@commons/file.ts";
 import * as storage from "@src/services/storage.ts";
+import { emitFileRemoved } from "@src/services/socket.ts";
 import { signDownloadToken, verifyDownloadToken } from "@src/services/auth.ts";
 
 // Once uploaded, only the update notes can change (the stored file and its version are fixed; upload a new version instead)
@@ -80,6 +81,7 @@ export const remove = async (req: Request, res: Response) => {
     await service.remove(file.id);
     await storage.removeStored([file]);
     await logActivity(res, ActivityType.FILE_DELETED, toPlain(file));
+    await emitFileRemoved(file);
     res.status(204).send();
 };
 

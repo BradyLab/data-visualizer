@@ -46,6 +46,17 @@ const doiHref = computed(() => {
     return /^https?:\/\//i.test(doi) ? doi : `https://doi.org/${doi}`;
 });
 
+// The open dataset disappears from the store while the page is showing it (deleted, or no longer visible to the viewer, as pushed by the
+// server), so say so instead of leaving a blank page. loading is set before the lookups below clear the dataset, so those are not reported
+watch(
+    () => datasetStore.currentDataset,
+    (now, before) => {
+        if (!now && before && !loading.value) error.value = "This dataset was deleted or is no longer available to you.";
+        // An editor changed the url slug: follow it, so a reload or a bookmark of this page keeps working
+        else if (now && before?.id === now.id && now.url !== route.params.datasetURL) router.replace(`/dataset/${now.url}`);
+    }
+);
+
 // Loads the dataset (and, for logged-in users, their permissions) whenever the url slug changes
 watch(
     () => route.params.datasetURL as string,

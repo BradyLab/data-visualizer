@@ -3,6 +3,7 @@ import { Response } from "express";
 import { Model, Op, type WhereOptions } from "sequelize";
 import { Activities, IActivity } from "@src/models/activity.ts";
 import { ActivityType } from "@commons/activity.ts";
+import { emitActivity } from "@src/services/socket.ts";
 
 // Optional filters to list the activity of any of the given users and/or of any of the given activity types, newest first.
 // Returns one page (limit rows after skipping offset) plus the total number of matches, since the log grows without bound
@@ -64,7 +65,8 @@ export const logActivity = (res: Response, type: ActivityType, data: Record<stri
 /** Like logActivity, for code that runs outside a normal request/response (e.g. when a resumable upload finishes) */
 export const logActivityAs = async (user_id: string | null, type: ActivityType, data: Record<string, unknown>) => {
     try {
-        await create({ user_id, type, data });
+        const created = await create({ user_id, type, data });
+        await emitActivity(created.get({ plain: true }));
     } catch (error) {
         console.error("[ACTIVITY SERVICE] Failed to log activity", type, error);
     }

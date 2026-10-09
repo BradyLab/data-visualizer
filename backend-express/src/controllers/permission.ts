@@ -4,6 +4,7 @@ import * as service from "@src/services/permission.ts";
 import { IPermission } from "@src/models/permission.ts";
 import * as userService from "@src/services/user.ts";
 import { diff, logActivity, toPlain } from "@src/services/activity.ts";
+import { emitPermissionChanged } from "@src/services/socket.ts";
 import { authorizeDataset, caller, OWNER } from "@src/services/access.ts";
 import { Datasets } from "@src/models/dataset.ts";
 import { pick } from "@src/utils/pick.ts";
@@ -78,6 +79,7 @@ export const create = async (req: Request, res: Response) => {
     if (problem) return res.status(400).json({ error: problem });
     const created = await service.create({ ...fields, perm });
     await logActivity(res, ActivityType.PERM_GRANTED, toPlain(created));
+    await emitPermissionChanged(created, created.get({ plain: true }), found.dataset.owner);
     res.status(201).json(created);
 };
 
@@ -102,18 +104,21 @@ export const update = async (req: Request, res: Response) => {
     // There is no PERM_UPDATED type, so a changed permission level is logged as PERM_GRANTED
     if (changes)
         await logActivity(res, ActivityType.PERM_GRANTED, { user_id: item.user_id, dataset_id: item.dataset_id, changes });
+    await emitPermissionChanged(item, item.get({ plain: true }), found.dataset.owner);
     res.status(200).json(item);
 };
 
 /** DELETE /:userId/:datasetId : deletes a permission (204 with no body), or 404 if it does not exist; needs OWNER access */
 export const remove = async (req: Request, res: Response) => {
     console.log("[PERMISSION CONTROLLER] Attempting to delete permission...");
-    if (!(await authorizeDataset(res, req.params.datasetId as string, OWNER))) return;
+    const found = await authorizeDataset(res, req.params.datasetId as string, OWNER);
+    if (!found) return;
     const existing = await service.getById(req.params.userId as string, req.params.datasetId as string);
     if (!existing || !(await service.remove(req.params.userId as string, req.params.datasetId as string))) {
         console.log("[PERMISSION CONTROLLER] Permission not found");
         return res.status(404).json({ error: "Permission not found" });
     }
     await logActivity(res, ActivityType.PERM_REVOKED, toPlain(existing));
+    await emitPermissionChanged(existing, null, found.dataset.owner);
     res.status(204).send();
 };

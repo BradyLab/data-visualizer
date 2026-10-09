@@ -41,11 +41,11 @@ export const signToken = (id: string, storedPassword: string) => {
     return jwt.sign({ id, pv: passwordVersion(storedPassword) } satisfies TokenPayload, process.env.JWT_SECRET, { expiresIn });
 };
 
-/** Returns the id and password fingerprint in a valid login token, or null if the token is invalid, expired, or not a login token */
+/** Returns the id, password fingerprint and expiry (seconds since the epoch, if the token has one) in a valid login token, or null if the token is invalid, expired, or not a login token */
 export const verifyToken = (token: string) => {
     try {
-        const { id, pv } = jwt.verify(token, process.env.JWT_SECRET) as Partial<TokenPayload>;
-        return id && pv ? { id, pv } : null;
+        const { id, pv, exp } = jwt.verify(token, process.env.JWT_SECRET) as Partial<TokenPayload> & { exp?: number };
+        return id && pv ? { id, pv, exp } : null;
     } catch {
         console.log("[AUTH SERVICE] Token is invalid or expired");
         return null;

@@ -6,6 +6,7 @@ import * as userService from "@src/services/user.ts";
 import * as fileService from "@src/services/file.ts";
 import { removeStored } from "@src/services/storage.ts";
 import { diff, logActivity, toPlain } from "@src/services/activity.ts";
+import { emitDatasetCreated, emitDatasetDeleted, emitDatasetUpdated } from "@src/services/socket.ts";
 import { authorizeDataset, caller, getAccess, hasAccess, OWNER } from "@src/services/access.ts";
 import { pick } from "@src/utils/pick.ts";
 import { ActivityType } from "@commons/activity.ts";
@@ -66,6 +67,7 @@ export const create = async (req: Request, res: Response) => {
     }
     const created = await service.create({ ...fields, owner });
     await logActivity(res, ActivityType.DATASET_CREATED, toPlain(created));
+    await emitDatasetCreated(created);
     res.status(201).json(created);
 };
 
@@ -82,9 +84,12 @@ export const update = async (req: Request, res: Response) => {
         console.log("[DATASET CONTROLLER] Only an owner may change visibility");
         return res.status(403).json({ error: "Forbidden" });
     }
+    // Read before the update in case the service changes the same instance
+    const visibilityBefore = found.dataset.visibility;
     const updated = await service.update(found.dataset.id, fields);
     const changes = updated && diff(found.dataset, updated, DATASET_UPDATE_FIELDS);
     if (changes) await logActivity(res, ActivityType.DATASET_UPDATED, { dataset_id: found.dataset.id, changes });
+    if (updated) await emitDatasetUpdated(updated, visibilityBefore);
     res.status(200).json(updated);
 };
 
@@ -98,5 +103,6 @@ export const remove = async (req: Request, res: Response) => {
     await service.remove(found.dataset.id);
     await removeStored(files);
     await logActivity(res, ActivityType.DATASET_DELETED, toPlain(found.dataset));
+    await emitDatasetDeleted(found.dataset.id);
     res.status(204).send();
 };

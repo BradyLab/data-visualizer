@@ -1,8 +1,11 @@
 // Request handlers for authentication
 import { Request, Response } from "express";
 import * as service from "@src/services/auth.ts";
+import * as userService from "@src/services/user.ts";
+import { emitUserChanged, revokeSession } from "@src/services/socket.ts";
 import { logActivity } from "@src/services/activity.ts";
 import { ActivityType } from "@commons/activity.ts";
+import { SessionRevokedReason } from "@commons/socket.ts";
 import { MIN_PASSWORD_LENGTH } from "@commons/general.ts";
 import { UserStatus } from "@commons/user.ts";
 
@@ -52,10 +55,17 @@ export const changePassword = async (req: Request, res: Response) => {
     if (!token) {
         return res.status(403).json({ error: "Old password is incorrect" });
     }
-    if (wasInvited)
+    // The old token no longer works, so end the user's other sessions (open tabs, other devices). The caller's own tab sends its socket id
+    // and keeps its socket until it reconnects with the new token
+    await revokeSession(res.locals.user.id, SessionRevokedReason.PASSWORD_CHANGED, req.header("x-socket-id"));
+    if (wasInvited) {
         await logActivity(res, ActivityType.USER_JOINED, {
             changes: { status: { before: UserStatus.INVITED, after: UserStatus.ACTIVE } },
         });
+        // Admins see the invited user become active
+        const joined = await userService.getById(res.locals.user.id);
+        if (joined) await emitUserChanged(joined.get({ plain: true }));
+    }
     // Tokens issued before the change no longer work, so hand back a fresh one for the caller's own session
     res.status(200).json({ token });
 };

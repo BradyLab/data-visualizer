@@ -31,6 +31,9 @@ export interface IUser {
     updatedAt: Timestamp | null;
 }
 
+// A user reduced to what name lookups and role-based choices need (the shape of GET /users/names)
+export type IUserName = Pick<IUser, "id" | "name" | "role" | "status">;
+
 // Credentials sent to the login endpoint
 export interface ILoginRequest {
     email: string;

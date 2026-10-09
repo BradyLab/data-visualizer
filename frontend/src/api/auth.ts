@@ -18,11 +18,13 @@ export const authApi = {
     },
 
     /** POST /auth/change-password : changes the logged-in user's password and returns a fresh token (older ones are revoked); rejects with a 403 error if the old password is wrong */
-    async changePassword(oldPassword: string, newPassword: string): Promise<string> {
-        const response = await axios.post<{ token: string }>(`${baseURL}/${apis.AUTH}/change-password`, {
-            oldPassword,
-            newPassword,
-        });
+    // socketId is this tab's websocket connection: the backend ends the user's other sessions but keeps that one
+    async changePassword(oldPassword: string, newPassword: string, socketId?: string | null): Promise<string> {
+        const response = await axios.post<{ token: string }>(
+            `${baseURL}/${apis.AUTH}/change-password`,
+            { oldPassword, newPassword },
+            { headers: socketId ? { "X-Socket-Id": socketId } : {} }
+        );
         return response.data.token;
     },
 
