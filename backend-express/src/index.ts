@@ -1,5 +1,7 @@
 // Express server entry point: loads env vars, builds the app, connects to the DB, and starts listening
 import "dotenv/config";
+import { realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import "reflect-metadata";
 import cors from "cors";
 import express, { Express, Request, Response, NextFunction } from "express";
@@ -123,6 +125,8 @@ export const start = async () => {
     });
 };
 
-// TODO: start() runs on import, so importing get() (e.g. in tests) also connects to the DB and listens on the port
-// Start the server when this module is run
-start();
+// Start the server only when this file is the entry point (node dist/index.js, tsx src/index.ts), so importing get() in tests
+// doesn't also connect to the DB and listen on the port
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
+    start();
+}

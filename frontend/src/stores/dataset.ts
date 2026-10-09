@@ -18,9 +18,17 @@ export const useDatasetStore = defineStore("dataset", () => {
     // True while the latest fetchDatasets failed, so the layout can tell the viewer the dataset list may be missing or stale
     const loadFailed = ref(false);
 
+    // Dataset list requests in flight, the latest one's number, and the changes (a dataset, or null for a deletion) that arrived while any
+    // were in flight. A list is a snapshot from before those changes, so the newest request applies them on top of it; otherwise a push
+    // that lands between the request and its response would be undone by the response
+    let listRequests = 0;
+    let latestList = 0;
+    const changedDuringFetch = new Map<string, IDataset | null>();
+
     // Replaces the cached dataset with the same id, or adds it. Used for the user's own changes and for pushed ones, which
     // can arrive in either order, so neither may add a duplicate. Also keeps the open dataset in sync
     function upsert(dataset: IDataset) {
+        if (listRequests) changedDuringFetch.set(dataset.id, dataset);
         const i = datasets.value.findIndex((d) => d.id === dataset.id);
         if (i === -1) datasets.value.push(dataset);
         else datasets.value[i] = dataset;
@@ -29,6 +37,7 @@ export const useDatasetStore = defineStore("dataset", () => {
 
     // Drops a dataset (and its cached permissions, which the backend deletes with it) from the store
     function drop(id: string) {
+        if (listRequests) changedDuringFetch.set(id, null);
         if (currentDataset.value?.id === id) currentDataset.value = null;
         usePermissionStore().removeForDataset(id);
         datasets.value = datasets.value.filter((d) => d.id !== id);
@@ -36,12 +45,25 @@ export const useDatasetStore = defineStore("dataset", () => {
 
     /** Loads all datasets from the backend into the store; records a failure in loadFailed and still rejects so callers can react */
     async function fetchDatasets() {
+        const request = ++latestList;
+        listRequests++;
         try {
-            datasets.value = await datasetApi.getDatasets();
-            loadFailed.value = false;
+            const list = await datasetApi.getDatasets();
+            // Only the newest request may replace the list, so a slow older response cannot undo a newer one
+            if (request === latestList) {
+                for (const [id, changed] of changedDuringFetch) {
+                    const i = list.findIndex((d) => d.id === id);
+                    if (i !== -1) list.splice(i, 1);
+                    if (changed) list.push(changed);
+                }
+                datasets.value = list;
+                loadFailed.value = false;
+            }
         } catch (error) {
-            loadFailed.value = true;
+            if (request === latestList) loadFailed.value = true;
             throw error;
+        } finally {
+            if (--listRequests === 0) changedDuringFetch.clear();
         }
     }
 

@@ -8,6 +8,7 @@ import { useFileStore } from "@src/stores/file";
 import { useDatasetStore } from "@src/stores/dataset";
 import { usePermissionStore } from "@src/stores/permission";
 import { useSocketStore } from "@src/stores/socket";
+import { useUserStore } from "@src/stores/user";
 
 // What a viewer may see depends on who they are, so when they log in or out (the user id changes) drop the
 // permissions and cover images loaded for the previous viewer and reload the dataset list. Otherwise private datasets would stay
@@ -19,6 +20,9 @@ const fileStore = useFileStore();
 const router = useRouter();
 // Creating the socket store opens the websocket while logged in (it follows the login token itself)
 useSocketStore();
+// The user store subscribes to the user events when it is created, and the viewer's own role, name or status changing live
+// (and the end of their session) must be heard on every page, not only on the pages that happen to use the store
+useUserStore();
 watch(
     () => auth.user.id,
     () => {

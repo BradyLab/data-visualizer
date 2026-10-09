@@ -19,11 +19,14 @@ export const useFileStore = defineStore("file", () => {
     // True while a data file download is being started
     const downloading = ref(false);
 
-    // Frees a cached cover (the browser keeps the image data in memory until its object URL is revoked) and forgets it, so it is loaded again on demand
+    // Frees a cached cover (the browser keeps the image data in memory until its object URL is revoked) and forgets it, so it is loaded again on demand.
+    // A request still in flight is forgotten too: its answer predates whatever made the cover stale (e.g. a new upload), so it must not be stored.
+    // Nothing else would ask again, since an entry that was never loaded does not change when deleted, so the cover is requested anew here
     function dropCover(datasetId: string) {
         const url = covers.value[datasetId];
         if (url) URL.revokeObjectURL(url);
         delete covers.value[datasetId];
+        if (pendingCovers.delete(datasetId)) loadCover(datasetId).catch(() => {});
     }
 
     /** Loads a dataset's cover into `covers` unless it is already loaded or loading; rejects if the request fails (nothing is cached then, so a later call retries) */
@@ -35,7 +38,9 @@ export const useFileStore = defineStore("file", () => {
         const request = fileApi
             .getCover(datasetId)
             .then((blob) => {
-                if (started === generation) covers.value[datasetId] = blob ? URL.createObjectURL(blob) : null;
+                // Dropped (see dropCover) or cleared while in flight: the answer is out of date
+                if (started === generation && pendingCovers.get(datasetId) === request)
+                    covers.value[datasetId] = blob ? URL.createObjectURL(blob) : null;
             })
             // Only forget this request: after clear(), the entry may belong to a newer request for the same dataset
             .finally(() => {
