@@ -31,7 +31,7 @@ const RANK: Record<AccessLevel, number> = {
 const higher = (a: Access, b: Access): Access => (a && b ? (RANK[a] >= RANK[b] ? a : b) : (a ?? b));
 
 // The lower of two levels
-const atMost = (level: PermissionOptions, max: PermissionOptions) => (RANK[level] <= RANK[max] ? level : max);
+const lower = (level: PermissionOptions, max: PermissionOptions) => (RANK[level] <= RANK[max] ? level : max);
 
 /** True if the level is at least `min` */
 export const hasAccess = (level: Access, min: AccessLevel) => level !== null && RANK[level] >= RANK[min];
@@ -53,7 +53,7 @@ export const getAccess = async (user: Users | null, dataset: Datasets): Promise<
     if (user.role === UserRoles.ADMIN) return OWNER;
     if (dataset.owner === user.id) return OWNER;
     const row = await Permissions.findOne({ where: { user_id: user.id, dataset_id: dataset.id } });
-    if (row) level = higher(level, user.role === UserRoles.EXTERNAL ? atMost(row.perm, PermissionOptions.DOWNLOAD) : row.perm);
+    if (row) level = higher(level, user.role === UserRoles.EXTERNAL ? lower(row.perm, PermissionOptions.DOWNLOAD) : row.perm);
     if (user.role === UserRoles.LAB_MEMBER) level = higher(level, PermissionOptions.DOWNLOAD);
     return level;
 };

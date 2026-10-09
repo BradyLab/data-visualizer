@@ -75,10 +75,7 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
 // Drops the Users table
 export async function down(queryInterface: QueryInterface, sequelize: Sequelize) {
     try {
-        // Postgres keeps ENUM types after dropTable, so they are dropped explicitly or re-running up() fails with "type already exists"
         await queryInterface.dropTable("Users");
-        // Cast needed: dropEnum is Postgres-specific and missing from the QueryInterface typings
-        // Enum type names follow Sequelize's enum_<Table>_<column> convention
         await (queryInterface as any).dropEnum("enum_Users_role");
         await (queryInterface as any).dropEnum("enum_Users_status");
     } catch (error) {

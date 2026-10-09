@@ -6,7 +6,6 @@ import { baseURL } from "@src/interfaces/general";
 
 export const authApi = {
     /** POST /auth/login : returns a token and the user, rejects with a 401 error for bad credentials */
-    // Unauthenticated call: no token exists yet, so no Authorization header is attached
     async login(credentials: ILoginRequest): Promise<ILoginResponse> {
         const response = await axios.post<ILoginResponse>(`${baseURL}/${apis.AUTH}/login`, credentials);
         return response.data;

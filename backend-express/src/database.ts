@@ -13,9 +13,7 @@ const dbHost = process.env.DB_HOST as string;
 const dbPort = process.env.DB_PORT as string;
 const dbPassword = process.env.DB_PASSWORD as string;
 
-// Shared Sequelize instance. Models are registered as imported classes rather than by directory path:
-// path loading can create a second copy of each model class, so the classes the services import are never registered.
-// New models must be added to the list below
+// Shared Sequelize instance. New models must be added to the list below
 export const sequelize = new Sequelize({
     database: dbName,
     username: dbUser,

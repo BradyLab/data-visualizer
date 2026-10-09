@@ -19,6 +19,8 @@ declare global {
             // Secret used to sign login tokens, and how long they last (e.g. "8h")
             JWT_SECRET: string;
             JWT_EXPIRES_IN?: string;
+            // Folder for uploaded files (rds/ and cover/ are created inside it)
+            UPLOAD_DIR: string;
         }
     }
 }

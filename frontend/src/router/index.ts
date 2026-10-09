@@ -99,7 +99,6 @@ const router = createRouter({
 
 // Route guard: login-required pages send logged-out users to /login (with the requested page in the redirect query), admin-only and dataset-creation pages send
 // users without the needed role home.
-// The session is restored before the router is installed (see main.ts), so the auth state is settled here.
 // Returning a route location redirects; returning nothing lets navigation proceed
 router.beforeEach((to) => {
     const auth = useAuthStore();

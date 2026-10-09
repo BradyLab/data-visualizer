@@ -25,7 +25,6 @@ export const permissionApi = {
     },
 
     /** GET /permissions/:userId/:datasetId : returns one permission (rejects with a 404 error if it does not exist) */
-    // A permission has no id of its own; it is addressed by user id + dataset id
     async getPermission(userId: string, datasetId: string): Promise<IPermission> {
         const response = await axios.get<IPermission>(`${baseURL}/${apis.PERMISSION}/${userId}/${datasetId}`);
         return response.data;
@@ -38,7 +37,6 @@ export const permissionApi = {
     },
 
     /** PUT /permissions/:userId/:datasetId : changes the access level of a permission and returns it */
-    // Only the access level can change; user and dataset come from the path
     async updatePermission(userId: string, datasetId: string, perm: PermissionOptions): Promise<IPermission> {
         const response = await axios.put<IPermission>(`${baseURL}/${apis.PERMISSION}/${userId}/${datasetId}`, { perm });
         return response.data;

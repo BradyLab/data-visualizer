@@ -1,4 +1,3 @@
-// Copies only the allowed keys from a request body so clients cannot set columns like id or createdAt
 /**
  * Builds a partial object containing only the listed keys that are defined on body.
  * @param body untrusted input (e.g. req.body); null/undefined is treated as {}

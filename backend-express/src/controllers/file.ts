@@ -97,7 +97,8 @@ const readAccess = (type: FileTypes) => (type === FileTypes.COVER ? PermissionOp
 /**
  * GET /current/:datasetId/:type/content : sends the current file of that type (cover image inline, other files as a download), with Range support.
  * Needs VIEW access to the dataset for covers and DOWNLOAD for data files (404 if there is no such file or the dataset is not visible, 403 otherwise),
- * or a valid ?token= from the download-token route below, which is how a browser download (no Authorization header) proves access; the token acts as the user it was issued to, whose account and access are re-checked on every use
+ * or a valid ?token= from the download-token route below, which is how a browser download (no Authorization header) proves access; the token acts as 
+ * the user it was issued to, whose account and access are re-checked on every use
  */
 export const content = async (req: Request, res: Response) => {
     console.log("[FILE CONTROLLER] Attempting to send file...");

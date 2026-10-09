@@ -3,8 +3,6 @@ import { Files, IFile } from "@src/models/file.ts";
 import { FileTypes } from "@commons/file.ts";
 
 // Returns an error message for the first client-supplied field that is present but invalid, or null if all are fine.
-// Two uploads racing for the same version can violate the (dataset_id, type, version) unique constraint;
-// that surfaces as a UniqueConstraintError, which the global error handler in index.ts maps to 409
 export const validateFileFields = (fields: Partial<IFile>) => {
     if (fields.type !== undefined && !Object.values(FileTypes).includes(fields.type))
         return `type must be one of: ${Object.values(FileTypes).join(", ")}`;

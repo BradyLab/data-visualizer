@@ -24,8 +24,7 @@ export const userApi = {
         return response.data;
     },
 
-    /** POST /users : creates a user and returns it */
-    // Users are created by invitation (name, email, role); the server sets status, which starts as INVITED
+    /** POST /users : creates a user and returns it (name, email, role); the server sets status, which starts as INVITED */
     async createUser(payload: InviteUserPayload): Promise<IUser> {
         const response = await axios.post<IUser>(`${baseURL}/${apis.USER}`, payload);
         return response.data;

@@ -32,7 +32,10 @@ export const logout = (_req: Request, res: Response) => {
     res.status(204).send();
 };
 
-/** POST /change-password : changes the logged-in user's password (200, returns a new { token }; all older tokens stop working), 400 if a field is missing, the new password is shorter than MIN_PASSWORD_LENGTH, or it equals the old or default password, or 403 if the old password is wrong */
+/** POST /change-password : changes the logged-in user's password (200, returns a new { token }; all older tokens stop working), 
+ * 400 if a field is missing, the new password is shorter than MIN_PASSWORD_LENGTH, or it equals the old or default password, or 
+ * 403 if the old password is wrong 
+*/
 export const changePassword = async (req: Request, res: Response) => {
     console.log("[AUTH CONTROLLER] Attempting to change password...");
     const { oldPassword, newPassword } = req.body ?? {};

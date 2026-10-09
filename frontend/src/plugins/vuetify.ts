@@ -1,5 +1,4 @@
 // Vuetify plugin: configures the theme, default component props, and icon set
-//imports
 import type { App } from "vue";
 import { createVuetify } from "vuetify";
 import { aliases, mdi } from "vuetify/iconsets/mdi";
@@ -70,7 +69,6 @@ export default (app: App) => {
             },
         },
         // Tables match a tonal chip: translucent primary background with primary text (VDataTable has no color prop, so use theme variables)
-        // VDataTableServer (server-side paging) is a separate component, so it gets the same defaults
         VDataTable: tableDefaults,
         VDataTableServer: tableDefaults,
     };
