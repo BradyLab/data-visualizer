@@ -8,11 +8,13 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
-    "format": "prettier --write --experimental-cli src/ && prettier --write --experimental-cli migrations/ && prettier --write --experimental-cli seeders/ && prettier --write --experimental-cli ../commons",
+    "format": "prettier --write --experimental-cli src/ && prettier --write --experimental-cli migrations/ && prettier --write --experimental-cli seeders/ && prettier --write --experimental-cli seeders-e2e/ && prettier --write --experimental-cli ../commons",
     "format:check": "prettier --check src/",
     "db:migrate": "node --import tsx node_modules/.bin/sequelize-cli db:migrate --config src/config.ts",
     "db:migrate:undo": "node --import tsx node_modules/.bin/sequelize-cli db:migrate:undo --config src/config.ts",
-    "db:seed": "node --import tsx node_modules/.bin/sequelize-cli db:seed:all --config src/config.ts"
+    "db:seed": "node --import tsx node_modules/.bin/sequelize-cli db:seed:all --config src/config.ts",
+    "db:seed:e2e": "node --import tsx node_modules/.bin/sequelize-cli db:seed:all --config src/config.ts --seeders-path seeders-e2e",
+    "e2e:start": "npm run db:migrate && npm run db:seed:e2e && tsx src/index.ts"
   },
   "keywords": [],
   "type": "module",

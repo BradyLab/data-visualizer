@@ -42,3 +42,7 @@ __screenshots__/
 
 test-results/
 playwright-report/
+
+# Playwright e2e: saved logins and uploaded files from test runs
+e2e/.auth/
+e2e/.tmp/

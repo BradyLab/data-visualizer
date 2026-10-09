@@ -1,110 +1,67 @@
 import process from 'node:process'
 import { defineConfig, devices } from '@playwright/test'
+import { BACKEND_ENV, BACKEND_URL, FRONTEND_ENV, FRONTEND_PORT, FRONTEND_URL } from './e2e/stack'
 
-/**
- * Read environment variables from file.
- * https://github.com/motdotla/dotenv
- */
-// require('dotenv').config();
+// The e2e stack runs on its own ports and database so it never collides with (or touches) the dev stack (see e2e/stack.ts):
+//   Postgres  localhost:5433  (docker-compose.e2e.yml, wiped on every `npm run test:e2e`)
+//   backend   localhost:3101  (backend-express, migrated and seeded with ACTIVE test users on start)
+//   frontend  localhost:3100  (Vite dev server locally, a production build + preview on CI)
 
-/**
- * See https://playwright.dev/docs/test-configuration.
- */
+// Cross-browser runs (Firefox, WebKit) are opt-in to keep local runs fast: E2E_ALL_BROWSERS=1 npm run test:e2e
+const allBrowsers = !!process.env.E2E_ALL_BROWSERS || !!process.env.CI
+
 export default defineConfig({
   testDir: './e2e',
-  /* Maximum time one test can run for. */
   timeout: 30 * 1000,
-  expect: {
-    /**
-     * Maximum time expect() should wait for the condition to be met.
-     * For example in `await expect(locator).toHaveText();`
-     */
-    timeout: 5000,
-  },
-  /* Fail the build on CI if you accidentally left test.only in the source code. */
+  expect: { timeout: 10_000 },
   forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
+  // Three browsers at once on every core slow WebKit enough to time out now and then, so cross-browser runs use fewer workers
+  workers: process.env.CI ? 1 : allBrowsers ? 6 : undefined,
+  reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : [['list'], ['html', { open: 'never' }]],
+
   use: {
-    /* Maximum time each action such as `click()` can take. Defaults to 0 (no limit). */
-    actionTimeout: 0,
-    /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: process.env.CI ? 'http://localhost:3000' : 'http://localhost:3000',
-
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
+    baseURL: FRONTEND_URL,
     trace: 'on-first-retry',
-
-    /* Only on CI systems run the tests headless */
-    headless: !!process.env.CI,
+    screenshot: 'only-on-failure',
+    // Always headless (a headed WebKit window under WSLg ends up with a 0x0 viewport); pass --headed to watch a run
+    headless: true,
   },
 
-  /* Configure projects for major browsers */
   projects: [
+    // Logs in as each test user and saves the sessions the other projects start from
+    { name: 'setup', testMatch: /auth\.setup\.ts/ },
     {
       name: 'chromium',
-      use: {
-        ...devices['Desktop Chrome'],
-      },
+      use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup'],
+      testIgnore: /auth\.setup\.ts/,
     },
-    {
-      name: 'firefox',
-      use: {
-        ...devices['Desktop Firefox'],
-      },
-    },
-    {
-      name: 'webkit',
-      use: {
-        ...devices['Desktop Safari'],
-      },
-    },
-
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: {
-    //     ...devices['Pixel 5'],
-    //   },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: {
-    //     ...devices['iPhone 12'],
-    //   },
-    // },
-
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: {
-    //     channel: 'msedge',
-    //   },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: {
-    //     channel: 'chrome',
-    //   },
-    // },
+    ...(allBrowsers
+      ? [
+          { name: 'firefox', use: { ...devices['Desktop Firefox'] }, dependencies: ['setup'], testIgnore: /auth\.setup\.ts/ },
+          { name: 'webkit', use: { ...devices['Desktop Safari'] }, dependencies: ['setup'], testIgnore: /auth\.setup\.ts/ },
+        ]
+      : []),
   ],
 
-  /* Folder for test artifacts such as screenshots, videos, traces, etc. */
-  // outputDir: 'test-results/',
-
-  /* Run your local dev server before starting the tests */
-  webServer: {
-    /**
-     * Use the dev server by default for faster feedback loop.
-     * Use the preview server on CI for more realistic testing.
-     * Playwright will re-use the local server if there is already a dev-server running.
-     */
-    command: process.env.CI ? 'npm run preview' : 'npm run dev',
-    port: process.env.CI ? 3000 : 3000,
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: [
+    {
+      // Migrates and seeds the e2e database, then starts the API (the database itself is started by `pretest:e2e`)
+      command: 'npm --prefix ../backend-express run e2e:start',
+      url: `${BACKEND_URL}/health`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120 * 1000,
+      env: BACKEND_ENV,
+    },
+    {
+      command: process.env.CI
+        ? `npm run build-only && npm run preview -- --port ${FRONTEND_PORT} --strictPort`
+        : `npm run dev -- --port ${FRONTEND_PORT} --strictPort`,
+      url: FRONTEND_URL,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120 * 1000,
+      env: FRONTEND_ENV,
+    },
+  ],
 })

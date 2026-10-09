@@ -1,0 +1,21 @@
+# Throwaway Postgres for the Playwright e2e tests (see frontend/playwright.config.ts).
+# Uses its own port and a tmpfs data dir, so it never touches the dev database and every `down` wipes it.
+# Started and reset by `npm run test:e2e` in frontend/ (the pretest:e2e script).
+name: data-visualizer-e2e
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: data_visualizer_e2e
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d data_visualizer_e2e"]
+      interval: 2s
+      timeout: 5s
+      retries: 15

@@ -1,4 +1,8 @@
 {
   "extends": "@tsconfig/node24/tsconfig.json",
-  "include": ["./**/*"]
+  "include": ["./**/*"],
+  "compilerOptions": {
+    // Same alias as the app, so specs can import the shared enums and types (Playwright reads this file to resolve it)
+    "paths": { "@commons/*": ["../../commons/*"] }
+  }
 }
