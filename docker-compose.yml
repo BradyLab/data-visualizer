@@ -4,6 +4,7 @@ services:
     working_dir: /backend-express
     volumes:
       - ./backend-express:/backend-express
+      - /backend-express/node_modules
       - ./commons:/commons
       - ./data:/data
     ports:
@@ -49,6 +50,7 @@ services:
     working_dir: /app
     volumes:
       - ./frontend:/app
+      - /app/node_modules
       - ./commons:/commons
     ports:
       - "3000:3000"
