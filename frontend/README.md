@@ -1,73 +1,73 @@
 # frontend
 
-This template should help get you started developing with Vue 3 in Vite.
+Single-page web app for browsing and managing Brady Lab single cell RNA-seq datasets.
 
-## Recommended IDE Setup
+Stack: Vue 3 (`<script setup>`, TypeScript), Vite, Vuetify 4, Pinia, Vue Router, axios, `socket.io-client`,
+`tus-js-client` (resumable uploads), Playwright for e2e tests.
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+## Running locally
 
-## Recommended Browser Setup
-
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
-
-## Type Support for `.vue` Imports in TS
-
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
+Requires Node 22.18+ (or 24.12+) and a running backend (see [`../backend-express`](../backend-express/README.md)).
 
 ```sh
+cp .env.example .env
 npm install
+npm run dev            # http://localhost:3000
 ```
 
-### Compile and Hot-Reload for Development
+Or use `docker compose up` from the repo root to start everything.
 
-```sh
-npm run dev
-```
 
-### Type-Check, Compile and Minify for Production
+## Scripts
 
-```sh
-npm run build
-```
+| Script | What it does |
+| --- | --- |
+| `npm run dev` | Vite dev server with hot reload (port 3000) |
+| `npm run build` | Type-check (`vue-tsc`) and build for production |
+| `npm run preview` | Serve the production build |
+| `npm run type-check` | Type-check only |
+| `npm run lint` | oxlint and ESLint with auto-fix |
+| `npm run format` | Prettier on `src/` and `../commons` |
+| `npm run test:e2e` | Playwright tests (starts and wipes a throwaway Postgres) |
+| `npm run test:e2e:fast` | Same, but starts the servers itself; see [`e2e/README.md`](e2e/README.md) |
 
-### Fromat with Prettier
+First e2e run: `npx playwright install` to download browsers.
 
-```sh
-npm run format
-```
+## Source layout (`src/`)
 
-### Run End-to-End Tests with [Playwright](https://playwright.dev)
+Imports use `@src/` (this `src/`) and `@commons/` (`../commons`, shared with the backend).
 
-```sh
-# Install browsers for the first run
-npx playwright install
+| Folder | Role |
+| --- | --- |
+| `main.ts`, `App.vue` | App bootstrap and root component |
+| `router/` | Routes and the navigation guard (login, admin and dataset-creator checks) |
+| `views/` | Pages: Home, Dataset, EditDataset (create/edit), Login, Settings, About, and `admin/` (UserManagement, ActivityLogs, PermissionManagement) |
+| `layouts/` | Page shell: header, footer, default layout |
+| `components/` | Reusable pieces and dialogs (invite/edit user, change password, new permission, dataset cover, ...) |
+| `stores/` | Pinia stores (`auth`, `dataset`, `file`, `permission`, `user`, `activity`, `socket`) |
+| `api/` | axios wrappers, one file per backend resource |
+| `interfaces/` | Frontend-only types |
+| `plugins/` | Vuetify setup |
 
-# When testing on CI, must build the project first
-npm run build
+## Pages
 
-# Runs the end-to-end tests
-npm run test:e2e
-# Runs the tests only on Chromium
-npm run test:e2e -- --project=chromium
-# Runs the tests of a specific file
-npm run test:e2e -- tests/example.spec.ts
-# Runs the tests in debug mode
-npm run test:e2e -- --debug
-```
+| Route | Access |
+| --- | --- |
+| `/home`, `/about`, `/dataset/:datasetURL`, `/login` | Everyone (guests see only public datasets) |
+| `/settings`, `/dataset/:datasetURL/edit`, `/admin/permissions` | Logged in (permissions page: admins see all datasets, others those they own) |
+| `/dataset/new` | Admins and lab members |
+| `/admin/user-mgmt`, `/admin/activity-logs` | Admins |
 
-### Lint with [ESLint](https://eslint.org/)
+The router guard only improves navigation; the backend enforces all access rules.
 
-```sh
-npm run lint
-```
+## Things worth knowing
+
+- **Live updates:** the `socket` store connects to the backend's Socket.IO server after login and updates the other stores when datasets, permissions, files, users or activity change, so no manual refresh is needed. Event types are in `../commons/socket.ts`.
+- **Uploads** use tus, so a large `.rds` upload can resume after a dropped connection. File downloads use a short-lived token from the backend so the browser can download directly.
+- **Session:** if the saved login can't be verified because the server is down, the app keeps the token and shows a banner offering a reload instead of logging the user out.
+- **Vite** polls for file changes (`usePolling`) so hot reload works in Docker/WSL2.
+
+## Recommended setup
+
+[VS Code](https://code.visualstudio.com/) with [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (disable Vetur), and the
+[Vue.js devtools](https://devtools.vuejs.org/) browser extension. `.vue` type information comes from `vue-tsc`, not plain `tsc`.
