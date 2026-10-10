@@ -105,12 +105,11 @@ watch(
         <!-- Download or load errors that appear after the page loaded -->
         <v-alert v-if="error" type="error" variant="tonal" closable class="mb-4" @click:close="error = null">{{ error }}</v-alert>
         <!-- Title, DOI, and action buttons -->
-        <v-row class="mb-4">
+        <v-row>
             <v-col>
                 <h1 class="text-h6 my-0 font-weight-bold">{{ datasetStore.currentDataset.name }}</h1>
-                <div v-if="doiHref" class="text-body-small">
-                    DOI: <a :href="doiHref" target="_blank" rel="noopener noreferrer">{{ datasetStore.currentDataset.doi }}</a>
-                </div>
+                <div class="text-body-small">Author: {{ datasetStore.currentDataset.ownerName }}</div>
+                
             </v-col>
             <v-col cols="auto" class="d-flex align-center ga-2">
                 <v-btn
@@ -130,14 +129,17 @@ watch(
                 >
             </v-col>
         </v-row>
+        <v-row class="mt-0">
+            <div v-if="doiHref" class="text-body-small">
+                DOI: <a :href="doiHref" target="_blank" rel="noopener noreferrer">{{ datasetStore.currentDataset.doi }}</a>
+            </div>
+        </v-row>
+        <v-row class="mt-0 mb-4">
+            <div v-if="datasetStore.currentDataset.attribution" class="text-body-small">Attribution: {{ datasetStore.currentDataset.attribution }}</div>
+        </v-row>
 
         <!-- Dataset description -->
         <v-row class="text-body-large">{{ datasetStore.currentDataset.description }}</v-row>
-
-        <!-- Attribution (only when set) -->
-        <v-row v-if="datasetStore.currentDataset.attribution" class="text-body-medium text-medium-emphasis">{{
-            datasetStore.currentDataset.attribution
-        }}</v-row>
 
         <!-- Gene selector (multi-select with removable chips) -->
         <v-row class="text-body-medium mx-4">Pick Your Genes</v-row>

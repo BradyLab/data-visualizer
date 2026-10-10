@@ -22,6 +22,8 @@ export interface IDataset {
     id: string;
     name: string;
     owner: string;
+    // Display name of the owner; filled in by the backend on responses, not stored in the Datasets table
+    ownerName?: string;
     url: string;
     description: string;
     doi: string;

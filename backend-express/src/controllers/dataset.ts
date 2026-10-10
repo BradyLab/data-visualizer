@@ -30,14 +30,14 @@ const DATASET_UPDATE_FIELDS = DATASET_FIELDS.filter((f) => f !== "owner");
 /** GET / : returns the datasets the caller may see (200); guests get only PUBLIC ones */
 export const list = async (req: Request, res: Response) => {
     console.log("[DATASET CONTROLLER] Attempting to list datasets...");
-    res.status(200).json(await service.getVisibleTo(caller(res)));
+    res.status(200).json(await service.withOwnerName(await service.getVisibleTo(caller(res))));
 };
 
 /** GET /:id : returns one dataset (200), or 404 if it does not exist or the caller cannot see it */
 export const get = async (req: Request, res: Response) => {
     console.log("[DATASET CONTROLLER] Attempting to get dataset...");
     const found = await authorizeDataset(res, req.params.id as string, PermissionOptions.VIEW);
-    if (found) res.status(200).json(found.dataset);
+    if (found) res.status(200).json((await service.withOwnerName([found.dataset]))[0]);
 };
 
 /** GET /byURL/:url : returns the dataset with this url slug (200), or 404 if it does not exist or the caller cannot see it */
@@ -48,7 +48,7 @@ export const getByUrl = async (req: Request, res: Response) => {
         console.log("[DATASET CONTROLLER] Dataset not found or not visible to the caller");
         return res.status(404).json({ error: "Dataset not found" });
     }
-    res.status(200).json(item);
+    res.status(200).json((await service.withOwnerName([item]))[0]);
 };
 
 /**
@@ -67,8 +67,9 @@ export const create = async (req: Request, res: Response) => {
     }
     const created = await service.create({ ...fields, owner });
     await logActivity(res, ActivityType.DATASET_CREATED, toPlain(created));
-    await emitDatasetCreated(created);
-    res.status(201).json(created);
+    const withName = (await service.withOwnerName([created]))[0]!;
+    await emitDatasetCreated(withName);
+    res.status(201).json(withName);
 };
 
 /**
@@ -89,8 +90,9 @@ export const update = async (req: Request, res: Response) => {
     const updated = await service.update(found.dataset.id, fields);
     const changes = updated && diff(found.dataset, updated, DATASET_UPDATE_FIELDS);
     if (changes) await logActivity(res, ActivityType.DATASET_UPDATED, { dataset_id: found.dataset.id, changes });
-    if (updated) await emitDatasetUpdated(updated, visibilityBefore);
-    res.status(200).json(updated);
+    const withName = updated && (await service.withOwnerName([updated]))[0];
+    if (withName) await emitDatasetUpdated(withName, visibilityBefore);
+    res.status(200).json(withName);
 };
 
 /** DELETE /:id : deletes a dataset (204 with no body); needs OWNER access (404 if not found or not visible, 403 if not an owner) */

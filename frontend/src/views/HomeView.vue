@@ -5,6 +5,7 @@ import { useRouter } from "vue-router";
 import DatasetCover from "@src/components/DatasetCover.vue";
 import { useAuthStore } from "@src/stores/auth";
 import { useDatasetStore } from "@src/stores/dataset";
+import { DatasetVisibility } from "@commons/dataset";
 
 // Router instance used for programmatic navigation
 const router = useRouter();
@@ -41,13 +42,18 @@ function navTo(route: string) {
         <v-row>
             <!-- One card per dataset; clicking opens the dataset page -->
             <!-- The url slug is the unique key and the route param -->
-            <v-col cols="3" v-for="dataset in datasetStore.datasets" :key="dataset.url">
-                <v-card @click="navTo('/dataset/' + dataset.url)">
+            <v-col cols="6" class="d-flex" v-for="dataset in datasetStore.datasets" :key="dataset.url">
+                <v-card class="flex-grow-1 d-flex flex-column" @click="navTo('/dataset/' + dataset.url)">
                     <!-- Cover image, or a color block when the dataset has none -->
                     <DatasetCover :dataset-id="dataset.id" :height="110" />
                     <v-card-item>
                         <v-card-title class="text-body-2 font-weight-bold">{{ dataset.name }}</v-card-title>
-                        <v-card-subtitle>{{ dataset.description }}</v-card-subtitle>
+                        <v-card-subtitle>
+                            <div>Author: {{ dataset.ownerName ?? dataset.owner }}</div>
+                            <div v-if="dataset.visibility === DatasetVisibility.PUBLIC">Attribution: {{ dataset.attribution }}</div>
+                        </v-card-subtitle>
+                        <v-card-text v-if="dataset.description" class="px-0 py-2">{{ dataset.description }}</v-card-text>
+                        
                     </v-card-item>
                 </v-card>
             </v-col>

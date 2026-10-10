@@ -22,6 +22,13 @@ export const getVisibleTo = async (user: Users | null) => {
     });
 };
 
+/** Returns plain copies of the datasets with the owner's display name added as ownerName, for responses and pushed events */
+export const withOwnerName = async (datasets: Datasets[]): Promise<IDataset[]> => {
+    const owners = await Users.findAll({ where: { id: [...new Set(datasets.map((d) => d.owner))] }, attributes: ["id", "name"] });
+    const names = new Map(owners.map((u) => [u.id, u.name]));
+    return datasets.map((d) => ({ ...d.get({ plain: true }), ownerName: names.get(d.owner) ?? "" }));
+};
+
 /** Finds a dataset by primary key, or null */
 export const getById = (id: string) => {
     console.log("[DATASET SERVICE] Fetching dataset by id...");
