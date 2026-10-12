@@ -1,8 +1,10 @@
-# Runs on every push to main: backend checks, frontend checks, then the Playwright e2e tests
+# Runs on every push to main and on pull requests: backend checks, frontend checks, the Docker images for the R services, then the Playwright e2e tests
 name: CI
 
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
 
 concurrency:
@@ -49,9 +51,53 @@ jobs:
       - run: npm run test:unit
       - run: npm run build-only
 
+  # The R services have no package manifest: the Dockerfile is the only place their dependencies are declared, so building the
+  # images is what catches a missing package (library(x) failing at startup)
+  shiny:
+    name: Shiny image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build the Shiny image
+        uses: docker/build-push-action@v6
+        with:
+          context: shiny
+          load: true
+          tags: shiny-ci
+          cache-from: type=gha,scope=shiny
+          cache-to: type=gha,scope=shiny,mode=max
+      - name: Check that the app parses
+        run: docker run --rm --entrypoint Rscript shiny-ci -e 'invisible(parse("/srv/shiny-server/app/app.R"))'
+      # Shiny Server only starts the app on the first request, so a request is what surfaces a failing library() or top-level error
+      - name: Check that the app starts
+        run: |
+          docker run -d --name shiny -p 3838:3838 -e SHINY_DEV=1 -e SHINY_SECRET=ci -e PARQUET_DIR=/tmp shiny-ci
+          for i in $(seq 1 30); do curl -fs -o /dev/null localhost:3838/app/ && break; sleep 2; done
+          curl -fs "localhost:3838/app/?dataset=00000000-0000-0000-0000-000000000000" -o page.html
+          if grep -qi "an error has occurred" page.html; then docker logs shiny; exit 1; fi
+          grep -q "shiny" page.html
+      - name: Show the container log on failure
+        if: failure()
+        run: docker logs shiny || true
+
+  preprocess:
+    name: Preprocess image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build the preprocess image
+        uses: docker/build-push-action@v6
+        with:
+          context: shiny/preprocess
+          tags: preprocess-ci
+          cache-from: type=gha,scope=preprocess
+          cache-to: type=gha,scope=preprocess,mode=max
+
   e2e:
     name: E2E
-    needs: [backend, frontend]
+    needs: [backend, frontend, shiny, preprocess]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
