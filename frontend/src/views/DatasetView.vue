@@ -8,6 +8,8 @@ import { useFileStore } from "@src/stores/file";
 import { useAuthStore } from "@src/stores/auth";
 import { useDatasetStore } from "@src/stores/dataset";
 import { usePermissionStore } from "@src/stores/permission";
+import { datasetApi } from "@src/api/dataset";
+import { DatasetStatus } from "@commons/dataset";
 
 const route = useRoute();
 const router = useRouter();
@@ -24,6 +26,51 @@ const error = ref<string | null>(null);
 // Treatments and plots the viewer has ticked (nothing starts selected)
 const selectedTreatments = ref<string[]>([]);
 const selectedPlots = ref<string[]>([]);
+
+// Shiny viewer: its iframe URL (null until Generate Plots is clicked) and the state of the ticket request
+const viewerUrl = ref<string | null>(null);
+const viewerLoading = ref(false);
+
+// Asks the backend for a viewer ticket and points the iframe at it. A fresh ticket is fetched on every click (it only lives about a minute),
+// and the ticked plots are passed along; the viewer narrows them to the plots the dataset offers
+async function generatePlots() {
+    error.value = null;
+    viewerLoading.value = true;
+    try {
+        const params: Record<string, string> = {};
+        if (selectedPlots.value.length) params.plots = selectedPlots.value.join(",");
+        viewerUrl.value = await datasetApi.getViewerUrl(datasetStore.currentDataset!.id, params);
+    } catch (err) {
+        error.value =
+            axios.isAxiosError(err) && err.response?.status === 503
+                ? "The plot viewer is not available right now."
+                : axios.isAxiosError(err) && err.response?.status === 409
+                  ? "The data for this dataset is not ready yet."
+                  : "Unable to open the plot viewer. Please try again.";
+    } finally {
+        viewerLoading.value = false;
+    }
+}
+
+// Plots can only be shown once the server has built the plot data from the uploaded file
+const plotsReady = computed(() => datasetStore.currentDataset?.status === DatasetStatus.READY);
+const reprocessing = ref(false);
+
+// Asks the server to rebuild the plot data (after a failure); the status then follows the live updates
+async function reprocess() {
+    error.value = null;
+    reprocessing.value = true;
+    try {
+        await datasetStore.reprocessDataset(datasetStore.currentDataset!.id);
+    } catch (err) {
+        error.value =
+            axios.isAxiosError(err) && err.response?.status === 409
+                ? (err.response.data?.error ?? "The plot data cannot be rebuilt right now.")
+                : "Unable to start processing. Please try again.";
+    } finally {
+        reprocessing.value = false;
+    }
+}
 
 // Starts the download of the dataset's .rds file; the browser takes over from there
 async function downloadData() {
@@ -65,6 +112,7 @@ watch(
         const isLatest = () => url === (route.params.datasetURL as string);
         loading.value = true;
         error.value = null;
+        viewerUrl.value = null;
         // Clear the previous dataset so a stale one is not shown while loading
         datasetStore.currentDataset = null;
         try {
@@ -200,14 +248,48 @@ watch(
             </v-col>
         </v-row>
 
-        <!-- Button that will generate the selected plots -->
+        <!-- Plot data status: the plots can only be shown once the uploaded data file has been processed -->
+        <v-alert v-if="datasetStore.currentDataset.status === DatasetStatus.PROCESSING" type="info" variant="tonal" class="mt-6">
+            The data for this dataset is being processed. Plots will be available when that is done.
+        </v-alert>
+        <v-alert
+            v-else-if="datasetStore.currentDataset.status === DatasetStatus.FAILED"
+            type="error"
+            variant="tonal"
+            class="mt-6"
+        >
+            The data for this dataset could not be processed.
+            <div v-if="datasetStore.currentDataset.statusMessage" class="text-body-small mt-1">
+                {{ datasetStore.currentDataset.statusMessage }}
+            </div>
+            <template v-if="permissionStore.canEdit(datasetStore.currentDataset)" #append>
+                <v-btn variant="outlined" :loading="reprocessing" @click="reprocess">Try again</v-btn>
+            </template>
+        </v-alert>
+
+        <!-- Button that opens the Shiny viewer with the selected plots -->
         <div class="d-flex justify-center mt-6">
-            <v-btn color="primary">Generate Plots</v-btn>
+            <v-btn color="primary" :disabled="!plotsReady" :loading="viewerLoading" @click="generatePlots">Generate Plots</v-btn>
         </div>
+
+        <!-- Interactive plots from the Shiny app; it is only reachable through the backend, which checks the viewer's access -->
+        <iframe
+            v-if="viewerUrl && plotsReady"
+            :src="viewerUrl"
+            title="Interactive plots"
+            class="viewer-frame mt-6"
+            referrerpolicy="same-origin"
+        ></iframe>
     </v-container>
 </template>
 
 <style scoped>
+.viewer-frame {
+    width: 100%;
+    height: 80vh;
+    border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+    border-radius: 4px;
+}
 /* Shrink the checkboxes to make the option lists more compact (:deep is needed to style Vuetify's inner elements) */
 :deep(.v-checkbox .v-selection-control) {
     --v-input-control-height: 28px;

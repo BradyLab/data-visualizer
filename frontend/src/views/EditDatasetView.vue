@@ -4,7 +4,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 import { FileTypes } from "@commons/file";
-import { DatasetPlots, DatasetVisibility, datasetUrlError, slugify, type IDataset } from "@commons/dataset";
+import { DatasetPlots, DatasetStatus, DatasetVisibility, datasetUrlError, slugify, type IDataset } from "@commons/dataset";
 import { UserRoles, UserStatus } from "@commons/user";
 import { useAuthStore } from "@src/stores/auth";
 import { useFileStore } from "@src/stores/file";
@@ -38,7 +38,9 @@ const dataset = ref<IDataset>({
     plots: [],
     // New datasets start private; visibility is changed from the settings page
     visibility: DatasetVisibility.PRIVATE,
-    // Placeholders to satisfy IDataset; they are not sent on save (the backend sets the real timestamps)
+    // Placeholders to satisfy IDataset; they are not sent on save (the backend sets the real status and timestamps)
+    status: DatasetStatus.PROCESSING,
+    statusMessage: null,
     createdAt: new Date(),
     updatedAt: null,
 });

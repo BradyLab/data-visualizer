@@ -3,7 +3,7 @@ import axios, { isAxiosError } from "axios";
 import type { IDataset } from "@commons/dataset";
 import { apis } from "@commons/general";
 import { type CreateDatasetPayload, type UpdateDatasetPayload } from "@src/interfaces/dataset";
-import { baseURL } from "@src/interfaces/general";
+import { baseOrigin, baseURL } from "@src/interfaces/general";
 
 export const datasetApi = {
     /** GET /datasets : returns all datasets */
@@ -32,6 +32,23 @@ export const datasetApi = {
             if (isAxiosError(e) && e.response?.status === 404) return null;
             throw e;
         }
+    },
+
+    /**
+     * POST /datasets/:id/viewer : asks for a short-lived ticket and returns the full URL of the dataset's Shiny viewer, to use as an iframe src.
+     * Optional query parameters (e.g. plots) are added after the ticket. The URL is on the backend origin, which sets the viewer cookie
+     */
+    async getViewerUrl(id: string, params: Record<string, string> = {}): Promise<string> {
+        const response = await axios.post<{ url: string }>(`${baseURL}/${apis.DATASET}/${id}/viewer`);
+        const url = new URL(response.data.url, baseOrigin);
+        for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+        return url.toString();
+    },
+
+    /** POST /datasets/:id/reprocess : rebuilds the plot data from the current data file (e.g. after a failure); returns the dataset, now PROCESSING */
+    async reprocessDataset(id: string): Promise<IDataset> {
+        const response = await axios.post<IDataset>(`${baseURL}/${apis.DATASET}/${id}/reprocess`);
+        return response.data;
     },
 
     /** POST /datasets : creates a dataset and returns it */

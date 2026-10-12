@@ -97,6 +97,13 @@ export const useDatasetStore = defineStore("dataset", () => {
         return dataset;
     }
 
+    /** Starts rebuilding a dataset's plot data and replaces it in the store (it is PROCESSING until the server is done) */
+    async function reprocessDataset(id: string) {
+        const dataset = await datasetApi.reprocessDataset(id);
+        upsert(dataset);
+        return dataset;
+    }
+
     /** Deletes a dataset and removes it from the store (clearing currentDataset if it is the open one) */
     async function removeDataset(id: string) {
         await datasetApi.deleteDataset(id);
@@ -113,5 +120,16 @@ export const useDatasetStore = defineStore("dataset", () => {
         () => fetchDatasets().catch(() => {})
     );
 
-    return { datasets, currentDataset, loadFailed, fetchDatasets, getById, getByUrl, addDataset, editDataset, removeDataset };
+    return {
+        datasets,
+        currentDataset,
+        loadFailed,
+        fetchDatasets,
+        getById,
+        getByUrl,
+        addDataset,
+        editDataset,
+        reprocessDataset,
+        removeDataset,
+    };
 });
