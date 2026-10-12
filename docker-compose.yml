@@ -16,6 +16,10 @@ services:
       - DB_NAME=data_visualizer
       - DB_USERNAME=postgres
       - DB_PASSWORD=postgres
+      - SHINY_URL=http://shiny:3838
+      - SHINY_SECRET=${SHINY_SECRET:?set SHINY_SECRET in .env (see .env.example)}
+      # Uploads are processed by the preprocess service below, which picks jobs up from this shared folder (inside ./data)
+      - PREPROCESS_SPOOL_DIR=/data/jobs
     command: sh -c "rm -rf dist/ &&
                     npm install &&
                     npm run build &&
@@ -45,6 +49,28 @@ services:
       timeout: 5s
       retries: 5
     restart: on-failure
+
+  # Only reachable from other services (no ports:); Express proxies to http://shiny:3838
+  shiny:
+    build: ./shiny
+    volumes:
+      - ./shiny/app:/srv/shiny-server/app
+      - ./data/parquet:/data/parquet:ro
+    environment:
+      - PARQUET_DIR=/data/parquet
+      - SHINY_SECRET=${SHINY_SECRET:?set SHINY_SECRET in .env (see .env.example)}
+      - SHINY_DEV=1
+
+  # Turns uploaded .rds files into the Parquet the Shiny app reads: waits for jobs the backend drops in data/jobs and runs
+  # preprocess.R on each (see shiny/preprocess/worker.sh). Needs RAM for the largest Seurat object (often 2-5x its file size)
+  preprocess:
+    build: ./shiny/preprocess
+    image: preprocess
+    entrypoint: ["/worker.sh"]
+    volumes:
+      - ./data:/data
+      - ./shiny/preprocess/preprocess.R:/preprocess.R:ro
+    restart: unless-stopped
 
   frontend:
     image: node:${NODE_VERSION:-24}-alpine
