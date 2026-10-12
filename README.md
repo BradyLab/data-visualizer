@@ -51,6 +51,13 @@ To run without Docker, see the "Running locally" sections in the two project REA
 
 ## Testing
 
+Unit and component tests (Vitest + jsdom) live in `frontend/src/__tests__/`; backend unit tests in `backend-express/test/`:
+
+```sh
+cd frontend && npm run test:unit
+cd backend-express && npm test
+```
+
 End-to-end tests live in `frontend/e2e/` and run against a real backend and a throwaway database:
 
 ```sh

@@ -16,8 +16,10 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  // Three browsers at once on every core slow WebKit enough to time out now and then, so cross-browser runs use fewer workers
-  workers: process.env.CI ? 1 : allBrowsers ? 6 : undefined,
+  // Three browsers at once on every core slow WebKit enough to time out now and then, so cross-browser runs use fewer workers.
+  // Locally the default (half the cores) starts too many browsers for machines with little RAM (e.g. 8 on a 16-core WSL2 box with 7 GB),
+  // which makes specs time out, so it is capped at 4; E2E_WORKERS overrides it
+  workers: process.env.E2E_WORKERS ? Number(process.env.E2E_WORKERS) : process.env.CI ? 1 : allBrowsers ? 6 : 4,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : [['list'], ['html', { open: 'never' }]],
 
   use: {

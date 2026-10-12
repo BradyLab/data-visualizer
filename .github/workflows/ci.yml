@@ -46,6 +46,7 @@ jobs:
       - run: npx oxlint .
       - run: npx eslint . --cache
       - run: npm run type-check
+      - run: npm run test:unit
       - run: npm run build-only
 
   e2e:
