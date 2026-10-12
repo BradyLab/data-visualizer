@@ -1,7 +1,7 @@
 // Sequelize model for the Datasets table (columns must stay in sync with the dataset migration)
 import { Column, DataType, ForeignKey, HasMany, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
 // Shared dataset interface and plot types from the commons package
-import { IDataset, DatasetPlots, DatasetVisibility, datasetUrlError } from "@commons/dataset.ts";
+import { IDataset, DatasetPlots, DatasetStatus, DatasetVisibility, datasetUrlError } from "@commons/dataset.ts";
 import { Users } from "@src/models/user.ts";
 import { Permissions } from "@src/models/permission.ts";
 import { Files } from "@src/models/file.ts";
@@ -96,6 +96,21 @@ export class Datasets extends Model<IDataset> {
         defaultValue: DatasetVisibility.PRIVATE,
     })
     declare visibility: DatasetVisibility;
+
+    // Processing state of the plot data derived from the .rds file; only the server changes it, so it is not in the controller's field whitelists
+    @Column({
+        type: DataType.ENUM(...Object.values(DatasetStatus)),
+        allowNull: false,
+        defaultValue: DatasetStatus.PROCESSING,
+    })
+    declare status: DatasetStatus;
+
+    // Why the processing failed, for display; null unless status is FAILED
+    @Column({
+        type: DataType.TEXT,
+        allowNull: true,
+    })
+    declare statusMessage: string | null;
 
     // Row creation time
     @Column({

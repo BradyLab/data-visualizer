@@ -12,6 +12,7 @@ import { getAccess, hasAccess } from "@src/services/access.ts";
 import { logActivityAs, toPlain } from "@src/services/activity.ts";
 import * as service from "@src/services/file.ts";
 import * as storage from "@src/services/storage.ts";
+import * as processing from "@src/services/processing.ts";
 import { emitFileUploaded } from "@src/services/socket.ts";
 import { randomUUID } from "node:crypto";
 
@@ -118,6 +119,10 @@ export const tusServer = new Server({
             console.log(`[TUS] Stored upload at ${storage.storedPath(record)}`);
             await logActivityAs(user_id, ActivityType.FILE_UPLOADED, toPlain(created));
             await emitFileUploaded(created.get({ plain: true }));
+            // A new data file means the plot data must be rebuilt (the dataset is PROCESSING, and hidden from the viewer, until it is).
+            // Not awaited: the upload is complete whatever happens to the job, and failures are recorded on the dataset
+            if (record.type === FileTypes.RDS)
+                processing.start(record.dataset_id).catch((err) => console.error("[TUS] Failed to start processing:", err));
             return { status_code: 200, body: JSON.stringify(toPlain(created)) };
         } catch (err) {
             // The upload is complete but unusable: don't leave gigabytes in the temporary folder

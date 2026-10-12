@@ -18,6 +18,12 @@ router.post("/", requireAuth, requireRole(UserRoles.ADMIN, UserRoles.LAB_MEMBER)
 router.get("/byURL/:url", optionalAuth, controller.getByUrl);
 router.get("/:id", optionalAuth, controller.get);
 
+// Rebuilds the plot data from the current RDS file (needs EDIT access, checked in the controller)
+router.post("/:id/reprocess", requireAuth, controller.reprocess);
+
+// Issues a short-lived ticket for the Shiny viewer of a dataset the caller may VIEW
+router.post("/:id/viewer", optionalAuth, controller.viewer);
+
 // Update needs EDIT access and delete needs OWNER access on the dataset, checked in the controller
 router.put("/:id", requireAuth, controller.update);
 router.delete("/:id", requireAuth, controller.remove);

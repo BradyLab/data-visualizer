@@ -21,6 +21,25 @@ declare global {
             JWT_EXPIRES_IN?: string;
             // Folder for uploaded files (rds/ and cover/ are created inside it)
             UPLOAD_DIR: string;
+            // Internal URL of the Shiny server that /shiny proxies to (e.g. http://shiny:3838); the viewer is disabled when unset
+            SHINY_URL?: string;
+            // Secret shared with the Shiny app (SHINY_SECRET there too) to sign the viewer context it trusts; the viewer is disabled when unset
+            SHINY_SECRET?: string;
+            // Lifetime of the viewer ticket and of the viewer cookie session (e.g. "60s", "1h")
+            VIEWER_TICKET_EXPIRES_IN?: string;
+            VIEWER_SESSION_EXPIRES_IN?: string;
+            // Where the Shiny plot data (one Parquet folder per dataset) is kept; /data/parquet next to UPLOAD_DIR's parent unless set
+            PARQUET_DIR?: string;
+            // Program and script of the preprocessing job (defaults: Rscript and shiny/preprocess/preprocess.R) and its time limit in ms
+            PREPROCESS_COMMAND?: string;
+            PREPROCESS_SCRIPT?: string;
+            PREPROCESS_TIMEOUT_MS?: string;
+            // Shared folder for handing jobs to a worker container instead of running R here (see services/processingSpool.ts)
+            PREPROCESS_SPOOL_DIR?: string;
+            // Spool mode: how long a job may wait for a worker, and how often the backend checks on it (ms)
+            PREPROCESS_PICKUP_TIMEOUT_MS?: string;
+            PREPROCESS_POLL_MS?: string;
+            
         }
     }
 }

@@ -1,9 +1,9 @@
-// Migration 02: creates the Datasets table (dataset metadata and enabled plots)
+// Migration 02: creates the Datasets table (dataset metadata, enabled plots and processing status)
 // up() applies schema changes, down() reverts them
 "use strict";
 
 import { DataTypes, type QueryInterface, type Sequelize } from "sequelize";
-import { DatasetPlots, DatasetVisibility } from "@commons/dataset.ts";
+import { DatasetPlots, DatasetStatus, DatasetVisibility } from "@commons/dataset.ts";
 // Minimal logger so migration errors/info are easy to spot in console output
 const migrationLogger = {
     error: (e: unknown) => {
@@ -76,6 +76,17 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 allowNull: false,
                 defaultValue: DatasetVisibility.PRIVATE,
             },
+            // Processing state of the plot data derived from the uploaded .rds file; new datasets start as PROCESSING
+            status: {
+                type: DataTypes.ENUM(...Object.values(DatasetStatus)),
+                allowNull: false,
+                defaultValue: DatasetStatus.PROCESSING,
+            },
+            // Why the processing failed, for display; null unless status is FAILED
+            statusMessage: {
+                type: DataTypes.TEXT,
+                allowNull: true,
+            },
             // Timestamps
             createdAt: {
                 type: DataTypes.DATE,
@@ -99,6 +110,7 @@ export async function down(queryInterface: QueryInterface, sequelize: Sequelize)
         await queryInterface.dropTable("Datasets");
         await (queryInterface as any).dropEnum("enum_Datasets_plots");
         await (queryInterface as any).dropEnum("enum_Datasets_visibility");
+        await (queryInterface as any).dropEnum("enum_Datasets_status");
     } catch (error) {
         migrationLogger.error(error);
         throw error;

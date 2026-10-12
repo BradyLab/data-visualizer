@@ -8,8 +8,11 @@ import express, { Express, Request, Response, NextFunction } from "express";
 import { sequelize } from "@src/database.ts";
 
 import { requireAuth } from "@src/middleware/auth.ts";
+import { handleShinyUpgrade, SHINY_PREFIX, shinyProxy } from "@src/middleware/shinyProxy.ts";
 import { cleanUpExpiredUploads, TUS_PATH, tusServer } from "@src/services/tus.ts";
 import { ensureDirs } from "@src/services/storage.ts";
+import { resume as resumeProcessing } from "@src/services/processing.ts";
+import { viewerEnabled } from "@src/services/viewer.ts";
 import { attachSocket } from "@src/services/socket.ts";
 import { apis } from "@commons/general.ts";
 
@@ -35,6 +38,9 @@ export const get = () => {
         (req, res, next) => (req.method === "OPTIONS" ? next() : requireAuth(req, res, next)),
         (req, res) => tusServer.handle(req, res)
     );
+    // Interactive Shiny plots, proxied after a viewer ticket/cookie and dataset permission check. Mounted before the body parsers
+    // (the proxy streams the raw request, and Shiny never needs CORS since the iframe is a plain navigation)
+    app.use(`${SHINY_PREFIX}/:url`, shinyProxy);
     app.use(express.json()); // Parses incoming JSON payloads
     // Parses URL-encoded form bodies
     app.use(express.urlencoded({ extended: true }));
@@ -114,6 +120,11 @@ export const start = async () => {
     });
     // Live updates (websocket) share the HTTP server with the REST API
     attachSocket(server);
+    // WebSocket connections to Shiny skip Express middleware, so they are authorized here
+    server.on("upgrade", handleShinyUpgrade);
+    if (!viewerEnabled()) console.warn("[SERVER]: SHINY_URL or SHINY_SECRET is not set; the Shiny viewer is disabled.");
+    // Datasets a restart left half-processed are processed again
+    resumeProcessing().catch((err) => console.error("[PROCESSING] Failed to resume jobs:", err));
     // Unfinished uploads expire; sweep them hourly (and once at startup)
     void cleanUpExpiredUploads();
     setInterval(cleanUpExpiredUploads, 60 * 60 * 1000).unref();

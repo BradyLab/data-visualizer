@@ -4,7 +4,7 @@ import * as service from "@src/services/dataset.ts";
 import { IDataset } from "@src/models/dataset.ts";
 import * as userService from "@src/services/user.ts";
 import * as fileService from "@src/services/file.ts";
-import { removeStored } from "@src/services/storage.ts";
+import { removeParquet, removeStored } from "@src/services/storage.ts";
 import { diff, logActivity, toPlain } from "@src/services/activity.ts";
 import { emitDatasetCreated, emitDatasetDeleted, emitDatasetUpdated } from "@src/services/socket.ts";
 import { authorizeDataset, caller, getAccess, hasAccess, OWNER } from "@src/services/access.ts";
@@ -12,6 +12,11 @@ import { pick } from "@src/utils/pick.ts";
 import { ActivityType } from "@commons/activity.ts";
 import { PermissionOptions } from "@commons/permissions.ts";
 import { UserRoles } from "@commons/user.ts";
+import { SHINY_PREFIX, VIEWER_TICKET_PARAM } from "@src/middleware/shinyProxy.ts";
+import { signViewerTicket, viewerEnabled } from "@src/services/viewer.ts";
+import * as processing from "@src/services/processing.ts";
+import { DatasetStatus } from "@commons/dataset.ts";
+import { FileTypes } from "@commons/file.ts";
 
 // Whitelist of columns clients may set (see utils/pick.ts)
 const DATASET_FIELDS = [
@@ -49,6 +54,40 @@ export const getByUrl = async (req: Request, res: Response) => {
         return res.status(404).json({ error: "Dataset not found" });
     }
     res.status(200).json((await service.withOwnerName([item]))[0]);
+};
+
+/**
+ * POST /:id/viewer : returns { url } for the dataset's Shiny viewer (200): a path under /shiny with a one-minute ticket the proxy
+ * swaps for a cookie session. Needs VIEW access (404 if the dataset does not exist or is not visible), and 503 if Shiny is not configured
+ */
+export const viewer = async (req: Request, res: Response) => {
+    console.log("[DATASET CONTROLLER] Attempting to issue a viewer ticket...");
+    if (!viewerEnabled()) return res.status(503).json({ error: "The viewer is not configured" });
+    const found = await authorizeDataset(res, req.params.id as string, PermissionOptions.VIEW);
+    if (!found) return;
+    // The viewer reads the Parquet files made from the RDS; until they exist (or after a failure) there is nothing to show
+    if (found.dataset.status !== DatasetStatus.READY)
+        return res.status(409).json({ error: "The plot data for this dataset is not ready", status: found.dataset.status });
+    const ticket = signViewerTicket(found.dataset.id, caller(res)?.id ?? null);
+    res.status(200).json({
+        url: `${SHINY_PREFIX}/${encodeURIComponent(found.dataset.url)}/?${VIEWER_TICKET_PARAM}=${encodeURIComponent(ticket)}`,
+    });
+};
+
+/**
+ * POST /:id/reprocess : rebuilds the plot data from the current RDS file, e.g. to retry after a failure (202 with the dataset, now PROCESSING).
+ * Needs EDIT access (404 if not found or not visible, 403 otherwise); 409 if it is already being processed or has no data file yet
+ */
+export const reprocess = async (req: Request, res: Response) => {
+    console.log("[DATASET CONTROLLER] Attempting to reprocess dataset...");
+    const found = await authorizeDataset(res, req.params.id as string, PermissionOptions.EDIT);
+    if (!found) return;
+    if (processing.isBusy(found.dataset.id)) return res.status(409).json({ error: "This dataset is already being processed" });
+    if (!(await fileService.getCurrent(found.dataset.id, FileTypes.RDS)))
+        return res.status(409).json({ error: "This dataset has no data file yet" });
+    await processing.start(found.dataset.id);
+    const updated = await service.getById(found.dataset.id);
+    res.status(202).json(updated && (await service.withOwnerName([updated]))[0]);
 };
 
 /**
@@ -102,8 +141,11 @@ export const remove = async (req: Request, res: Response) => {
     if (!found) return;
     // The database rows are deleted with the dataset; the stored files must be removed by hand
     const files = await fileService.getAll(found.dataset.id);
+    // A running or queued processing job is dropped, and the plot data it made goes with the dataset
+    processing.cancel(found.dataset.id);
     await service.remove(found.dataset.id);
     await removeStored(files);
+    await removeParquet(found.dataset.id);
     await logActivity(res, ActivityType.DATASET_DELETED, toPlain(found.dataset));
     await emitDatasetDeleted(found.dataset.id);
     res.status(204).send();

@@ -49,6 +49,9 @@ let io: AppServer | null = null;
 export const attachSocket = (server: HttpServer) => {
     io = new Server(server, {
         path: SOCKET_PATH,
+        // Leave upgrades for other paths alone: engine.io would otherwise close any it does not own after a second, which would cut
+        // off the /shiny WebSocket proxied by middleware/shinyProxy.ts. Without it other paths are simply never answered
+        destroyUpgrade: false,
         // Same rule as the REST API: only the browser app may connect
         cors: { origin: process.env.FRONTEND_URL as string },
     });

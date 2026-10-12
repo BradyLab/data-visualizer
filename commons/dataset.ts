@@ -17,6 +17,13 @@ export enum DatasetVisibility {
     PRIVATE = "PRIVATE",
 }
 
+// Where a dataset is in the processing that turns its uploaded .rds into the Parquet files the plot viewer reads (stored in the DB enum)
+export enum DatasetStatus {
+    PROCESSING = "PROCESSING",
+    READY = "READY",
+    FAILED = "FAILED",
+}
+
 // A dataset record as stored in the Datasets table
 export interface IDataset {
     id: string;
@@ -31,6 +38,10 @@ export interface IDataset {
     treatments: string[];
     plots: DatasetPlots[];
     visibility: DatasetVisibility;
+    // Processing state of the plot data; set by the server, never by clients
+    status: DatasetStatus;
+    // Why the processing failed (shown to editors); null unless status is FAILED
+    statusMessage: string | null;
     createdAt: Timestamp;
     updatedAt: Timestamp | null;
 }
