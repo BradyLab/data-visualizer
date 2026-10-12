@@ -1,0 +1,88 @@
+# Runs on every push to main: backend checks, frontend checks, then the Playwright e2e tests
+name: CI
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend-express
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend-express/package-lock.json
+      - run: npm ci
+      - run: npm run format:check
+      - run: npx tsc --noEmit
+      - run: npm test
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      # The package's lint scripts pass --fix, so run the linters directly to fail instead of rewriting files
+      - run: npx oxlint .
+      - run: npx eslint . --cache
+      - run: npm run type-check
+      - run: npm run build-only
+
+  e2e:
+    name: E2E
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            backend-express/package-lock.json
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: backend-express
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+        working-directory: frontend
+      # pretest:e2e starts the throwaway Postgres and posttest:e2e removes it
+      - name: Run e2e tests
+        run: npm run test:e2e:fast
+        working-directory: frontend
+        env:
+          CI: "true"
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+          if-no-files-found: ignore
+          retention-days: 7
