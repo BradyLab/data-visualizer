@@ -6,6 +6,9 @@
     // Extra safety for array and object lookups, but may have false positives.
     "noUncheckedIndexedAccess": true,
 
+    // The e2e specs are checked with this config and use Node globals such as Buffer
+    "types": ["node"],
+
     // Path mapping for cleaner imports.
     "paths": {
       "@src/*": ["./src/*"],
