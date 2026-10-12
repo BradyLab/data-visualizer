@@ -163,7 +163,7 @@ export const readFile = async (request: APIRequestContext, session: Session | nu
 
 /** Resolves when the page has received a dataset list from the server (the app asks for one on load and on every login) */
 export const waitForDatasetList = (page: Page) =>
-  page.waitForResponse((r) => r.request().method() === 'GET' && /\/api\/datasets$/.test(r.url()))
+  page.waitForResponse((r) => r.request().method() === 'GET' && r.url().endsWith('/api/datasets'))
 
 /**
  * Opens a page and resolves once its live-update websocket is up and its first dataset list has arrived, so a change made through the

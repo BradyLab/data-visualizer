@@ -109,7 +109,6 @@ watch(
             <v-col>
                 <h1 class="text-h6 my-0 font-weight-bold">{{ datasetStore.currentDataset.name }}</h1>
                 <div class="text-body-small">Author: {{ datasetStore.currentDataset.ownerName }}</div>
-                
             </v-col>
             <v-col cols="auto" class="d-flex align-center ga-2">
                 <v-btn
@@ -135,7 +134,9 @@ watch(
             </div>
         </v-row>
         <v-row class="mt-0 mb-4">
-            <div v-if="datasetStore.currentDataset.attribution" class="text-body-small">Attribution: {{ datasetStore.currentDataset.attribution }}</div>
+            <div v-if="datasetStore.currentDataset.attribution" class="text-body-small">
+                Attribution: {{ datasetStore.currentDataset.attribution }}
+            </div>
         </v-row>
 
         <!-- Dataset description -->

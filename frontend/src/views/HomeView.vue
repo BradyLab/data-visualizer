@@ -50,10 +50,11 @@ function navTo(route: string) {
                         <v-card-title class="text-body-2 font-weight-bold">{{ dataset.name }}</v-card-title>
                         <v-card-subtitle>
                             <div>Author: {{ dataset.ownerName ?? dataset.owner }}</div>
-                            <div v-if="dataset.visibility === DatasetVisibility.PUBLIC">Attribution: {{ dataset.attribution }}</div>
+                            <div v-if="dataset.visibility === DatasetVisibility.PUBLIC">
+                                Attribution: {{ dataset.attribution }}
+                            </div>
                         </v-card-subtitle>
                         <v-card-text v-if="dataset.description" class="px-0 py-2">{{ dataset.description }}</v-card-text>
-                        
                     </v-card-item>
                 </v-card>
             </v-col>
