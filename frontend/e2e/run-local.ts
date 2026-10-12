@@ -4,6 +4,7 @@
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
 import process from 'node:process'
 import path from 'node:path'
+import { stripVTControlCharacters } from 'node:util'
 import { BACKEND_ENV, FRONTEND_ENV, FRONTEND_PORT } from './stack.ts'
 
 // The frontend is served from a production build (a few seconds), not the Vite dev server: the dev server serves hundreds of unbundled
@@ -39,7 +40,8 @@ const start = (name: string, command: string, args: string[], env: Record<string
     let output = ''
     const timer = setTimeout(() => reject(new Error(`${name} did not become ready in 2 minutes:\n${output}`)), 120_000)
     const onData = (chunk: Buffer) => {
-      output += chunk.toString()
+      // Strip color codes: on CI Vite bolds the port ("localhost:\x1b[1m3100\x1b[22m"), which would hide the ready text
+      output += stripVTControlCharacters(chunk.toString())
       if (output.includes(ready)) {
         clearTimeout(timer)
         resolve()
