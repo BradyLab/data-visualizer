@@ -1,12 +1,12 @@
 // Helpers that set up and inspect state through the backend API, so specs only drive the UI for the part they are testing.
 // Every dataset gets a unique name and url, so specs never collide with each other or with leftovers of an earlier run
 import { expect, type APIRequestContext, type Page } from '@playwright/test'
-import { DatasetVisibility, type IDataset } from '@commons/dataset'
-import type { FileTypes, IFile } from '@commons/file'
-import type { PermissionOptions } from '@commons/permissions'
-import { UserStatus, type IUser, type UserRoles } from '@commons/user'
-import { BACKEND_ENV, BACKEND_URL, FRONTEND_URL } from './stack'
-import { E2E_PASSWORD, USERS, type Role } from './users'
+import { DatasetVisibility, type IDataset } from '@commons/dataset.ts'
+import type { FileTypes, IFile } from '@commons/file.ts'
+import type { PermissionOptions } from '@commons/permissions.ts'
+import { UserStatus, type IUser, type UserRoles } from '@commons/user.ts'
+import { BACKEND_ENV, BACKEND_URL, FRONTEND_URL } from './stack.ts'
+import { E2E_PASSWORD, USERS, type Role } from './users.ts'
 
 const API = `${BACKEND_URL}/api`
 

@@ -2,6 +2,13 @@
   "extends": "@tsconfig/node24/tsconfig.json",
   "include": ["./**/*"],
   "compilerOptions": {
+    // Same module settings as tsconfig.node.json: specs import with .ts extensions or none, and this is type-checking only
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "types": ["node"],
+    "lib": ["es2024", "dom"],
     // Same alias as the app, so specs can import the shared enums and types (Playwright reads this file to resolve it)
     "paths": { "@commons/*": ["../../commons/*"] }
   }
