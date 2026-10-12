@@ -31,6 +31,15 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 status: UserStatus.INVITED,
                 createdAt: new Date(),
             },
+            {
+                id: "82d307ce-5f45-4404-b343-c64b2098e1a0",
+                email: "e3wright@uwaterloo.ca",
+                password: await hashPassword(process.env.DEFAULT_PASSWORD),
+                name: "Liz #2",
+                role: UserRoles.EXTERNAL,
+                status: UserStatus.INVITED,
+                createdAt: new Date(),
+            },
         ],
         {}
     );
