@@ -1,6 +1,7 @@
+# Node major version for the dev containers: set NODE_VERSION (shell or root .env) to try another, and keep the default in line with .nvmrc
 services:
   backend:
-    image: node:current-alpine
+    image: node:${NODE_VERSION:-24}-alpine
     working_dir: /backend-express
     volumes:
       - ./backend-express:/backend-express
@@ -46,7 +47,7 @@ services:
     restart: on-failure
 
   frontend:
-    image: node:current-alpine
+    image: node:${NODE_VERSION:-24}-alpine
     working_dir: /app
     volumes:
       - ./frontend:/app

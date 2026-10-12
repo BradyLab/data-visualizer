@@ -9,7 +9,7 @@ Socket.IO, [`@tus/server`](https://github.com/tus/tus-node-server) for resumable
 
 ## Running locally
 
-Requires Node 22.18+ (or 24.12+) and a running PostgreSQL.
+Requires Node 24 (24.12+; the version in `.nvmrc`) and a running PostgreSQL.
 
 ```sh
 cp .env.example .env      # then edit

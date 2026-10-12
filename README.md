@@ -47,7 +47,7 @@ The backend needs a `backend-express/.env` (copy `backend-express/.env.example`)
 see each project's README. The seeder creates two users (an admin and a lab member) with the `DEFAULT_PASSWORD`
 from `.env`; you will be asked to change it on first login.
 
-To run without Docker, see the "Running locally" sections in the two project READMEs (you need Node 22.18+/24.12+ and a Postgres).
+To run without Docker, see the "Running locally" sections in the two project READMEs (you need Node 24 (see `.nvmrc`) and a Postgres).
 
 ## Testing
 
