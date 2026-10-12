@@ -10,6 +10,9 @@ import { BACKEND_ENV, BACKEND_URL, FRONTEND_ENV, FRONTEND_PORT, FRONTEND_URL } f
 // Cross-browser runs (Firefox, WebKit) are opt-in to keep local runs fast: E2E_ALL_BROWSERS=1 npm run test:e2e
 const allBrowsers = !!process.env.E2E_ALL_BROWSERS || !!process.env.CI
 
+// CI starts its own servers and wants a clean port, but run-local.ts starts them itself and sets E2E_REUSE_SERVERS so Playwright uses them
+const reuseServers = !process.env.CI || !!process.env.E2E_REUSE_SERVERS
+
 export default defineConfig({
   testDir: './e2e',
   timeout: 30 * 1000,
@@ -52,7 +55,7 @@ export default defineConfig({
       // Migrates and seeds the e2e database, then starts the API (the database itself is started by `pretest:e2e`)
       command: 'npm --prefix ../backend-express run e2e:start',
       url: `${BACKEND_URL}/health`,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: reuseServers,
       timeout: 120 * 1000,
       env: BACKEND_ENV,
     },
@@ -61,7 +64,7 @@ export default defineConfig({
         ? `npm run build-only && npm run preview -- --port ${FRONTEND_PORT} --strictPort`
         : `npm run dev -- --port ${FRONTEND_PORT} --strictPort`,
       url: FRONTEND_URL,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: reuseServers,
       timeout: 120 * 1000,
       env: FRONTEND_ENV,
     },

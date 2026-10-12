@@ -77,7 +77,11 @@ try {
       `:${FRONTEND_PORT}`
     ),
   ])
-  exitCode = spawnSync('npx', ['playwright', 'test', ...process.argv.slice(2)], { stdio: 'inherit' }).status ?? 1
+  exitCode = spawnSync('npx', ['playwright', 'test', ...process.argv.slice(2)], {
+    stdio: 'inherit',
+    // The servers are already up; without this Playwright refuses to start on CI (it expects the ports to be free there)
+    env: { ...process.env, E2E_REUSE_SERVERS: '1' },
+  }).status ?? 1
 } catch (err) {
   console.error(err instanceof Error ? err.message : err)
 } finally {
