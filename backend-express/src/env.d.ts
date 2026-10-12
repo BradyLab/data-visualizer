@@ -39,7 +39,6 @@ declare global {
             // Spool mode: how long a job may wait for a worker, and how often the backend checks on it (ms)
             PREPROCESS_PICKUP_TIMEOUT_MS?: string;
             PREPROCESS_POLL_MS?: string;
-            
         }
     }
 }

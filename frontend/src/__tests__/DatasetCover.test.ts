@@ -20,8 +20,7 @@ vi.stubGlobal(
     }
 );
 
-const render = () =>
-    mount(DatasetCover, { props: { datasetId: "d1", height: 120 }, global: { plugins: [createVuetify()] } });
+const render = () => mount(DatasetCover, { props: { datasetId: "d1", height: 120 }, global: { plugins: [createVuetify()] } });
 
 beforeEach(() => {
     vi.resetAllMocks();

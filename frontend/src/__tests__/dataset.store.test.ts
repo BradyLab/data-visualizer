@@ -50,7 +50,9 @@ describe("fetchDatasets", () => {
 
     it("ignores a slow older response once a newer request has finished", async () => {
         const slow = deferred<IDataset[]>();
-        vi.mocked(datasetApi.getDatasets).mockReturnValueOnce(slow.promise).mockResolvedValueOnce([ds("new")]);
+        vi.mocked(datasetApi.getDatasets)
+            .mockReturnValueOnce(slow.promise)
+            .mockResolvedValueOnce([ds("new")]);
         const store = useDatasetStore();
         const first = store.fetchDatasets();
         await store.fetchDatasets();
