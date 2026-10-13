@@ -120,13 +120,27 @@ export const content = async (req: Request, res: Response) => {
     const file = await service.getCurrent(datasetId, type);
     // A token only opens the file it was issued for (if a newer version has replaced it since, the link no longer works)
     if (!file || (tokenInfo && tokenInfo.file !== file.id)) return res.status(404).json({ error: "File not found" });
+    // Covers are shown inline; everything else is sent as an attachment named after the original upload
     const send =
         type === FileTypes.COVER
             ? res.sendFile.bind(res)
             : (p: string, o: object, cb: (e?: Error) => void) => res.download(p, file.ogName, o, cb);
     send(storage.storedPath(file), { dotfiles: "allow", headers: { "Cache-Control": "private, no-cache" } }, (err?: Error) => {
         // The record exists but the file is gone from disk (or the client hung up, which needs no answer)
-        if (err && !res.headersSent) res.status(404).json({ error: "File not found" });
+        if (err) {
+            if (!res.headersSent) res.status(404).json({ error: "File not found" });
+            return;
+        }
+        // Logged when the file is actually sent, not when a download token is issued. Covers are not downloads, and a Range request
+        // that doesn't start at the beginning is a resumed download that was already logged
+        const range = req.headers.range;
+        if (type !== FileTypes.COVER && (!range || /^bytes=0-/.test(range)))
+            void logActivity(res, ActivityType.FILE_DOWNLOADED, {
+                file_id: file.id,
+                dataset_id: file.dataset_id,
+                type: file.type,
+                version: file.version,
+            });
     });
 };
 
@@ -141,11 +155,5 @@ export const downloadToken = async (req: Request, res: Response) => {
     if (!(await authorizeDataset(res, req.params.datasetId as string, PermissionOptions.DOWNLOAD))) return;
     const file = await service.getCurrent(req.params.datasetId as string, type);
     if (!file) return res.status(404).json({ error: "File not found" });
-    await logActivity(res, ActivityType.FILE_DOWNLOADED, {
-        file_id: file.id,
-        dataset_id: file.dataset_id,
-        type: file.type,
-        version: file.version,
-    });
     res.status(200).json({ token: signDownloadToken(file.id, res.locals.user.id) });
 };

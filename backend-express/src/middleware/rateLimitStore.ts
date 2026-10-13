@@ -12,6 +12,7 @@ export class PostgresStore implements Store {
     readonly prefix: string;
     // Counters in the database are visible to every instance (lets express-rate-limit skip its in-memory double-count check)
     readonly localKeys = false;
+    // Replaced by the limiter's own windowMs in init()
     private windowMs = 15 * 60 * 1000;
     private cleanupTimer?: NodeJS.Timeout;
 

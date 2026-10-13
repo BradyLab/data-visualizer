@@ -12,6 +12,7 @@ const router = Router();
 router.get("/", optionalAuth, controller.list);
 
 // Files are created by resumable (tus) uploads at /files/upload, mounted in index.ts (see services/tus.ts), not by POST here
+
 // The current file of a type in a dataset: the bytes (also reachable with a ?token= from the route below, for browser downloads) and the token
 router.get("/current/:datasetId/:type/content", optionalAuth, controller.content);
 router.post("/current/:datasetId/:type/download-token", requireAuth, controller.downloadToken);

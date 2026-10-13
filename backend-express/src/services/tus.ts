@@ -112,7 +112,12 @@ export const tusServer = new Server({
             if (version <= latest) throw reject(409, `version must be higher than the latest version (${latest})`);
             const record = { ...parsed, version, updates: parsed.updates ?? null, id: randomUUID(), user_id };
             // The move runs inside the transaction: a failed move leaves no row, and a failed row (e.g. a duplicate version) moves nothing
-            const { created, replaced } = await service.createCurrent(record, () => storage.store(tmpPath, record));
+            const { created, replaced } = await service.createCurrent(
+                record,
+                () => storage.store(tmpPath, record),
+                // A failed commit leaves the moved file at its final path with no row; delete it
+                () => storage.removeStored([record])
+            );
             // Only the current version is kept on disk. The new file is already stored and recorded, so a failed cleanup
             // is only logged: throwing would make the catch below answer 500 for an upload that succeeded
             await storage.removeStored(replaced).catch((err) => console.error("[TUS] Failed to remove replaced files:", err));

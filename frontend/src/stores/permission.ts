@@ -133,8 +133,11 @@ export const usePermissionStore = defineStore("permission", () => {
         };
         const datasetStore = useDatasetStore();
         if (user_id === auth.user.id) myPermissions.value = apply(myPermissions.value);
+        // The server sends a permission event only to the grantee, the dataset's owner and admins. So a non-admin who hears about
+        // someone else's row must be the owner, even if the dataset list is not loaded yet to say so
         const dataset = datasetStore.datasets.find((d) => d.id === dataset_id);
-        if (auth.isAdmin || dataset?.owner === auth.user.id) adminPermissions.value = apply(adminPermissions.value);
+        if (auth.isAdmin || dataset?.owner === auth.user.id || user_id !== auth.user.id)
+            adminPermissions.value = apply(adminPermissions.value);
         // New or lost access changes which datasets the viewer can see, so reload the list
         if (user_id === auth.user.id) datasetStore.fetchDatasets().catch(() => {});
     }

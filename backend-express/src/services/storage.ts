@@ -27,7 +27,7 @@ export const ALLOWED_EXTENSIONS: Record<FileTypes, string[]> = {
     [FileTypes.COVER]: [".jpg", ".jpeg", ".png", ".webp", ".gif"],
 };
 
-// Largest accepted cover photo; RDS files are only bound by the upload limit in middleware/upload.ts
+// Largest accepted cover photo; RDS files are only bound by MAX_UPLOAD_BYTES in services/tus.ts
 export const MAX_COVER_BYTES = 20 * 1024 * 1024;
 
 /** Lowercased extension of an uploaded file name (including the dot), or "" */

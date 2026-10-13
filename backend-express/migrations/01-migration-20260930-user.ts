@@ -42,7 +42,6 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 type: DataTypes.STRING,
                 allowNull: false,
             },
-            // Role the user has
             role: {
                 // Allowed roles; keep in sync with the UserRoles enum
                 type: DataTypes.ENUM(...Object.values(UserRoles)),

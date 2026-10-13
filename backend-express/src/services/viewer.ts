@@ -41,18 +41,19 @@ export const signShinyContext = ({ dataset, access }: Pick<ViewerContext, "datas
     return `${payload}.${createHmac("sha256", process.env.SHINY_SECRET!).update(payload).digest("hex")}`;
 };
 
-/** How long the viewer session cookie lasts, in seconds (matches the session token, so the cookie does not outlive it) */
+/** How long the viewer session cookie lasts, in seconds (matches the session token, so the cookie does not outlive it); read back from a throwaway signed token so it follows VIEWER_SESSION_EXPIRES_IN */
 export const sessionMaxAgeSeconds = () => {
     const { exp, iat } = jwt.decode(signViewerSession("x", null)) as { exp: number; iat: number };
     return exp - iat;
 };
 
+// Signs a viewer token of the given kind (typ) for a dataset and user (null = guest)
 const sign = (typ: string, expiresIn: NonNullable<jwt.SignOptions["expiresIn"]>, datasetId: string, userId: string | null) => {
     if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET is not set");
     return jwt.sign({ typ, dataset_id: datasetId, user_id: userId }, process.env.JWT_SECRET, { expiresIn });
 };
 
-/** Signs the one-minute ticket handed to the frontend; the caller must already have checked VIEW access. userId is null for a guest */
+/** Signs the short-lived ticket (60s by default) handed to the frontend; the caller must already have checked VIEW access. userId is null for a guest */
 export const signViewerTicket = (datasetId: string, userId: string | null) => sign(TICKET, ticketTtl(), datasetId, userId);
 
 /** Signs the longer-lived token kept in the viewer cookie */

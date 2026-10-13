@@ -21,6 +21,6 @@ export const sequelize = new Sequelize({
     host: dbHost,
     port: Number(dbPort),
     dialect: "postgres",
-    logging: false,
+    logging: false, // do not print every SQL query
     models: [Users, Datasets, Permissions, Files, Activities],
 });

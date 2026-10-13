@@ -39,8 +39,7 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 type: DataTypes.ENUM(...Object.values(ActivityType)),
                 allowNull: false,
             },
-            // Data from the activity
-            // JSON column; shape varies by ActivityType
+            // JSON payload of the activity; shape varies by ActivityType
             data: {
                 type: DataTypes.JSON,
                 allowNull: false,

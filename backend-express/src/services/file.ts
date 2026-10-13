@@ -50,19 +50,30 @@ export const latestVersion = async (dataset_id: string, type: IFile["type"]) => 
 
 /**
  * Creates a file record as the current version of its type, and in the same transaction clears the flag on the one it replaces.
- * beforeCommit (e.g. moving the file into place) runs inside the transaction. Returns the new record and the records that stopped being current (their files are no longer needed on disk)
+ * beforeCommit (e.g. moving the file into place) runs inside the transaction. If the commit then fails, undo (e.g. moving the file
+ * back out of its final place) runs, since the rollback only reverts the database.
+ * Returns the new record and the records that stopped being current (their files are no longer needed on disk)
  */
-export const createCurrent = async (body: Partial<IFile>, beforeCommit?: () => Promise<void>) => {
+export const createCurrent = async (body: Partial<IFile>, beforeCommit?: () => Promise<void>, undo?: () => Promise<void>) => {
     console.log("[FILE SERVICE] Creating file record...");
-    return Files.sequelize!.transaction(async (transaction) => {
-        const where = { dataset_id: body.dataset_id, type: body.type, isCurrent: true };
-        const replaced = await Files.findAll({ where, transaction });
-        await Files.update({ isCurrent: false }, { where, transaction });
-        const created = await Files.create({ ...body, isCurrent: true } as IFile, { transaction });
-        // Runs once the row exists (so a duplicate version has already failed) but before the commit; if it throws, everything is rolled back
-        await beforeCommit?.();
-        return { created, replaced };
-    });
+    let ranBeforeCommit = false;
+    try {
+        return await Files.sequelize!.transaction(async (transaction) => {
+            const where = { dataset_id: body.dataset_id, type: body.type, isCurrent: true };
+            const replaced = await Files.findAll({ where, transaction });
+            await Files.update({ isCurrent: false }, { where, transaction });
+            const created = await Files.create({ ...body, isCurrent: true } as IFile, { transaction });
+            // Runs once the row exists (so a duplicate version has already failed) but before the commit; if it throws, everything is rolled back
+            await beforeCommit?.();
+            ranBeforeCommit = true;
+            return { created, replaced };
+        });
+    } catch (err) {
+        // Only after a completed beforeCommit: before that, the final path may not be ours (e.g. it held the file of a duplicate version)
+        if (ranBeforeCommit)
+            await undo?.().catch((undoErr) => console.error("[FILE SERVICE] Failed to undo after a failed commit:", undoErr));
+        throw err;
+    }
 };
 
 /** Updates a file record with the whitelisted body fields; returns null if not found */

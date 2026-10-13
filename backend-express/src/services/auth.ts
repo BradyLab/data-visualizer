@@ -44,7 +44,10 @@ export const signToken = (id: string, storedPassword: string) => {
 /** Returns the id, password fingerprint and expiry (seconds since the epoch, if the token has one) in a valid login token, or null if the token is invalid, expired, or not a login token */
 export const verifyToken = (token: string) => {
     try {
-        const { id, pv, exp } = jwt.verify(token, process.env.JWT_SECRET) as Partial<TokenPayload> & { exp?: number };
+        // Pin the algorithm (jwt.sign defaults to HS256) so a token signed with any other one is rejected
+        const { id, pv, exp } = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ["HS256"] }) as Partial<TokenPayload> & {
+            exp?: number;
+        };
         return id && pv ? { id, pv, exp } : null;
     } catch {
         console.log("[AUTH SERVICE] Token is invalid or expired");
@@ -71,7 +74,11 @@ export const signDownloadToken = (fileId: string, userId: string) => {
 /** Returns the file id and issuing user id in a valid download token, or null (login tokens are not download tokens and vice versa) */
 export const verifyDownloadToken = (token: string) => {
     try {
-        const payload = jwt.verify(token, process.env.JWT_SECRET) as { file?: string; user?: string; purpose?: string };
+        const payload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ["HS256"] }) as {
+            file?: string;
+            user?: string;
+            purpose?: string;
+        };
         return payload.purpose === "download" && typeof payload.file === "string" && typeof payload.user === "string"
             ? { file: payload.file, user: payload.user }
             : null;

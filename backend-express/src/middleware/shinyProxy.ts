@@ -32,7 +32,9 @@ const SHINY_APP_PATH = "/app";
 // Query parameter carrying the ticket. Deliberately not a short name like "t": Shiny's own SockJS requests use ?t=<timestamp>
 export const VIEWER_TICKET_PARAM = "viewer_ticket";
 
+// Name of the viewer session cookie
 const COOKIE = "viewer";
+// Matches the /shiny/<slug> start of a URL; group 1 is the (still encoded) slug
 const SLUG_URL = new RegExp(`^${SHINY_PREFIX}/([^/?#]+)`);
 
 // Query parameter holding the signed context the Shiny app trusts (see signShinyContext)

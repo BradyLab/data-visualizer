@@ -4,6 +4,7 @@ import * as controller from "@src/controllers/auth.ts";
 import { requireAuth, requireAuthAllowInvited } from "@src/middleware/auth.ts";
 import { changePasswordLimiter, loginAccountLimiter, loginIpLimiter } from "@src/middleware/rateLimit.ts";
 
+// Express router for the authentication endpoints
 const router = Router();
 
 // Public: exchanges email + password for a JWT; failed attempts are rate limited per IP and per account (429)

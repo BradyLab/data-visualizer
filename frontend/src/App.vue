@@ -20,8 +20,7 @@ const fileStore = useFileStore();
 const router = useRouter();
 // Creating the socket store opens the websocket while logged in (it follows the login token itself)
 useSocketStore();
-// The user store subscribes to the user events when it is created, and the viewer's own role, name or status changing live
-// (and the end of their session) must be heard on every page, not only on the pages that happen to use the store
+// Creating the user store subscribes to the user events, so the viewer's own live role/name/status changes (and session end) are heard on every page
 useUserStore();
 watch(
     () => auth.user.id,

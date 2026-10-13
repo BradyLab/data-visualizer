@@ -12,7 +12,7 @@ export const userApi = {
         return response.data;
     },
 
-    /** GET /users/names : returns just the id and name of every user (admins and lab members only) */
+    /** GET /users/names : returns the id, name, role and status of every user (admins and lab members only) */
     async getNames(): Promise<UserName[]> {
         const response = await axios.get<UserName[]>(`${baseURL}/${apis.USER}/names`);
         return response.data;

@@ -63,9 +63,8 @@ watch(
 // Datasets the viewer may manage: all for admins, otherwise only those they own
 const visibleDatasets = computed(() => datasetStore.datasets.filter((d) => permissionStore.canManage(d)));
 
-// Permission rows joined with user and dataset details, limited to the selected filters.
-// Rows of deactivated users are left out unless showInactive is on.
-// Admins see every permission; others only see permissions on the datasets they manage.
+// Permission rows joined with user and dataset details, limited to the selected filters
+// (deactivated users' rows only when showInactive is on; the store already limits non-admins to datasets they manage)
 const rows = computed(() => {
     return permissionStore.adminPermissions
         .filter(

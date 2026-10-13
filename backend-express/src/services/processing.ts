@@ -41,6 +41,7 @@ const terminate = (child: ChildProcess | null) => {
     setTimeout(() => child.kill("SIGKILL"), 10_000).unref();
 };
 
+// The job currently being worked on
 interface Running {
     datasetId: string;
     child: ChildProcess | null;
@@ -48,6 +49,7 @@ interface Running {
     stopped: boolean;
 }
 
+// Dataset ids waiting for their turn, and the one job running now (at most one)
 const queue: string[] = [];
 let running: Running | null = null;
 

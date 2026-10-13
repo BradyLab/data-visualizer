@@ -10,7 +10,7 @@ import { DatasetVisibility } from "@commons/dataset";
 // Router instance used for programmatic navigation
 const router = useRouter();
 
-// Auth store (only referenced by the commented-out welcome message in the template)
+// Auth store, used to show the New Dataset button (and by the commented-out welcome message in the template)
 const auth = useAuthStore();
 
 // Dataset store, loaded when the page opens so new or edited datasets show up

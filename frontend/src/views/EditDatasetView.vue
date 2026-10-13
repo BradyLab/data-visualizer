@@ -212,6 +212,7 @@ async function save() {
             const rds = firstFile(rdsFile.value);
             if (rds) await fileStore.uploadFile(saved.id, FileTypes.RDS, rds, rdsUpdates.value.trim());
             rdsFile.value = undefined;
+            rdsUpdates.value = "";
         } catch (err) {
             // Keep the user on the edit page of the saved dataset, with the files that did not upload still selected
             if (!isEdit.value) await router.replace(`/dataset/${saved.url}/edit`);

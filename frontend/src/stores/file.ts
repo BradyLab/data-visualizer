@@ -65,7 +65,8 @@ export const useFileStore = defineStore("file", () => {
             await fileApi.uploadFile(datasetId, type, file, updates, (fraction) => (progress.fraction = fraction));
             if (type === FileTypes.COVER) dropCover(datasetId);
         } finally {
-            uploading.value = null;
+            // Only clear our own entry: if a newer upload has replaced it, that one is still running and owns `uploading`
+            if (uploading.value === progress) uploading.value = null;
         }
     }
 

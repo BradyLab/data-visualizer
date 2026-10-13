@@ -32,6 +32,7 @@ const DATASET_FIELDS = [
 ] as const;
 // Same whitelist minus owner, which is set when the dataset is created and cannot be changed afterwards
 const DATASET_UPDATE_FIELDS = DATASET_FIELDS.filter((f) => f !== "owner");
+
 /** GET / : returns the datasets the caller may see (200); guests get only PUBLIC ones */
 export const list = async (req: Request, res: Response) => {
     console.log("[DATASET CONTROLLER] Attempting to list datasets...");
@@ -74,6 +75,9 @@ export const viewer = async (req: Request, res: Response) => {
     });
 };
 
+/** Datasets with a reprocess request in flight, so a concurrent request is rejected before the job is queued */
+const reprocessing = new Set<string>();
+
 /**
  * POST /:id/reprocess : rebuilds the plot data from the current RDS file, e.g. to retry after a failure (202 with the dataset, now PROCESSING).
  * Needs EDIT access (404 if not found or not visible, 403 otherwise); 409 if it is already being processed or has no data file yet
@@ -82,10 +86,18 @@ export const reprocess = async (req: Request, res: Response) => {
     console.log("[DATASET CONTROLLER] Attempting to reprocess dataset...");
     const found = await authorizeDataset(res, req.params.id as string, PermissionOptions.EDIT);
     if (!found) return;
-    if (processing.isBusy(found.dataset.id)) return res.status(409).json({ error: "This dataset is already being processed" });
-    if (!(await fileService.getCurrent(found.dataset.id, FileTypes.RDS)))
-        return res.status(409).json({ error: "This dataset has no data file yet" });
-    await processing.start(found.dataset.id);
+    const id = found.dataset.id;
+    // Claim the dataset synchronously: isBusy() only turns true after start()'s await, so concurrent requests could otherwise both pass it
+    if (reprocessing.has(id) || processing.isBusy(id))
+        return res.status(409).json({ error: "This dataset is already being processed" });
+    reprocessing.add(id);
+    try {
+        if (!(await fileService.getCurrent(id, FileTypes.RDS)))
+            return res.status(409).json({ error: "This dataset has no data file yet" });
+        await processing.start(id);
+    } finally {
+        reprocessing.delete(id);
+    }
     const updated = await service.getById(found.dataset.id);
     res.status(202).json(updated && (await service.withOwnerName([updated]))[0]);
 };

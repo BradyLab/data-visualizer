@@ -61,7 +61,7 @@ const pageActivities = computed(() => activityStore.activities.map((a) => ({ ...
 const page = ref(1);
 const itemsPerPage = ref(25);
 const loading = ref(false);
-// Counts requests so a slow, outdated response never overwrites a newer one
+// Counts requests so a slow, outdated response doesn't switch the loading flag off early
 let latestRequest = 0;
 
 // Loads the current page for the selected filters
@@ -91,8 +91,7 @@ watch(page, load);
 const expanded = ref<string[]>([]);
 const PREVIEW_LINES = 3;
 
-// Pretty-printed JSON for an activity's data
-// lineCount decides whether it is long enough to need the expand/collapse behaviour
+// Pretty-printed JSON for an activity's data; lineCount tells whether it is long enough to need expand/collapse
 const formatData = (data: Record<string, unknown>) => JSON.stringify(data, null, 2);
 const lineCount = (data: Record<string, unknown>) => formatData(data).split("\n").length;
 

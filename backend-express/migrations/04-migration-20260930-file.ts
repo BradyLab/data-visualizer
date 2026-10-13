@@ -92,7 +92,7 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
             name: "Files_dataset_id_type_version_unique",
         });
 
-        // At most one current version per dataset and type (partial unique index; the Files model does not declare it)
+        // At most one current version per dataset and type (partial unique index; the Files model declares the same one in its @Table indexes)
         await queryInterface.addIndex("Files", ["dataset_id", "type"], {
             unique: true,
             name: "Files_dataset_id_type_current_unique",

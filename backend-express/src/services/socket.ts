@@ -40,6 +40,7 @@ handshakeFailures.init({ windowMs: HANDSHAKE_WINDOW_MS } as Options);
 // setTimeout cannot wait longer than this (about 24.8 days); longer waits are done in steps
 const MAX_TIMER_MS = 2 ** 31 - 1;
 
+// Socket.IO server typed with the shared event maps and the per-socket data above
 type AppServer = Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
 
 // Not set until attachSocket runs, so the emit helpers do nothing when the app is built without a server (e.g. in tests)

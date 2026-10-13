@@ -1,11 +1,10 @@
 // Seeder 01: development seed data
-// Seeds the Users table with sample users (a lab member and an admin) for development
+// Seeds the Users table with sample users (a lab member, an admin and an external user) for development
 // Fields must match the Users migration/model; passwords are hashed before insert
 import { type QueryInterface, type Sequelize } from "sequelize";
 import { UserRoles, UserStatus } from "@commons/user.ts";
 import { hashPassword } from "@src/utils/password.ts";
 
-// Insert the sample users
 export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
     // Insert sample users with fixed ids so down() can remove exactly these rows
     await queryInterface.bulkInsert(
@@ -51,7 +50,11 @@ export async function down(queryInterface: QueryInterface, sequelize: Sequelize)
         "Users",
         {
             // Must list the same ids as up() so only the seeded rows are deleted
-            id: ["a63324c7-73a6-4093-9475-c271173a481d", "f81d4fae-7dec-11d0-a765-00a0c91e6bf6"],
+            id: [
+                "a63324c7-73a6-4093-9475-c271173a481d",
+                "f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+                "82d307ce-5f45-4404-b343-c64b2098e1a0",
+            ],
         },
         {}
     );

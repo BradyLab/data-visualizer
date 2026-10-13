@@ -26,7 +26,7 @@ import authRouter from "@src/routers/auth.ts";
 import { UniqueConstraintError, ValidationError, ForeignKeyConstraintError, DatabaseError } from "sequelize";
 
 // Port to listen on; falls back to 3001 if API_PORT is not set
-const PORT = process.env.API_PORT || 3001;
+const PORT = process.env.API_PORT;
 
 // Builds and configures the Express app (kept separate from start() so it can be reused, e.g. in tests)
 export const get = () => {
@@ -51,7 +51,7 @@ export const get = () => {
     if (!frontendUrl) throw new Error("FRONTEND_URL is not set; refusing to allow all cross-origin requests.");
     app.use(cors({ origin: frontendUrl }));
 
-    //health API call
+    // Health check (e.g. for Docker/load balancers); needs no login
     app.get("/health", (req: Request, res: Response) => {
         res.status(200).json({ status: "OK", timestamp: new Date() });
     });
@@ -131,8 +131,10 @@ export const start = async () => {
     // Node's defaults (5 minute request timeout, 2 minute socket timeout) would cut off a multi-GB upload in progress
     server.requestTimeout = 0;
     server.timeout = 0;
+    // A failed listen (e.g. EADDRINUSE) leaves the open DB pool keeping the process alive without serving, so exit
     server.on("error", (error: Error) => {
-        console.error("Error occurred: ", error.message);
+        console.error("[SERVER]: Error occurred:", error.message);
+        process.exit(1);
     });
 };
 

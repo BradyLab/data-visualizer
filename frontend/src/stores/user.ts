@@ -12,7 +12,7 @@ export const useUserStore = defineStore("user", () => {
     // Reactive state (cached list of all users, filled by fetchUsers)
     const users = ref<IUser[]>([]);
 
-    // Id/name pairs of every user, for pages that only need names and are open to non-admins (see fetchNames)
+    // Id, name, role and status of every user, for pages that only need names and are open to non-admins (see fetchNames)
     const names = ref<UserName[]>([]);
 
     /** Loads all users from the backend into the store (admins only) */
@@ -20,7 +20,7 @@ export const useUserStore = defineStore("user", () => {
         users.value = await userApi.getUsers();
     }
 
-    /** Loads just the id and name of every user (admins and lab members) */
+    /** Loads the id, name, role and status of every user (admins and lab members) */
     async function fetchNames() {
         names.value = await userApi.getNames();
     }
@@ -65,7 +65,7 @@ export const useUserStore = defineStore("user", () => {
         return user;
     }
 
-    // Note: editUser/removeUser only touch these local caches after the backend call succeeds
+    // Note: addUser/editUser/removeUser only touch these local caches after the backend call succeeds
     /** Deletes a user and removes it from the store */
     async function removeUser(id: string) {
         await userApi.deleteUser(id);

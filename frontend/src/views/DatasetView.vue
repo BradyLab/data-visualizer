@@ -156,7 +156,9 @@ watch(
         <v-row>
             <v-col>
                 <h1 class="text-h6 my-0 font-weight-bold">{{ datasetStore.currentDataset.name }}</h1>
-                <div class="text-body-small">Author: {{ datasetStore.currentDataset.ownerName }}</div>
+                <div class="text-body-small">
+                    Author: {{ datasetStore.currentDataset.ownerName ?? datasetStore.currentDataset.owner }}
+                </div>
             </v-col>
             <v-col cols="auto" class="d-flex align-center ga-2">
                 <v-btn
