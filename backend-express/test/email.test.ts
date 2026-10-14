@@ -37,12 +37,10 @@ test("sendInviteEmail posts the template variables and keys to EmailJS, with no 
     assert.equal(body.service_id, "test-EMAILJS_SERVICE_ID");
     assert.equal(body.accessToken, "test-EMAILJS_PRIVATE_KEY");
     assert.deepEqual(body.template_params, {
-        to_name: "New User",
-        to_email: "new@example.com",
-        invited_by_name: "Ada Admin",
-        invited_by_email: "ada@example.com",
-        login_url: "https://viz.example.com/login",
-        reply_to: "ada@example.com",
+        invitee_name: "New User",
+        invitee_email: "new@example.com",
+        admin_name: "Ada Admin",
+        admin_email: "ada@example.com",
     });
 });
 

@@ -5,7 +5,7 @@ import { DatasetVisibility, type IDataset } from '@commons/dataset.ts'
 import type { FileTypes, IFile } from '@commons/file.ts'
 import type { PermissionOptions } from '@commons/permissions.ts'
 import { UserStatus, type IUser, type UserRoles } from '@commons/user.ts'
-import { BACKEND_ENV, BACKEND_URL, FRONTEND_URL } from './stack.ts'
+import { BACKEND_URL, FRONTEND_URL } from './stack.ts'
 import { E2E_PASSWORD, USERS, type Role } from './users.ts'
 
 const API = `${BACKEND_URL}/api`
