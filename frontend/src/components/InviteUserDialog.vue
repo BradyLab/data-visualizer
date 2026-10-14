@@ -82,8 +82,7 @@ async function copyPassword() {
                     password below.
                 </v-alert>
                 <p class="mb-2">
-                    Give {{ invited.user.name }} this temporary password over a different channel than the email (chat, phone or
-                    in person). They must replace it the first time they log in. <strong>It will not be shown again.</strong>
+                    Give {{ invited.user.name }} this temporary password. They must replace it the first time they log in. <strong>It will not be shown again.</strong>
                 </p>
                 <v-text-field
                     :model-value="invited.temporaryPassword"

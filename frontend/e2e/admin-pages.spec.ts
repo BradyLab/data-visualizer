@@ -31,7 +31,7 @@ test.describe('user management', () => {
     await dialog.getByRole('textbox', { name: 'Email' }).fill(email)
     await dialog.getByRole('button', { name: 'Invite' }).click()
     // The temporary password is shown once, and the popup stays open until it is dismissed
-    await expect(dialog.getByLabel('Temporary password')).not.toBeEmpty()
+    await expect(dialog.getByRole('textbox', { name: 'Temporary password' })).toHaveValue(/^\S{12,}$/)
     await dialog.getByRole('button', { name: 'Done' }).click()
     await expect(dialog).toBeHidden()
     const row = await userRow(page, email)
