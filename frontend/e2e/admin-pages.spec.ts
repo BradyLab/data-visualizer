@@ -30,6 +30,9 @@ test.describe('user management', () => {
     await dialog.getByRole('textbox', { name: 'Name' }).fill(name)
     await dialog.getByRole('textbox', { name: 'Email' }).fill(email)
     await dialog.getByRole('button', { name: 'Invite' }).click()
+    // The temporary password is shown once, and the popup stays open until it is dismissed
+    await expect(dialog.getByLabel('Temporary password')).not.toBeEmpty()
+    await dialog.getByRole('button', { name: 'Done' }).click()
     await expect(dialog).toBeHidden()
     const row = await userRow(page, email)
     await expect(row).toContainText(name)
@@ -52,6 +55,7 @@ test.describe('user management', () => {
     await dialog.getByRole('textbox', { name: 'Name' }).fill('Listed once')
     await dialog.getByRole('textbox', { name: 'Email' }).fill(email)
     await dialog.getByRole('button', { name: 'Invite' }).click()
+    await dialog.getByRole('button', { name: 'Done' }).click()
     await expect(dialog).toBeHidden()
     // The table is paged and the new user lands on a later page once there are enough users, so go to the row first
     await expect(await userRow(page, email)).toHaveCount(1)

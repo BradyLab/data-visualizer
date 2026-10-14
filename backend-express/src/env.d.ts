@@ -14,8 +14,14 @@ declare global {
             DB_NAME: string;
             DB_USERNAME: string;
             DB_PASSWORD: string;
-            // Password given to newly invited users until they change it (forced on first login)
+            // Password given to seeded users until they change it (invited users get a random temporary password instead)
             DEFAULT_PASSWORD: string;
+            // EmailJS settings for the invite email (service and template IDs, public key, and the private key that allows server-side calls);
+            // invites are still created, but no email is sent, unless all four are set
+            EMAILJS_SERVICE_ID?: string;
+            EMAILJS_TEMPLATE_ID?: string;
+            EMAILJS_PUBLIC_KEY?: string;
+            EMAILJS_PRIVATE_KEY?: string;
             // Secret used to sign login tokens, and how long they last (e.g. "8h")
             JWT_SECRET: string;
             JWT_EXPIRES_IN?: string;

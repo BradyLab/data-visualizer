@@ -20,6 +20,7 @@ import {
 } from "@src/services/socket.ts";
 import { SessionRevokedReason } from "@commons/socket.ts";
 import { removeStored } from "@src/services/storage.ts";
+import { sendInviteEmail } from "@src/services/email.ts";
 
 // Columns clients may change on an existing user; the password is deliberately absent so it can only be
 // changed through POST /auth/change-password (which checks the old password)
@@ -55,7 +56,11 @@ export const get = async (req: Request, res: Response) => {
     res.status(200).json(item);
 };
 
-/** POST / : invites a user from {name, email, role} with INVITED status and the default password (201), or 400 if a field is missing or invalid */
+/**
+ * POST / : invites a user from {name, email, role} with INVITED status and a random temporary password, and emails them a login link (201).
+ * Returns { user, temporaryPassword, emailSent }: the password is shown to the inviting admin once, to pass on over another channel,
+ * and emailSent is false if the email was not configured or failed (the invite stands either way). 400 if a field is missing or invalid
+ */
 export const create = async (req: Request, res: Response) => {
     console.log("[USER CONTROLLER] Attempting to invite user...");
     const { name, role } = req.body ?? {};
@@ -63,10 +68,18 @@ export const create = async (req: Request, res: Response) => {
     if (typeof name !== "string" || !name.trim() || !email) return res.status(400).json({ error: "Name and email are required" });
     if (!EMAIL_FORMAT.test(email)) return res.status(400).json({ error: "Enter a valid email address" });
     if (!ASSIGNABLE_ROLES.includes(role)) return res.status(400).json({ error: "A valid role is required" });
-    const created = await service.create(pick<IUserPass>({ name: name.trim(), email, role }, ["email", "name", "role"] as const));
+    const { user: created, temporaryPassword } = await service.create(
+        pick<IUserPass>({ name: name.trim(), email, role }, ["email", "name", "role"] as const)
+    );
+    // The activity log and the websocket get the user only, never the temporary password
     await logActivity(res, ActivityType.INVITE_USER, toPlain(created));
     await emitUserChanged(created);
-    res.status(201).json(created);
+    const emailSent = await sendInviteEmail({
+        name: created.name,
+        email: created.email,
+        invitedBy: { name: res.locals.user.name, email: res.locals.user.email },
+    });
+    res.status(201).json({ user: created, temporaryPassword, emailSent });
 };
 
 /**
@@ -97,7 +110,7 @@ export const update = async (req: Request, res: Response) => {
         return res.status(404).json({ error: "User not found" });
     }
     // Status must be a real UserStatus; INVITED is only accepted as a no-op, since a user cannot be set back to INVITED
-    // (it means "still on the default password") and the edit dialog resends the current status of an invited user
+    // (it means "still on the temporary password") and the edit dialog resends the current status of an invited user
     if (
         fields.status !== undefined &&
         (!Object.values(UserStatus).includes(fields.status) ||

@@ -2,7 +2,7 @@
 import axios from "axios";
 import type { IUser } from "@commons/user";
 import { apis } from "@commons/general";
-import { type UpdateUserPayload, type InviteUserPayload, type UserName } from "@src/interfaces/user";
+import { type UpdateUserPayload, type InviteUserPayload, type InviteUserResult, type UserName } from "@src/interfaces/user";
 import { baseURL } from "@src/interfaces/general";
 
 export const userApi = {
@@ -24,9 +24,9 @@ export const userApi = {
         return response.data;
     },
 
-    /** POST /users : creates a user and returns it (name, email, role); the server sets status, which starts as INVITED */
-    async createUser(payload: InviteUserPayload): Promise<IUser> {
-        const response = await axios.post<IUser>(`${baseURL}/${apis.USER}`, payload);
+    /** POST /users : invites a user (name, email, role; the server sets status, which starts as INVITED) and returns it with its one-time temporary password */
+    async createUser(payload: InviteUserPayload): Promise<InviteUserResult> {
+        const response = await axios.post<InviteUserResult>(`${baseURL}/${apis.USER}`, payload);
         return response.data;
     },
 

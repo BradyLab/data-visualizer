@@ -3,7 +3,7 @@ import { Op } from "sequelize";
 import { Users, IUserPass } from "@src/models/user.ts";
 import { Permissions } from "@src/models/permission.ts";
 import { sequelize } from "@src/database.ts";
-import { hashPassword } from "@src/utils/password.ts";
+import { generatePassword, hashPassword } from "@src/utils/password.ts";
 import { PermissionOptions } from "@commons/permissions.ts";
 import { UserRoles, UserStatus } from "@commons/user.ts";
 
@@ -35,16 +35,16 @@ export const getById = (id: string) => {
 };
 
 /**
- * Invites a user: creates them with INVITED status and the default password from the DEFAULT_PASSWORD env var.
- * Returns the user without the password. Throws if DEFAULT_PASSWORD is not configured.
+ * Invites a user: creates them with INVITED status and a random temporary password, which is stored only as a hash.
+ * Returns the user without the password, and the temporary password in plain text; this is the only time it exists unhashed
  */
 export const create = async (data: Partial<IUserPass>) => {
     console.log("[USER SERVICE] Inviting user...");
-    const defaultPassword = process.env.DEFAULT_PASSWORD;
-    if (!defaultPassword) throw new Error("DEFAULT_PASSWORD is not set");
-    return toPublic(
-        await Users.create({ ...data, status: UserStatus.INVITED, password: await hashPassword(defaultPassword) } as IUserPass)
+    const temporaryPassword = generatePassword();
+    const user = toPublic(
+        await Users.create({ ...data, status: UserStatus.INVITED, password: await hashPassword(temporaryPassword) } as IUserPass)
     );
+    return { user, temporaryPassword };
 };
 
 /** True if some other ACTIVE admin exists, i.e. this user can lose admin access without locking everyone out */

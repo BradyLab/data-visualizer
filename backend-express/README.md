@@ -29,13 +29,26 @@ npm run dev               # tsx watch, http://localhost:3001
 | `API_PORT` | Port to listen on (default 3001) |
 | `BACKEND_URL` / `FRONTEND_URL` | Public URLs. `FRONTEND_URL` is the only CORS origin allowed; the server refuses to start without it |
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD` | PostgreSQL connection |
-| `DEFAULT_PASSWORD` | Password given to invited and seeded users until they change it |
+| `DEFAULT_PASSWORD` | Password given to seeded users until they change it (invited users get a random temporary password) |
+| `EMAILJS_SERVICE_ID`, `EMAILJS_TEMPLATE_ID`, `EMAILJS_PUBLIC_KEY`, `EMAILJS_PRIVATE_KEY` | Optional. [EmailJS](https://www.emailjs.com) settings for the invite email; all four are needed, otherwise no email is sent. See [Invite emails](#invite-emails) |
 | `JWT_SECRET` | Signing secret for login tokens; the server refuses to start without it |
 | `JWT_EXPIRES_IN` | Token lifetime, e.g. `8h` |
 | `UPLOAD_DIR` | Where uploads are stored (default `/data/uploads`); `rds/`, `cover/` and `tmp/` are created inside |
 | `UPLOAD_MAX_BYTES` | Largest accepted upload (default 30 GiB) |
 
 `.env.example` has working defaults for local development; change `JWT_SECRET` and `DEFAULT_PASSWORD` anywhere else.
+
+## Invite emails
+
+When an admin invites a user, the backend creates them with a random temporary password and emails them a link to the login page
+(`FRONTEND_URL/login`). The email never contains the password: it is shown to the inviting admin once, in the invite dialog, to pass on over
+another channel (chat, phone, in person). The response of `POST /users` is `{ user, temporaryPassword, emailSent }`; if sending fails or
+is not configured the invite still succeeds with `emailSent: false`, and the dialog tells the admin to send the link themselves.
+
+Setup in EmailJS: connect the mailbox to send from (use a lab-owned or shared one, not a personal account), create a template with the
+variables `to_name`, `to_email`, `invited_by_name`, `invited_by_email`, `login_url` (set its *To* field to `{{to_email}}` and *Reply To*
+to `{{reply_to}}`), enable *Allow EmailJS API for non-browser applications* under Security, and put the four IDs/keys in `.env`.
+If invites stop arriving, check that the mailbox connection in EmailJS is still authorised (a password or MFA change can revoke it).
 
 ## Scripts
 

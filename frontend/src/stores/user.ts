@@ -43,15 +43,16 @@ export const useUserStore = defineStore("user", () => {
         else names.value[i] = entry;
     }
 
-    /** Creates a user and adds it to the store */
+    /** Invites a user and adds it to the store; returns the invite result (including the one-time temporary password) for the caller to show */
     async function addUser(payload: InviteUserPayload) {
-        const user = await userApi.createUser(payload);
+        const result = await userApi.createUser(payload);
+        const { user } = result;
         // The server announces the new user over the websocket before it answers this request, so the user may already be here
         const i = users.value.findIndex((u) => u.id === user.id);
         if (i === -1) users.value.push(user);
         else users.value[i] = user;
         syncName(user);
-        return user;
+        return result;
     }
 
     /** Updates a user and replaces it in the store */

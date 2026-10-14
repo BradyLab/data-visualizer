@@ -26,7 +26,7 @@ Full documentation: [Google Doc](https://docs.google.com/document/d/1VB1B6OtJmUq
   Admins and the dataset's owner are `OWNER`; lab members get at least `DOWNLOAD` on everything; external users
   get what they were granted (capped at `DOWNLOAD`); everyone, guests included, can `VIEW` public datasets.
   The rules live in `backend-express/src/services/access.ts` and `commons/permissions.ts`.
-- **Accounts** are invite-only: an admin invites a user, who logs in with a default password and must change it first.
+- **Accounts** are invite-only: an admin invites a user, who gets a login link by email and a random temporary password from the admin (shown once, never emailed), and must change it on first login.
 - **Live updates:** the backend pushes changes (datasets, permissions, uploads, activity) to browsers over Socket.IO.
 - **Shared code:** both projects alias `@commons` to `commons/`, so API paths, enums and payload types are defined once.
 

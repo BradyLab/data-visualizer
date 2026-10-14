@@ -177,9 +177,6 @@ export const gotoLive = async (page: Page, url: string) => {
   await list
 }
 
-/** The password a newly invited user starts with (DEFAULT_PASSWORD of the e2e backend) */
-export const DEFAULT_PASSWORD = BACKEND_ENV.DEFAULT_PASSWORD
-
 /** A user created by a spec, with the password they can currently log in with */
 export interface TestUser extends Session {
   email: string
@@ -187,19 +184,19 @@ export interface TestUser extends Session {
 }
 
 /**
- * Invites a user with a unique email (status INVITED, on the default password). Specs that change users create their own,
+ * Invites a user with a unique email (status INVITED, on the random temporary password the invite returns). Specs that change users create their own,
  * so the seeded accounts, whose saved logins every other spec uses, are never touched
  */
 export const inviteUser = async (request: APIRequestContext, admin: Session, role: UserRoles, name = `E2E ${uid()}`): Promise<TestUser> => {
   const email = `e2e-${uid()}@e2e.test`
   const created = await request.post(`${API}/users`, { headers: bearer(admin), data: { name, email, role } })
   expect(created.status(), 'invite user').toBe(201)
-  const user: IUser = await created.json()
-  // Invited users can log in, but the API refuses most calls until they change the default password
-  const response = await request.post(`${API}/auth/login`, { data: { email, password: DEFAULT_PASSWORD } })
+  const { user, temporaryPassword } = (await created.json()) as { user: IUser; temporaryPassword: string }
+  // Invited users can log in, but the API refuses most calls until they change the temporary password
+  const response = await request.post(`${API}/auth/login`, { data: { email, password: temporaryPassword } })
   expect(response.ok(), 'login of invited user').toBeTruthy()
   const { token } = (await response.json()) as Session
-  return { token, user, email, password: DEFAULT_PASSWORD }
+  return { token, user, email, password: temporaryPassword }
 }
 
 /** Changes the password of the session's user and returns the session with the fresh token (older tokens stop working) */

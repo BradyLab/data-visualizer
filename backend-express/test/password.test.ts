@@ -2,7 +2,7 @@
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
 import jwt from "jsonwebtoken";
-import { hashPassword } from "@src/utils/password.ts";
+import { generatePassword, hashPassword } from "@src/utils/password.ts";
 import {
     passwordVersion,
     signToken,
@@ -63,4 +63,11 @@ test("download token round-trips file and user", () => {
 test("login and download tokens are not interchangeable", () => {
     assert.equal(verifyDownloadToken(signToken("u", "h")), null);
     assert.equal(verifyToken(signDownloadToken("f", "u")), null);
+});
+
+test("generatePassword returns the requested length from the unambiguous alphabet, and differs each time", () => {
+    const a = generatePassword();
+    assert.match(a, /^[A-HJ-NP-Za-km-z2-9]{16}$/);
+    assert.equal(generatePassword(24).length, 24);
+    assert.notEqual(a, generatePassword());
 });

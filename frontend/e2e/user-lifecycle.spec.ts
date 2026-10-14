@@ -6,7 +6,6 @@ import {
   changePassword,
   createDataset,
   deleteUser,
-  DEFAULT_PASSWORD,
   inviteUser,
   login,
   tryLogin,
@@ -24,20 +23,20 @@ test.describe('first login', () => {
   // Both tests check that a refused password fails to log in, which counts toward the address's limit
   test.afterEach(resetRateLimits)
 
-  test('an invited user must replace the default password, then is active', async ({ page, request }) => {
+  test('an invited user must replace the temporary password, then is active', async ({ page, request }) => {
     const admin = await login(request, 'admin')
     const invited = await inviteUser(request, admin, UserRoles.EXTERNAL)
 
     await page.goto('/login')
-    await submitLogin(page, invited.email, DEFAULT_PASSWORD)
+    await submitLogin(page, invited.email, invited.password)
     // Invited users are sent to settings, where the change-password dialog cannot be dismissed
     await expect(page).toHaveURL(/\/settings$/)
     const dialog = page.getByRole('dialog')
     await expect(dialog.getByText('Change Password')).toBeVisible()
     await expect(dialog.getByRole('button', { name: 'Cancel' })).toHaveCount(0)
 
-    // The default password cannot be kept as the "new" one, and the new one must be long enough
-    await dialog.getByLabel('Old password').fill(DEFAULT_PASSWORD)
+    // The new password must be long enough
+    await dialog.getByLabel('Old password').fill(invited.password)
     await dialog.getByLabel('New password', { exact: true }).fill('short')
     await dialog.getByLabel('Confirm new password').fill('short')
     await dialog.getByRole('button', { name: 'Change' }).click()
@@ -54,7 +53,7 @@ test.describe('first login', () => {
     await page.goto('/home')
     await expect(page).toHaveURL(/\/home$/)
     expect((await tryLogin(request, invited.email, newPassword)).status()).toBe(200)
-    expect((await tryLogin(request, invited.email, DEFAULT_PASSWORD)).status()).toBe(401)
+    expect((await tryLogin(request, invited.email, invited.password)).status()).toBe(401)
     const me = await (await tryLogin(request, invited.email, newPassword)).json()
     expect(me.user.status).toBe(UserStatus.ACTIVE)
   })
