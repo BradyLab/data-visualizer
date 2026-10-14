@@ -3,11 +3,11 @@
 Single-page web app for browsing and managing Brady Lab single cell RNA-seq datasets.
 
 Stack: Vue 3 (`<script setup>`, TypeScript), Vite, Vuetify 4, Pinia, Vue Router, axios, `socket.io-client`,
-`tus-js-client` (resumable uploads), Playwright for e2e tests.
+`tus-js-client` (resumable uploads), Vitest + Vue Test Utils for unit tests, Playwright for e2e tests.
 
 ## Running locally
 
-Requires Node 24 (24.12+; the version in `.nvmrc`) and a running backend (see [`../backend-express`](../backend-express/README.md)).
+Requires Node 24 (24.12+, below 25; the version in `.nvmrc`) and a running backend (see [`../backend-express`](../backend-express/README.md)).
 
 ```sh
 cp .env.example .env
@@ -28,6 +28,7 @@ Or use `docker compose up` from the repo root to start everything.
 | `npm run type-check` | Type-check only |
 | `npm run lint` | oxlint and ESLint with auto-fix |
 | `npm run format` | Prettier on `src/` and `../commons` |
+| `npm run test:unit` / `test:unit:watch` | Vitest unit and component tests (jsdom) in `src/__tests__/` |
 | `npm run test:e2e` | Playwright tests (starts and wipes a throwaway Postgres) |
 | `npm run test:e2e:fast` | Same, but starts the servers itself; see [`e2e/README.md`](e2e/README.md) |
 
@@ -62,6 +63,7 @@ The router guard only improves navigation; the backend enforces all access rules
 
 ## Things worth knowing
 
+- **Plot viewer:** the dataset page shows the dataset's processing `status`. When `READY`, **Generate Plots** asks the backend for a short-lived viewer ticket and shows the Shiny app in an iframe; while `PROCESSING` or `FAILED` it shows a message, and editors get a **Try again** button. Needs the Shiny service running (see [`../shiny/README.md`](../shiny/README.md)).
 - **Live updates:** the `socket` store connects to the backend's Socket.IO server after login and updates the other stores when datasets, permissions, files, users or activity change, so no manual refresh is needed. Event types are in `../commons/socket.ts`.
 - **Uploads** use tus, so a large `.rds` upload can resume after a dropped connection. File downloads use a short-lived token from the backend so the browser can download directly.
 - **Session:** if the saved login can't be verified because the server is down, the app keeps the token and shows a banner offering a reload instead of logging the user out.

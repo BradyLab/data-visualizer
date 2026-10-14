@@ -9,7 +9,7 @@ Playwright drives the real app against a real backend and a throwaway Postgres. 
 | `npm run test:e2e:fast` | Starts the database, backend and a production build of the frontend itself, runs the tests, stops everything. Extra arguments go to Playwright (`-- --headed -g "login"`). `E2E_DEV=1` uses the Vite dev server instead. |
 | `npm run test:e2e` | Same through Playwright's own `webServer` config (also what CI uses). On some WSL2 setups it waits ~2 minutes per server because connecting to a closed localhost port hangs; use `test:e2e:fast` there. |
 
-Firefox and WebKit run only with `E2E_ALL_BROWSERS=1` (or on CI). Runs are headless; add `--headed` to watch (`npm run test:e2e:fast -- --headed`).
+Locally at most 4 workers run at once (`E2E_WORKERS=n` overrides this), so machines with little RAM do not time out. Firefox and WebKit run only with `E2E_ALL_BROWSERS=1` (or on CI). Runs are headless; add `--headed` to watch (`npm run test:e2e:fast -- --headed`).
 
 ## The stack
 
