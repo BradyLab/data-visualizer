@@ -54,7 +54,9 @@ function navTo(route: string) {
                                 Attribution: {{ dataset.attribution }}
                             </div>
                         </v-card-subtitle>
-                        <v-card-text v-if="dataset.description" class="px-0 py-2">{{ dataset.description }}</v-card-text>
+                        <v-card-text v-if="dataset.description" class="px-0 py-2">
+                            <div style="display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden">{{ dataset.description }}</div>
+                        </v-card-text>
                     </v-card-item>
                 </v-card>
             </v-col>
