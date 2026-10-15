@@ -52,14 +52,35 @@ One folder per dataset, `<PARQUET_DIR>/<dataset uuid>/` (`data/parquet/` in the 
 Planned additions (not produced yet): cluster markers, PCA loadings/variance.
 The original `.rds` stays in `data/uploads/rds` for downloads; the Parquet is derived and can be rebuilt.
 
+## Plots
+
+The **Pick your plots** box in the viewer chooses which plots show (applied with **Update plots**). It starts with just the UMAP (or the first plot the dataset offers, if it does not offer that) and only offers what the dataset offers.
+
+| Plot | What it shows |
+| --- | --- |
+| `UMAP`, `PCA` | cells (PC1 vs PC2 for PCA) colored by the cell labels (or **Group by**), or one expression panel per picked gene; **Split by** draws a panel per value of a column |
+| `ViolinPlot` | expression of each picked gene per cluster |
+| `DotPlot` | per gene and cluster: dot size = % of cells expressing, color = scaled average expression |
+| `Heatmap` | like Seurat's `DoHeatmap`: a column per cell, grouped by cell label under a colored bar, a row per picked gene, drawing the object's `scale.data` (clipped to ±2.5, colored magenta, black, yellow across the drawn range) with a gap between groups, one heatmap per **Group by** column (titled by the column when there are several); genes missing from it are z-scored across the drawn cells; above 20,000 cells a random sample is drawn |
+
+**Cell labels:** cells are labeled by `seurat_annotations` (cell type names) when `cells.parquet` has that column, else by `seurat_clusters`. The cell type picker, the colors and the violin/dot/heat plots all use those labels.
+
+**Group by / Split by** (in the options row above **Update plots**, like Seurat's `group.by` / `split.by`; Group by shows with the UMAP, PCA or heatmap, Split by with the UMAP or PCA) list the text, logical and cluster columns with at most 50 values. Group by takes several columns, each drawn as its own chart (up to 8, titled by the column; default: the cell labels, also used when it is emptied). It does not apply to gene panels, as in `FeaturePlot`. Split by draws one panel per value (without genes, each group in each panel gets its own color and label, e.g. `B_CTRL` and `B_STIM`; colors run through the first panel's groups, then the next panel's), or, with genes picked, genes down and values across.
+
+The dataset page always sends `?treatments=<JSON array>` with every treatment of the dataset. There is no treatment picker: when that list is not empty and the data has a treatment column, every plot keeps only cells whose value in that column is one of those treatments (the names must match exactly). The column is the one named by the `TREATMENT_COLUMN` environment variable, else the first column called `treatment`, `treatments`, `condition` or `orig.ident` (any case), else the first whose name contains "treat" or "condition". If there are treatments but no column is found, the viewer lists the available columns.
+
+**Chart width** (slider in the options row above **Update plots**, 300-1200 px, applies right away) sets the width of every chart; it starts at 600, and picking the violin plot, the dot plot, the heatmap or a **Split by** column sets it to 1200 (move it afterwards if you like). Charts flow left to right and wrap, so when they are narrow enough several sit side by side (the plots you picked, and the group by charts of the UMAP and PCA); a chart is never wider than the page.
+
+The violin, dot and heat maps need at least one gene picked. UMAP, PCA and violin draw a panel per gene, so they show only the first 10 picked genes (a note under the plot says so); the dot plot and heatmap show all picked genes. `TissuePlot` is not drawn yet.
+
 ## Try it
 
 The Shiny port is not published, so `localhost:3838` does not work with a plain `docker compose up`. Go through the app, as users do:
 
 1. `docker compose up` (needs `SHINY_URL` and `SHINY_SECRET`, which compose sets for the backend and the `shiny` service), log in at http://localhost:3000, open a dataset.
 2. Click **Generate Plots**. The frontend asks the backend for a viewer ticket and shows the Shiny app in an iframe.
-3. Click **Generate plots** inside the iframe: a "Hey, this works!" box shows the dataset id, access level, offered plots and cell
-   count, plus a UMAP if `data/parquet/<dataset uuid>/cells.parquet` exists.
+3. The UMAP, colored by the cell labels, is drawn as soon as the viewer loads. Optionally pick genes in **Pick your genes** (searchable, one UMAP panel per gene, up to 10, needs `genes.parquet` and `expression.parquet`) instead of coloring by the cell labels; **Pick your cell types** keeps only the chosen labels. Clear a picker to undo it.
+4. Click **Update plots** inside the iframe to apply the pickers (the pickers, **Group by**, **Split by** and **Label clusters** all wait for the button; only **Chart width** applies right away).
 
 Running the backend outside Docker: add `SHINY_URL=http://localhost:3838` and `SHINY_SECRET=<same as the shiny container>` to `backend-express/.env` and publish the port
 (`docker compose run --rm -p 3838:3838 shiny`); without it the viewer answers 503. Shiny alone (dev only, `SHINY_DEV=1` is set in

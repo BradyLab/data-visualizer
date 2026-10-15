@@ -20,7 +20,6 @@ import {
     viewerEnabled,
     verifyViewerSession,
     verifyViewerTicket,
-    type ViewerContext,
 } from "@src/services/viewer.ts";
 
 /** URL prefix the proxy answers on; the next segment is the dataset's url slug */

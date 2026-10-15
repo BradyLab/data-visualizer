@@ -1,7 +1,7 @@
 <script setup lang="ts">
-// Dataset page view: shows a dataset from the backend (found by the url slug in the route) and lets viewers pick treatments and plots.
-// Gene and cell type selection and plot generation are still static placeholders.
-import { computed, ref, watch } from "vue";
+// Dataset page view: shows a dataset from the backend (found by the url slug in the route) and opens the Shiny plot viewer for it,
+// where the plots, genes and cell types are picked.
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import axios from "axios";
 import { useRoute, useRouter } from "vue-router";
 import { useFileStore } from "@src/stores/file";
@@ -23,22 +23,30 @@ const fileStore = useFileStore();
 const loading = ref(true);
 const error = ref<string | null>(null);
 
-// Treatments and plots the viewer has ticked (nothing starts selected)
-const selectedTreatments = ref<string[]>([]);
-const selectedPlots = ref<string[]>([]);
-
 // Shiny viewer: its iframe URL (null until Generate Plots is clicked) and the state of the ticket request
 const viewerUrl = ref<string | null>(null);
 const viewerLoading = ref(false);
 
+// The viewer reports how tall its content is (postMessage) so the iframe grows to fit it; only messages from our own iframe count
+const viewerFrame = ref<HTMLIFrameElement | null>(null);
+const viewerHeight = ref<number | null>(null);
+function onViewerMessage(event: MessageEvent) {
+    const data = event.data;
+    if (!viewerFrame.value || event.source !== viewerFrame.value.contentWindow) return;
+    if (data?.type === "viewer-height" && typeof data.height === "number" && Number.isFinite(data.height)) {
+        viewerHeight.value = Math.min(Math.max(Math.round(data.height), 300), 6000);
+    }
+}
+onMounted(() => window.addEventListener("message", onViewerMessage));
+onBeforeUnmount(() => window.removeEventListener("message", onViewerMessage));
+
 // Asks the backend for a viewer ticket and points the iframe at it. A fresh ticket is fetched on every click (it only lives about a minute),
-// and the ticked plots are passed along; the viewer narrows them to the plots the dataset offers
+// and every treatment of the dataset is passed along (the viewer only draws cells of those treatments)
 async function generatePlots() {
     error.value = null;
     viewerLoading.value = true;
     try {
-        const params: Record<string, string> = {};
-        if (selectedPlots.value.length) params.plots = selectedPlots.value.join(",");
+        const params = { treatments: JSON.stringify(datasetStore.currentDataset!.treatments) };
         viewerUrl.value = await datasetApi.getViewerUrl(datasetStore.currentDataset!.id, params);
     } catch (err) {
         error.value =
@@ -113,6 +121,7 @@ watch(
         loading.value = true;
         error.value = null;
         viewerUrl.value = null;
+        viewerHeight.value = null;
         // Clear the previous dataset so a stale one is not shown while loading
         datasetStore.currentDataset = null;
         try {
@@ -127,8 +136,6 @@ watch(
                     : Promise.resolve(),
             ]);
             if (!isLatest()) return;
-            selectedTreatments.value = [];
-            selectedPlots.value = [];
             if (!found) error.value = "Dataset not found";
             else if (permissionsFailed)
                 error.value = "Unable to load your permissions, so some actions may be missing. Reload to try again.";
@@ -142,14 +149,14 @@ watch(
 );
 </script>
 
-<!-- Dataset page: name, description, treatments and plots come from the backend; genes and cell types are still placeholders -->
+<!-- Dataset page: name, description and status come from the backend; the plots are drawn by the Shiny viewer below -->
 <template>
     <!-- Not loaded yet: spinner while loading, otherwise the error -->
     <v-container v-if="!datasetStore.currentDataset" class="px-12">
         <v-progress-circular v-if="loading" indeterminate></v-progress-circular>
         <v-alert v-else type="error" variant="tonal">{{ error }}</v-alert>
     </v-container>
-    <v-container v-else class="px-12">
+    <div v-else class="px-5 mx-5 justify-center">
         <!-- Download or load errors that appear after the page loaded -->
         <v-alert v-if="error" type="error" variant="tonal" closable class="mb-4" @click:close="error = null">{{ error }}</v-alert>
         <!-- Title, DOI, and action buttons -->
@@ -192,64 +199,6 @@ watch(
         <!-- Dataset description -->
         <v-row class="text-body-large">{{ datasetStore.currentDataset.description }}</v-row>
 
-        <!-- Gene selector (multi-select with removable chips) -->
-        <v-row class="text-body-medium mx-4">Pick Your Genes</v-row>
-        <v-combobox
-            :items="['Gene 1', 'Gene 2', 'Gene 3']"
-            :model-value="['Gene 1', 'Gene 2']"
-            multiple
-            chips
-            closable-chips
-            density="comfortable"
-            prepend-inner-icon="mdi-magnify"
-            hide-details
-            class="mb-4 mx-4"
-        ></v-combobox>
-
-        <!-- Cell type selector (multi-select with removable chips) -->
-        <div class="text-body-medium mb-1 mx-4">Pick Your Cell Types</div>
-        <v-combobox
-            :items="['Cell Type 1', 'Cell Type 2', 'Cell Type 3']"
-            :model-value="['Cell Type 1', 'Cell Type 2']"
-            multiple
-            chips
-            closable-chips
-            density="comfortable"
-            prepend-inner-icon="mdi-magnify"
-            hide-details
-            class="mb-6 mx-4"
-        ></v-combobox>
-
-        <!-- Treatment and plot checkboxes, side by side on wider screens -->
-        <v-row class="mx-4">
-            <v-col cols="12" md="6">
-                <div class="text-body-medium mb-1">Pick Your Treatments</div>
-                <v-checkbox
-                    v-for="treatment in datasetStore.currentDataset.treatments"
-                    :key="treatment"
-                    v-model="selectedTreatments"
-                    :value="treatment"
-                    :label="treatment"
-                    color="primary"
-                    density="compact"
-                    hide-details
-                ></v-checkbox>
-            </v-col>
-            <v-col cols="12" md="6">
-                <div class="text-body-medium mb-1">Pick Your Plots</div>
-                <v-checkbox
-                    v-for="plot in datasetStore.currentDataset.plots"
-                    :key="plot"
-                    v-model="selectedPlots"
-                    :value="plot"
-                    :label="plot"
-                    color="primary"
-                    density="compact"
-                    hide-details
-                ></v-checkbox>
-            </v-col>
-        </v-row>
-
         <!-- Plot data status: the plots can only be shown once the uploaded data file has been processed -->
         <v-alert v-if="datasetStore.currentDataset.status === DatasetStatus.PROCESSING" type="info" variant="tonal" class="mt-6">
             The data for this dataset is being processed. Plots will be available when that is done.
@@ -269,26 +218,28 @@ watch(
             </template>
         </v-alert>
 
-        <!-- Button that opens the Shiny viewer with the selected plots -->
+        <!-- Button that opens the Shiny viewer for this dataset -->
         <div class="d-flex justify-center mt-6">
-            <v-btn color="primary" :disabled="!plotsReady" :loading="viewerLoading" @click="generatePlots">Generate Plots</v-btn>
+            <v-btn v-if="!viewerUrl" color="primary" :disabled="!plotsReady" :loading="viewerLoading" @click="generatePlots">Generate Plots</v-btn>
         </div>
 
         <!-- Interactive plots from the Shiny app; it is only reachable through the backend, which checks the viewer's access -->
         <iframe
             v-if="viewerUrl && plotsReady"
+            ref="viewerFrame"
             :src="viewerUrl"
+            :style="viewerHeight ? { height: `${viewerHeight}px` } : undefined"
             title="Interactive plots"
             class="viewer-frame mt-6"
             referrerpolicy="same-origin"
         ></iframe>
-    </v-container>
+    </div>
 </template>
 
 <style scoped>
 .viewer-frame {
     width: 100%;
-    height: 80vh;
+    height: 600px; /* until the viewer reports its content height */
     border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
     border-radius: 4px;
 }
