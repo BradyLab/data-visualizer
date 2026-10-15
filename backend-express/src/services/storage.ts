@@ -75,8 +75,3 @@ export const removeParquet = async (datasetId: string) => {
 
 /** Deletes only the half-built folder a failed preprocessing run leaves next to the dataset's Parquet folder, never the published data */
 export const removeParquetTmp = (datasetId: string) => rm(`${parquetPath(datasetId)}.tmp`, { recursive: true, force: true });
-
-/** Deletes a leftover temporary upload (e.g. one that failed validation) */
-export const discard = async (tmpPath: string) => {
-    await rm(tmpPath, { force: true });
-};

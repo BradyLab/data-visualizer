@@ -1,7 +1,7 @@
 // Routes for authentication, mounted at /auth in index.ts
 import { Router } from "express";
 import * as controller from "@src/controllers/auth.ts";
-import { requireAuth, requireAuthAllowInvited } from "@src/middleware/auth.ts";
+import { requireAuthAllowInvited } from "@src/middleware/auth.ts";
 import { changePasswordLimiter, loginAccountLimiter, loginIpLimiter } from "@src/middleware/rateLimit.ts";
 
 // Express router for the authentication endpoints

@@ -1,5 +1,5 @@
 // Dataset access rules: combines the caller's role (UserRoles) with their per-dataset permission (PermissionOptions)
-import { Request, Response } from "express";
+import { Response } from "express";
 import { Datasets } from "@src/models/dataset.ts";
 import { Permissions } from "@src/models/permission.ts";
 import { Users } from "@src/models/user.ts";

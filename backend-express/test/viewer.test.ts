@@ -1,5 +1,5 @@
 // Unit tests for the viewer ticket/session tokens (services/viewer) and the cookie/URL helpers of middleware/shinyProxy
-import { test, beforeEach, afterEach, mock } from "node:test";
+import { test, afterEach, mock } from "node:test";
 import assert from "node:assert/strict";
 import jwt from "jsonwebtoken";
 import {

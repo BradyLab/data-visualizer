@@ -20,7 +20,7 @@ import { emitDatasetUpdated } from "@src/services/socket.ts";
 import * as storage from "@src/services/storage.ts";
 import { runSpooled } from "@src/services/processingSpool.ts";
 
-// Program and script that do the conversion (see shiny/preprocess/README); the defaults suit a checkout of this repository
+// Program and script that do the conversion (see shiny/README); the defaults suit a checkout of this repository
 const command = () => process.env.PREPROCESS_COMMAND || "Rscript";
 const script = () => process.env.PREPROCESS_SCRIPT || path.resolve(import.meta.dirname, "../../../shiny/preprocess/preprocess.R");
 // A job that runs longer than this is killed and the dataset marked FAILED (default 6 hours)
