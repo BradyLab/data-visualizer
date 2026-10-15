@@ -3,7 +3,7 @@
 Interactive plots for one dataset, shown in an iframe on the dataset page. The Shiny server is private: the Express backend proxies
 `/shiny/<dataset slug>/...` to it after checking the viewer ticket/cookie and the dataset permissions
 (`backend-express/src/middleware/shinyProxy.ts`), and tells the app who is asking through trusted headers
-(dataset id, access level, offered plots). Shiny Server does not hand request headers to the app, so Express signs them into
+(dataset id, offered plots). Shiny Server does not hand request headers to the app, so Express signs them into
 `?ctx=<payload>.<hmac>` in the iframe URL with `SHINY_SECRET` (set the same value for Express and Shiny); the app verifies it.
 
 - `app/` the Shiny app (served by Shiny Server at `/app/`). No Seurat: it reads Parquet through DuckDB.

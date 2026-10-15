@@ -27,6 +27,8 @@ declare global {
             JWT_EXPIRES_IN?: string;
             // Folder for uploaded files (rds/ and cover/ are created inside it)
             UPLOAD_DIR: string;
+            // Largest accepted upload in bytes (default 30 GiB)
+            UPLOAD_MAX_BYTES?: string;
             // Internal URL of the Shiny server that /shiny proxies to (e.g. http://shiny:3838); the viewer is disabled when unset
             SHINY_URL?: string;
             // Secret shared with the Shiny app (SHINY_SECRET there too) to sign the viewer context it trusts; the viewer is disabled when unset

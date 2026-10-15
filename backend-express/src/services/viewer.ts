@@ -23,17 +23,16 @@ const sessionTtl = () => (process.env.VIEWER_SESSION_EXPIRES_IN ?? "1h") as NonN
 export const viewerEnabled = () => Boolean(process.env.SHINY_URL && process.env.SHINY_SECRET);
 
 /**
- * Signs what the Shiny app may know about the viewer: the dataset id, the caller's access level and the plots the dataset offers.
+ * Signs what the Shiny app may know about the viewer: the dataset id and the plots the dataset offers.
  * Shiny Server does not hand request headers or query strings to the R app, so the identity cannot travel as trusted headers.
  * It goes in the iframe URL instead (?ctx=...), where the browser can read it but cannot change it: the value is
  * `<base64url JSON>.<hex HMAC-SHA256>` made with SHINY_SECRET, which only Express and Shiny know, and the R app verifies it.
  * It expires with the viewer session
  */
-export const signShinyContext = ({ dataset, access }: Pick<ViewerContext, "dataset" | "access">) => {
+export const signShinyContext = ({ dataset }: Pick<ViewerContext, "dataset">) => {
     const payload = Buffer.from(
         JSON.stringify({
             dataset_id: dataset.id,
-            access,
             plots: dataset.plots ?? [],
             exp: Math.floor(Date.now() / 1000) + sessionMaxAgeSeconds(),
         })

@@ -2,7 +2,7 @@
 #
 # Who may see what is decided by Express, which proxies requests here only for permitted users. Shiny Server does not pass request
 # headers to the app, so Express puts a signed context in the iframe URL (?ctx=<base64url JSON>.<hex HMAC-SHA256>, made with the
-# SHINY_SECRET shared with Express): the dataset id, the viewer's access level and the plots the dataset offers. The signature means
+# SHINY_SECRET shared with Express): the dataset id and the plots the dataset offers. The signature means
 # the browser can read it but not change it, so a viewer cannot switch to another dataset by editing the URL.
 # For local development without the proxy, set SHINY_DEV=1 to also accept ?dataset=<uuid> in the URL.
 library(shiny)
@@ -40,14 +40,14 @@ verify_context <- function(token) {
   payload
 }
 
-# Who is looking at what: list(dataset_id, access, plots) from the signed ctx in the URL, or NULL if there is none that is valid.
-# With SHINY_DEV=1 a bare ?dataset=<uuid> is accepted too (no access level, every plot)
+# Who is looking at what: list(dataset_id, plots) from the signed ctx in the URL, or NULL if there is none that is valid.
+# With SHINY_DEV=1 a bare ?dataset=<uuid> is accepted too (every plot)
 viewer_context <- function(query) {
   payload <- verify_context(query$ctx)
   if (!is.null(payload)) {
-    return(list(dataset_id = payload$dataset_id, access = payload$access, plots = as.character(unlist(payload$plots))))
+    return(list(dataset_id = payload$dataset_id, plots = as.character(unlist(payload$plots))))
   }
-  if (DEV && !is.null(query$dataset)) return(list(dataset_id = query$dataset, access = "DEV", plots = character()))
+  if (DEV && !is.null(query$dataset)) return(list(dataset_id = query$dataset, plots = character()))
   NULL
 }
 

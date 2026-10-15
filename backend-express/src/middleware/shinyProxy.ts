@@ -4,7 +4,7 @@
 //
 // The viewer URL first arrives with ?viewer_ticket=<ticket> (see POST /datasets/:id/viewer); the ticket is swapped for an HttpOnly cookie
 // scoped to this dataset's path and the browser is redirected to the same URL without it, plus ?ctx=<signed context> that tells the
-// Shiny app which dataset it is showing and what the viewer may do (Shiny Server drops request headers, so it cannot be a header). HTTP requests and WebSocket upgrades
+// Shiny app which dataset it is showing and which plots it offers (Shiny Server drops request headers, so it cannot be a header). HTTP requests and WebSocket upgrades
 // are then authorized from the cookie. WebSocket upgrades never pass through Express middleware, so index.ts must call
 // handleShinyUpgrade itself; the proxy is created without `ws: true` precisely because that option would subscribe an
 // unauthenticated upgrade handler of its own
