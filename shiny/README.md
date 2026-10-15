@@ -46,8 +46,10 @@ One folder per dataset, `<PARQUET_DIR>/<dataset uuid>/` (`data/parquet/` in the 
 | `cells.parquet` | `barcode`, `umap_1`, `umap_2`, `pca_1`..`pca_10`, then every metadata column of the object |
 | `genes.parquet` | `gene_idx` (0-based), `gene`, `is_variable` |
 | `expression.parquet` | `gene_idx`, `cell_idx` (0-based row of `cells.parquet`), `value`; non-zero entries only, sorted by `gene_idx` |
+| `column_levels.parquet` | `column`, `level_idx` (0-based), `level`: the level order of every factor column of the metadata, which the viewer uses to order cell labels, legends, panels and heatmap groups (other values are sorted; datasets without the file are sorted) |
+| `scale_data.parquet` | `gene_idx`, `cell_idx`, `value` (float32): the assay's `scale.data` (usually the variable features only), dense, sorted by `gene_idx`; not written when the object has none |
 
-Planned additions (not produced yet): cluster markers, PCA loadings/variance, scaled variable-feature data for heatmaps.
+Planned additions (not produced yet): cluster markers, PCA loadings/variance.
 The original `.rds` stays in `data/uploads/rds` for downloads; the Parquet is derived and can be rebuilt.
 
 ## Try it
