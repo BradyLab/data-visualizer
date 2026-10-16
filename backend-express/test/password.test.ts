@@ -46,6 +46,18 @@ test("signToken throws without JWT_SECRET", () => {
     }
 });
 
+test("verifying throws without JWT_SECRET instead of calling every token invalid", () => {
+    const secret = process.env.JWT_SECRET;
+    const token = signToken("u", "h");
+    delete (process.env as Record<string, string | undefined>).JWT_SECRET;
+    try {
+        assert.throws(() => verifyToken(token), /JWT_SECRET/);
+        assert.throws(() => verifyDownloadToken(token), /JWT_SECRET/);
+    } finally {
+        process.env.JWT_SECRET = secret;
+    }
+});
+
 test("verifyToken rejects garbage, wrong secrets and expired tokens", () => {
     assert.equal(verifyToken("not-a-token"), null);
     assert.equal(verifyToken(jwt.sign({ id: "u", pv: "p" }, "other-secret")), null);

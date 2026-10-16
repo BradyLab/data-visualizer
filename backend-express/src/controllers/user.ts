@@ -109,14 +109,17 @@ export const update = async (req: Request, res: Response) => {
         console.log("[USER CONTROLLER] User not found");
         return res.status(404).json({ error: "User not found" });
     }
-    // Status must be a real UserStatus; INVITED is only accepted as a no-op, since a user cannot be set back to INVITED
-    // (it means "still on the temporary password") and the edit dialog resends the current status of an invited user
+    // Status must be a real UserStatus. An INVITED user stays INVITED until they change the temporary password themselves (that is what
+    // makes them ACTIVE, see controllers/auth.ts), so an admin cannot activate them, and INVITED is only accepted as a no-op
+    // (the edit dialog resends the current status of an invited user)
     if (
         fields.status !== undefined &&
         (!Object.values(UserStatus).includes(fields.status) ||
             (fields.status === UserStatus.INVITED && target.status !== UserStatus.INVITED))
     )
         return res.status(400).json({ error: "A valid status is required" });
+    if (fields.status === UserStatus.ACTIVE && target.status === UserStatus.INVITED)
+        return res.status(400).json({ error: "An invited user becomes active by changing their temporary password" });
     // The router lets non-admins through only for their own record; they may not change anything but the name
     // fields.email was cleaned (trimmed, lowercased) above, so the stored email is cleaned the same way to compare like with like
     if (res.locals.user.role !== UserRoles.ADMIN) {
@@ -125,21 +128,22 @@ export const update = async (req: Request, res: Response) => {
         if (Object.entries(restricted).some(([key, value]) => current[key as keyof typeof current] !== value))
             return res.status(403).json({ error: "Forbidden" });
     }
-    const losesAdmin =
-        target.role === UserRoles.ADMIN &&
-        target.status === UserStatus.ACTIVE &&
-        ((fields.role !== undefined && fields.role !== UserRoles.ADMIN) || fields.status === UserStatus.INACTIVE);
-    if (losesAdmin && !(await service.hasOtherActiveAdmin(id)))
-        return res.status(409).json({ error: "There must be at least one active admin" });
     // Becoming EXTERNAL downgrades the user's EDIT permissions (see service.update); remember which rows so they can be announced
     const downgrading =
         fields.role === UserRoles.EXTERNAL && target.role !== UserRoles.EXTERNAL
             ? (await permissionService.getAll({ user_id: id })).filter((p) => p.perm === PermissionOptions.EDIT)
             : [];
-    const updated = await service.update(id, fields);
+    // The service refuses, atomically, a change that would leave no active admin
+    let updated: Awaited<ReturnType<typeof service.update>>;
+    try {
+        updated = await service.update(id, fields);
+    } catch (err) {
+        if (err instanceof service.LastAdminError) return res.status(409).json({ error: err.message });
+        throw err;
+    }
     // One entry per request: a status change takes the more specific type, other changed fields ride along in the same entry
     const changes = updated && diff(target, updated, UPDATE_FIELDS);
-    if (changes) {
+    if (updated && changes) {
         const status = changes.status;
         const type =
             status?.after === UserStatus.INACTIVE
@@ -173,9 +177,6 @@ export const remove = async (req: Request, res: Response) => {
         console.log("[USER CONTROLLER] User not found");
         return res.status(404).json({ error: "User not found" });
     }
-    // Only an active admin counts toward the "at least one active admin" rule, so removing an inactive one is always safe
-    if (target.role === UserRoles.ADMIN && target.status === UserStatus.ACTIVE && !(await service.hasOtherActiveAdmin(id)))
-        return res.status(409).json({ error: "There must be at least one active admin" });
     if (await datasetService.countOwnedBy(id))
         return res.status(409).json({ error: "This user owns datasets; reassign them first or deactivate the user instead" });
     const deleted = toPlain(target);
@@ -183,7 +184,13 @@ export const remove = async (req: Request, res: Response) => {
     const files = await fileService.getByUser(id);
     // Their permissions are deleted with them, so announce those rows as removed once the delete went through
     const permissions = await permissionService.getAll({ user_id: id });
-    await service.remove(id);
+    // The service refuses, atomically, to delete the last active admin
+    try {
+        await service.remove(id);
+    } catch (err) {
+        if (err instanceof service.LastAdminError) return res.status(409).json({ error: err.message });
+        throw err;
+    }
     await removeStored(files);
     await logActivity(res, ActivityType.USER_DELETED, deleted);
     await emitUserDeleted(id);

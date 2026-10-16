@@ -57,7 +57,14 @@ export const useSocketStore = defineStore("socket", () => {
         next.on("connect_error", (err) => console.warn("[SOCKET] Connection failed:", err.message));
         // One forwarder for every event instead of one listener per event name
         next.onAny((event: SocketEvent, ...args: unknown[]) => {
-            handlers.get(event)?.forEach((handler) => (handler as (...a: unknown[]) => void)(...args));
+            // A handler that throws must not keep the others (other stores listening to the same event) from running
+            handlers.get(event)?.forEach((handler) => {
+                try {
+                    (handler as (...a: unknown[]) => void)(...args);
+                } catch (err) {
+                    console.error(`[SOCKET] A handler for ${event} failed:`, err);
+                }
+            });
         });
         socket = next;
     }

@@ -39,6 +39,32 @@ const lastLines = (log: string) =>
         .slice(-3)
         .join(" ");
 
+// Jobs the backend stopped waiting for while the worker had not confirmed the cancel (job id -> spool folder). The worker may still be
+// running them, so the next job must not be submitted until they are gone: it would otherwise sit in pending past the pickup timeout
+// (reported as "no worker") and two runs could write the same output folder
+const abandoned = new Map<string, string>();
+
+// Waits (at most limitMs, in case the worker died with the job) until the worker has finished every abandoned job of this spool folder,
+// then removes the files the worker left for them
+const waitForAbandoned = async (spool: string, job: Stoppable, limitMs: number) => {
+    const deadline = Date.now() + limitMs;
+    for (;;) {
+        for (const [id, folder] of abandoned) {
+            if (folder !== spool || (await read(path.join(spool, "running", `${id}.job`))) !== null) continue;
+            abandoned.delete(id);
+            await Promise.all(
+                [
+                    path.join(spool, "done", `${id}.status`),
+                    path.join(spool, "done", `${id}.log`),
+                    path.join(spool, "cancel", id),
+                ].map((f) => rm(f, { force: true }))
+            );
+        }
+        if (![...abandoned.values()].includes(spool) || job.stopped || Date.now() > deadline) return;
+        await sleep(POLL_MS);
+    }
+};
+
 /** Submits a job and waits for the worker's verdict. Never rejects; limitMs is the time allowed once the worker has started it */
 export const runSpooled = async (
     spool: string,
@@ -47,6 +73,7 @@ export const runSpooled = async (
     output: string,
     limitMs: number
 ): Promise<JobResult> => {
+    await waitForAbandoned(spool, job, limitMs);
     const id = randomUUID();
     const file = (dir: string, name: string) => path.join(spool, dir, name);
     try {
@@ -62,6 +89,7 @@ export const runSpooled = async (
     let startedAt: number | null = null; // when the worker was first seen running it
     let cancelAskedAt: number | null = null;
     let timedOut = false;
+    let gaveUp = false; // stopped waiting for a worker that had not confirmed the cancel
     const stoppedMessage = "Processing was stopped";
     try {
         for (;;) {
@@ -96,26 +124,25 @@ export const runSpooled = async (
                     await writeFile(file("cancel", id), "").catch(() => {});
                 }
                 // The worker did not confirm the cancel: stop waiting for it
-                if (cancelAskedAt !== null && Date.now() - cancelAskedAt > CANCEL_GRACE_MS)
+                // (the job is remembered in `abandoned`, see above, since the worker may still be running it)
+                if (cancelAskedAt !== null && Date.now() - cancelAskedAt > CANCEL_GRACE_MS) {
+                    gaveUp = true;
+                    abandoned.set(id, spool);
                     return {
                         ok: false,
                         message: timedOut
                             ? `Processing took longer than ${Math.round(limitMs / 60000)} minutes and was stopped`
                             : stoppedMessage,
                     };
+                }
             }
             await sleep(POLL_MS);
         }
     } finally {
-        // Whatever happened, leave no trace in the shared folder (a job nobody picked up must not run later either)
-        await Promise.all(
-            [
-                file("pending", `${id}.job`),
-                file("pending", `${id}.tmp`),
-                file("done", `${id}.status`),
-                file("done", `${id}.log`),
-                file("cancel", id),
-            ].map((f) => rm(f, { force: true }))
-        );
+        // Whatever happened, leave no trace in the shared folder (a job nobody picked up must not run later either).
+        // A job the worker may still be running keeps its cancel marker and result files; waitForAbandoned removes them once it is gone
+        const files = [file("pending", `${id}.job`), file("pending", `${id}.tmp`)];
+        if (!gaveUp) files.push(file("done", `${id}.status`), file("done", `${id}.log`), file("cancel", id));
+        await Promise.all(files.map((f) => rm(f, { force: true })));
     }
 };

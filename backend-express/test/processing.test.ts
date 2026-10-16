@@ -272,3 +272,11 @@ test("worker.sh refuses paths outside the upload and parquet folders", async () 
         delete process.env.PREPROCESS_SPOOL_DIR;
     }
 });
+
+test("redactPaths cuts absolute paths down to their last part and leaves the rest of the message", () => {
+    assert.equal(
+        processing.redactPaths("Error: cannot open '/data/uploads/rds/abc_RDS_v1.rds': No such file (also /data/parquet/abc.tmp)"),
+        "Error: cannot open '.../abc_RDS_v1.rds': No such file (also .../abc.tmp)"
+    );
+    assert.equal(processing.redactPaths("took 3/4 of the time, see /tmp"), "took 3/4 of the time, see /tmp");
+});

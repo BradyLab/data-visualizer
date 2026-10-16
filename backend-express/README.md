@@ -26,9 +26,9 @@ npm run dev               # tsx watch, http://localhost:3001
 
 | Variable | Meaning |
 | --- | --- |
-| `API_PORT` | Port to listen on (default 3001) |
+| `API_PORT` | Port to listen on (required, no default; `.env.example` uses 3001) |
 | `BACKEND_URL` / `FRONTEND_URL` | Public URLs. `FRONTEND_URL` is the only CORS origin allowed; the server refuses to start without it |
-| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD` | PostgreSQL connection |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD` | PostgreSQL connection (all required) |
 | `DEFAULT_PASSWORD` | Password given to seeded users until they change it (invited users get a random temporary password) |
 | `EMAILJS_SERVICE_ID`, `EMAILJS_TEMPLATE_ID`, `EMAILJS_PUBLIC_KEY`, `EMAILJS_PRIVATE_KEY` | Optional. [EmailJS](https://www.emailjs.com) settings for the invite email; all four are needed, otherwise no email is sent. See [Invite emails](#invite-emails) |
 | `JWT_SECRET` | Signing secret for login tokens; the server refuses to start without it |
@@ -41,6 +41,8 @@ npm run dev               # tsx watch, http://localhost:3001
 | `PREPROCESS_COMMAND`, `PREPROCESS_SCRIPT`, `PREPROCESS_TIMEOUT_MS` | Run the R job on this machine: program (default `Rscript`), script (default `shiny/preprocess/preprocess.R`) and time limit (default 6 h) |
 | `PREPROCESS_SPOOL_DIR` | Instead hand jobs to the `preprocess` worker container through this shared folder (`/data/jobs` in Docker). `PREPROCESS_PICKUP_TIMEOUT_MS` and `PREPROCESS_POLL_MS` tune how long a job may wait and how often it is checked |
 
+The server refuses to start, listing what is missing, if `API_PORT`, any `DB_*` setting or `JWT_SECRET` is unset (or a port is not a number).
+
 `.env.example` has working defaults for local development; change `JWT_SECRET` and `DEFAULT_PASSWORD` anywhere else.
 
 ## Invite emails
@@ -51,8 +53,8 @@ another channel (chat, phone, in person). The response of `POST /users` is `{ us
 is not configured the invite still succeeds with `emailSent: false`, and the dialog tells the admin to send the link themselves.
 
 Setup in EmailJS: connect the mailbox to send from (use a lab-owned or shared one, not a personal account), create a template with the
-variables `to_name`, `to_email`, `invited_by_name`, `invited_by_email`, `login_url` (set its *To* field to `{{to_email}}` and *Reply To*
-to `{{reply_to}}`), enable *Allow EmailJS API for non-browser applications* under Security, and put the four IDs/keys in `.env`.
+variables `invitee_name`, `invitee_email`, `admin_name`, `admin_email`, `login_url` (`FRONTEND_URL/login`), `reply_to` (the admin's email)
+(set its *To* field to `{{invitee_email}}` and *Reply To* to `{{reply_to}}`), enable *Allow EmailJS API for non-browser applications* under Security, and put the four IDs/keys in `.env`.
 If invites stop arriving, check that the mailbox connection in EmailJS is still authorised (a password or MFA change can revoke it).
 
 ## Scripts
@@ -62,7 +64,7 @@ If invites stop arriving, check that the mailbox connection in EmailJS is still 
 | `dev` | Run with file watching |
 | `test` | Run the unit tests |
 | `build` / `start` | Compile with `tsc` / run `dist/index.js` |
-| `db:migrate`, `db:migrate:undo` | Apply / revert the latest migration (Sequelize CLI) |
+| `db:migrate`, `db:migrate:undo` | Apply all pending migrations / revert the latest one (Sequelize CLI) |
 | `db:seed` | Seed development users (`seeders/`) |
 | `db:seed:e2e`, `e2e:start` | Seed and start for the Playwright tests (`seeders-e2e/`); used by the frontend e2e setup |
 | `format`, `format:check` | Prettier |

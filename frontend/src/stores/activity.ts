@@ -1,5 +1,5 @@
 // Pinia store holding the activity log and wrapping the activity API calls
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import { defineStore } from "pinia";
 import type { IActivity } from "@commons/activity";
 import { activityApi, type ActivityQuery } from "@src/api/activity";
@@ -38,7 +38,8 @@ export const useActivityStore = defineStore("activity", () => {
     // A new activity was logged (admins only). If the admin is looking at a list it belongs to, it counts toward the total, and on
     // the first page (newest first) it is shown right away; on later pages it only changes the page count, so the rows don't shift under the reader
     // The per-user list follows the same rule: a new activity of that user appears at the top of its first page
-    useSocketStore().on(SocketEvent.ACTIVITY_CREATED, ({ activity }) => {
+    const socket = useSocketStore();
+    socket.on(SocketEvent.ACTIVITY_CREATED, ({ activity }) => {
         const own = lastUserQuery;
         if (
             own &&
@@ -55,6 +56,15 @@ export const useActivityStore = defineStore("activity", () => {
         total.value++;
         if (query.offset === 0) activities.value = [activity, ...activities.value].slice(0, query.limit);
     });
+
+    // After a reconnect, reload whichever lists were loaded to catch activities logged while offline
+    watch(
+        () => socket.reconnects,
+        () => {
+            if (lastQuery) fetchActivities(lastQuery).catch(() => {});
+            if (lastUserQuery) fetchByUser(lastUserQuery.userId, lastUserQuery.page).catch(() => {});
+        }
+    );
 
     return { activities, userActivities, total, fetchActivities, fetchByUser, getById };
 });

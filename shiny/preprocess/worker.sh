@@ -65,6 +65,13 @@ while true; do
     while kill -0 "$pid" 2> /dev/null; do
         if [ -e "$SPOOL/cancel/$id" ]; then
             kill "$pid" 2> /dev/null
+            # R can ignore SIGTERM while it is busy; wait up to 10 seconds, then kill it, so the worker is free for the next job
+            n=0
+            while kill -0 "$pid" 2> /dev/null && [ "$n" -lt 10 ]; do
+                sleep 1
+                n=$((n + 1))
+            done
+            kill -9 "$pid" 2> /dev/null
             break
         fi
         sleep 1

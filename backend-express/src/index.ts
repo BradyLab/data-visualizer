@@ -25,8 +25,11 @@ import authRouter from "@src/routers/auth.ts";
 
 import { UniqueConstraintError, ValidationError, ForeignKeyConstraintError, DatabaseError } from "sequelize";
 
-// Port to listen on; falls back to 3001 if API_PORT is not set
+// Port to listen on (API_PORT; there is no default, and start() refuses to run without it)
 const PORT = process.env.API_PORT;
+
+// Settings the server cannot run without (FRONTEND_URL is checked in get())
+const REQUIRED_ENV = ["API_PORT", "DB_HOST", "DB_PORT", "DB_NAME", "DB_USERNAME", "DB_PASSWORD", "JWT_SECRET"] as const;
 
 // Builds and configures the Express app (kept separate from start() so it can be reused, e.g. in tests)
 export const get = () => {
@@ -84,13 +87,19 @@ export const get = () => {
 
 // Connects to the database and starts the HTTP server (the schema is managed by migrations, not sequelize.sync())
 export const start = async () => {
-    const app = get();
-
-    // Refuse to start without a signing secret, since every login would otherwise fail (see signToken in services/auth.ts)
-    if (!process.env.JWT_SECRET) {
-        console.error("[SERVER]: JWT_SECRET is not set; refusing to start.");
+    // Refuse to start with missing settings, reporting all of them at once instead of failing later and obscurely
+    // (JWT_SECRET: every login would fail, see signToken in services/auth.ts; API_PORT: listen() would pick a random port)
+    const missing = REQUIRED_ENV.filter((name) => !process.env[name]);
+    const notNumbers = ["API_PORT", "DB_PORT"].filter(
+        (name) => process.env[name] && !Number.isInteger(Number(process.env[name]))
+    );
+    if (missing.length || notNumbers.length) {
+        if (missing.length) console.error(`[SERVER]: Missing environment variables: ${missing.join(", ")}; refusing to start.`);
+        if (notNumbers.length) console.error(`[SERVER]: Not a valid port number: ${notNumbers.join(", ")}; refusing to start.`);
         process.exit(1);
     }
+
+    const app = get();
 
     try {
         await sequelize.authenticate();

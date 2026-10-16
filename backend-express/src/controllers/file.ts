@@ -11,6 +11,7 @@ import { Users } from "@src/models/user.ts";
 import { ActivityType } from "@commons/activity.ts";
 import { FileTypes } from "@commons/file.ts";
 import * as storage from "@src/services/storage.ts";
+import * as processing from "@src/services/processing.ts";
 import { emitFileRemoved } from "@src/services/socket.ts";
 import { signDownloadToken, verifyDownloadToken } from "@src/services/auth.ts";
 
@@ -80,6 +81,8 @@ export const remove = async (req: Request, res: Response) => {
     if (!file) return;
     await service.remove(file.id);
     await storage.removeStored([file]);
+    // The plot data was built from the current RDS, so without it the viewer must close and the Parquet must go
+    if (file.type === FileTypes.RDS && file.isCurrent) await processing.reset(file.dataset_id);
     await logActivity(res, ActivityType.FILE_DELETED, toPlain(file));
     await emitFileRemoved(file);
     res.status(204).send();

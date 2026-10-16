@@ -22,7 +22,7 @@ export const isEmailConfigured = () =>
 /**
  * Emails the invited user a link to the login page. Returns true if EmailJS accepted it, false if email is not configured or sending failed;
  * it never throws, because the user already exists by the time it is called and a failed email must not fail the invite.
- * The EmailJS template should use the variables to_name, to_email, invited_by_name, invited_by_email, login_url and reply_to
+ * The EmailJS template can use the variables invitee_name, invitee_email, admin_name, admin_email
  */
 export const sendInviteEmail = async ({ name, email, invitedBy }: InviteEmail) => {
     if (!isEmailConfigured()) {

@@ -62,6 +62,13 @@ async function generatePlots() {
 
 // Plots can only be shown once the server has built the plot data from the uploaded file
 const plotsReady = computed(() => datasetStore.currentDataset?.status === DatasetStatus.READY);
+// If the plot data stops being ready (e.g. a new upload is processed) the viewer closes (the backend ends its access too); forget its URL
+// so the Generate Plots button comes back and a fresh ticket is requested once the data is ready again
+watch(plotsReady, (ready) => {
+    if (ready) return;
+    viewerUrl.value = null;
+    viewerHeight.value = null;
+});
 const reprocessing = ref(false);
 
 // Asks the server to rebuild the plot data (after a failure); the status then follows the live updates
@@ -220,7 +227,9 @@ watch(
 
         <!-- Button that opens the Shiny viewer for this dataset -->
         <div class="d-flex justify-center mt-6">
-            <v-btn v-if="!viewerUrl" color="primary" :disabled="!plotsReady" :loading="viewerLoading" @click="generatePlots">Generate Plots</v-btn>
+            <v-btn v-if="!viewerUrl" color="primary" :disabled="!plotsReady" :loading="viewerLoading" @click="generatePlots"
+                >Generate Plots</v-btn
+            >
         </div>
 
         <!-- Interactive plots from the Shiny app; it is only reachable through the backend, which checks the viewer's access -->
@@ -242,17 +251,5 @@ watch(
     height: 600px; /* until the viewer reports its content height */
     border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
     border-radius: 4px;
-}
-/* Shrink the checkboxes to make the option lists more compact (:deep is needed to style Vuetify's inner elements) */
-:deep(.v-checkbox .v-selection-control) {
-    --v-input-control-height: 28px;
-    --v-selection-control-size: 20px;
-    min-height: 28px;
-}
-:deep(.v-checkbox .v-icon) {
-    font-size: 18px;
-}
-:deep(.v-checkbox .v-label) {
-    font-size: 0.8125rem;
 }
 </style>

@@ -61,6 +61,8 @@ const pageActivities = computed(() => activityStore.activities.map((a) => ({ ...
 const page = ref(1);
 const itemsPerPage = ref(25);
 const loading = ref(false);
+// Why the last load failed (null when it worked); shown above the table
+const error = ref<string | null>(null);
 // Counts requests so a slow, outdated response doesn't switch the loading flag off early
 let latestRequest = 0;
 
@@ -68,6 +70,7 @@ let latestRequest = 0;
 async function load() {
     const request = ++latestRequest;
     loading.value = true;
+    error.value = null;
     try {
         await activityStore.fetchActivities({
             user_id: userFilter.value,
@@ -75,6 +78,9 @@ async function load() {
             limit: itemsPerPage.value,
             offset: (page.value - 1) * itemsPerPage.value,
         });
+    } catch {
+        // Only the latest request may report, so a slow failed one doesn't hide the result of a newer one
+        if (request === latestRequest) error.value = "Unable to load the activity log. Please try again.";
     } finally {
         if (request === latestRequest) loading.value = false;
     }
@@ -101,7 +107,13 @@ function toggleExpanded(id: string) {
 }
 
 // Load the first page (and users, for the filter names); the router guard keeps everyone but admins off this page
-onMounted(() => Promise.all([load(), userStore.fetchUsers()]));
+// (load() reports its own failure; without the users the table still works, with ids in place of names)
+onMounted(() => {
+    void load();
+    userStore.fetchUsers().catch(() => {
+        error.value ??= "Unable to load the user names; users are shown by id.";
+    });
+});
 </script>
 
 <template>
@@ -109,6 +121,8 @@ onMounted(() => Promise.all([load(), userStore.fetchUsers()]));
         <div class="d-flex align-center mb-4">
             <h1 class="text-h6 font-weight-bold">ACTIVITY LOGS</h1>
         </div>
+
+        <v-alert v-if="error" type="error" variant="tonal" closable class="mb-4" @click:close="error = null">{{ error }}</v-alert>
 
         <!-- Filter menu: each item opens a submenu of values; picking one sets the filter and shows a chip -->
         <v-row class="align-center mb-2">

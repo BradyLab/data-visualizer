@@ -367,7 +367,6 @@ async function save() {
                 :multiple="false"
                 hide-details
             ></v-file-upload>
-            <!-- <v-btn color="primary" prepend-icon="mdi-upload">Upload .rds file</v-btn> -->
         </v-row>
         <!-- What changed since the previous version of the .rds file (logged with the file upload) -->
         <v-row v-if="firstFile(rdsFile)" class="text-body-medium mb-1 mx-4">Updates</v-row>

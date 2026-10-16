@@ -16,7 +16,9 @@ export const getById = (user_id: string, dataset_id: string) => {
     return Permissions.findOne({ where: { user_id, dataset_id } });
 };
 
-// Creates a permission; fails on the composite primary key if the user already has one for this dataset (deleted rows are gone for good)
+// Creates a permission (the controller has already checked that the level suits the user's role: EXTERNAL users never get EDIT, and
+// user.update downgrades existing EDIT rows when a user becomes EXTERNAL; getAccess caps EXTERNAL at DOWNLOAD as a last resort).
+// Fails on the composite primary key if the user already has one for this dataset (deleted rows are gone for good)
 export const create = async (data: Partial<IPermission>) => {
     console.log("[PERMISSION SERVICE] Creating permission...");
     return Permissions.create(data as IPermission);

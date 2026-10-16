@@ -37,7 +37,12 @@ const filteredUsers = computed(() =>
 );
 
 // Load the users (the router guard keeps everyone but admins off this page)
-onMounted(() => userStore.fetchUsers());
+const error = ref<string | null>(null);
+onMounted(() => {
+    userStore.fetchUsers().catch(() => {
+        error.value = "Unable to load the users. Please try again.";
+    });
+});
 
 // User currently being edited in the popup
 // (the dialog stays mounted and receives the selected user as a prop)
@@ -74,6 +79,8 @@ function inviteUser() {
         <div class="d-flex align-center mb-4">
             <h1 class="text-h6 font-weight-bold">USER MANAGEMENT</h1>
         </div>
+
+        <v-alert v-if="error" type="error" variant="tonal" closable class="mb-4" @click:close="error = null">{{ error }}</v-alert>
 
         <v-row class="align-center mb-2">
             <!-- Filter menu: each item opens a submenu of values; picking one sets the filter and shows a chip -->

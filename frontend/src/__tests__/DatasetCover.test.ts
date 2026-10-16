@@ -8,7 +8,8 @@ import { useFileStore } from "@src/stores/file";
 import { fileApi } from "@src/api/file";
 
 vi.mock("@src/api/file", () => ({ fileApi: { getCover: vi.fn() } }));
-vi.mock("@src/stores/socket", () => ({ useSocketStore: () => ({ on: vi.fn(), off: vi.fn(), socket: null }) }));
+// TODOB04: this mock has off() and socket, which the real socket store does not expose (it returns connected, socketId, reconnects, connect, disconnect, on)
+vi.mock("@src/stores/socket", () => ({ useSocketStore: () => ({ on: vi.fn(), socket: null }) }));
 
 // ResizeObserver is missing in jsdom and v-img uses it
 vi.stubGlobal(

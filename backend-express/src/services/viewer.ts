@@ -7,6 +7,7 @@ import jwt from "jsonwebtoken";
 import { Datasets } from "@src/models/dataset.ts";
 import { Users } from "@src/models/user.ts";
 import { getAccess, hasAccess, type Access } from "@src/services/access.ts";
+import { jwtSecret } from "@src/services/auth.ts";
 import { getByUrl } from "@src/services/dataset.ts";
 import { PermissionOptions } from "@commons/permissions.ts";
 import { DatasetStatus } from "@commons/dataset.ts";
@@ -48,8 +49,7 @@ export const sessionMaxAgeSeconds = () => {
 
 // Signs a viewer token of the given kind (typ) for a dataset and user (null = guest)
 const sign = (typ: string, expiresIn: NonNullable<jwt.SignOptions["expiresIn"]>, datasetId: string, userId: string | null) => {
-    if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET is not set");
-    return jwt.sign({ typ, dataset_id: datasetId, user_id: userId }, process.env.JWT_SECRET, { expiresIn });
+    return jwt.sign({ typ, dataset_id: datasetId, user_id: userId }, jwtSecret(), { expiresIn });
 };
 
 /** Signs the short-lived ticket (60s by default) handed to the frontend; the caller must already have checked VIEW access. userId is null for a guest */
@@ -60,8 +60,9 @@ export const signViewerSession = (datasetId: string, userId: string | null) => s
 
 // The dataset and user ids in a valid, unexpired token of the given kind, or null
 const verify = (token: string, typ: string) => {
+    const secret = jwtSecret(); // outside the try: a missing secret must not look like an invalid token
     try {
-        const p = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ["HS256"] }) as {
+        const p = jwt.verify(token, secret, { algorithms: ["HS256"] }) as {
             typ?: string;
             dataset_id?: unknown;
             user_id?: unknown;

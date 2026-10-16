@@ -30,22 +30,24 @@ const verifyPassword = async (password: string, stored: string) => {
 // Hash (a promise, since hashing is async) of a throwaway password, checked when the email is unknown so login takes about as long as for a real account
 const DUMMY_HASH = hashPassword("not-a-real-password");
 
+/** The secret that signs every token. Throws if it is not set, so a missing secret is reported as such instead of making every token look invalid (start() also refuses to run without it) */
+export const jwtSecret = () => {
+    if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET is not set");
+    return process.env.JWT_SECRET;
+};
+
 /** Signs a token for the user id, bound to their current stored password hash; lifetime comes from JWT_EXPIRES_IN (default 8h), signed with JWT_SECRET. Throws if JWT_SECRET is not set */
 export const signToken = (id: string, storedPassword: string) => {
     const expiresIn = (process.env.JWT_EXPIRES_IN ?? "8h") as NonNullable<jwt.SignOptions["expiresIn"]>;
-    // Fail loudly: returning undefined here would let login() answer 200 with no token
-    if (!process.env.JWT_SECRET) {
-        console.error("[AUTH SERVICE] JWT_SECRET not set");
-        throw new Error("JWT_SECRET is not set");
-    }
-    return jwt.sign({ id, pv: passwordVersion(storedPassword) } satisfies TokenPayload, process.env.JWT_SECRET, { expiresIn });
+    return jwt.sign({ id, pv: passwordVersion(storedPassword) } satisfies TokenPayload, jwtSecret(), { expiresIn });
 };
 
 /** Returns the id, password fingerprint and expiry (seconds since the epoch, if the token has one) in a valid login token, or null if the token is invalid, expired, or not a login token */
 export const verifyToken = (token: string) => {
+    const secret = jwtSecret(); // outside the try: a missing secret must not look like an invalid token
     try {
         // Pin the algorithm (jwt.sign defaults to HS256) so a token signed with any other one is rejected
-        const { id, pv, exp } = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ["HS256"] }) as Partial<TokenPayload> & {
+        const { id, pv, exp } = jwt.verify(token, secret, { algorithms: ["HS256"] }) as Partial<TokenPayload> & {
             exp?: number;
         };
         return id && pv ? { id, pv, exp } : null;
@@ -65,16 +67,16 @@ const DOWNLOAD_TOKEN_TTL = "6h";
  * The token names the user it was issued to, so the content route can re-check that user's account and access when the link is used
  */
 export const signDownloadToken = (fileId: string, userId: string) => {
-    if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET is not set");
-    return jwt.sign({ file: fileId, user: userId, purpose: "download" }, process.env.JWT_SECRET, {
+    return jwt.sign({ file: fileId, user: userId, purpose: "download" }, jwtSecret(), {
         expiresIn: DOWNLOAD_TOKEN_TTL,
     });
 };
 
 /** Returns the file id and issuing user id in a valid download token, or null (login tokens are not download tokens and vice versa) */
 export const verifyDownloadToken = (token: string) => {
+    const secret = jwtSecret();
     try {
-        const payload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ["HS256"] }) as {
+        const payload = jwt.verify(token, secret, { algorithms: ["HS256"] }) as {
             file?: string;
             user?: string;
             purpose?: string;

@@ -47,7 +47,7 @@ export const useAuthStore = defineStore("auth", () => {
     // so this stays false if restore() failed with the token kept; an expired token is caught by the 401 handler below
     const isLoggedIn = computed(() => !!token.value && !!user.value.id);
 
-    //misc information to avoid recalculations
+    // Role flags derived from the user, cached as computeds
     const isAdmin = computed(() => user.value.role === UserRoles.ADMIN);
     // Admins and lab members may create datasets (the same roles the owner dropdown offers)
     const canCreateDatasets = computed(() => isAdmin.value || user.value.role === UserRoles.LAB_MEMBER);

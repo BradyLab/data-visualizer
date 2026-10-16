@@ -4,7 +4,7 @@
 <template>
     <v-col cols="auto"> | </v-col>
     <v-col cols="auto" class="cursor-pointer">
-        <RouterLink to="/about" class="text-text" :class="{ 'text-decoration-none': true }">ABOUT</RouterLink>
+        <RouterLink to="/about" class="text-text text-decoration-none">ABOUT</RouterLink>
     </v-col>
     <v-col cols="auto"> | </v-col>
     <!-- TODO FEEDBACK does not link anywhere yet, make similar to about -->

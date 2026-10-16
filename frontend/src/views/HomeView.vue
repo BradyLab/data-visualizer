@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Home page view: lists all datasets as clickable cards
-import { onMounted } from "vue";
+import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import DatasetCover from "@src/components/DatasetCover.vue";
 import { useAuthStore } from "@src/stores/auth";
@@ -15,9 +15,14 @@ const auth = useAuthStore();
 
 // Dataset store, loaded when the page opens so new or edited datasets show up
 const datasetStore = useDatasetStore();
+// True once the list has loaded, so the "no datasets" banner doesn't flash while loading or appear when the load failed
+const loaded = ref(false);
 onMounted(() => {
-    // If the request fails the grid is simply empty
-    datasetStore.fetchDatasets().catch(() => {});
+    // If the request fails the grid is simply empty (the layout shows a warning, see datasetStore.loadFailed)
+    datasetStore
+        .fetchDatasets()
+        .then(() => (loaded.value = true))
+        .catch(() => {});
 });
 
 // Navigate to the given route path
@@ -39,6 +44,10 @@ function navTo(route: string) {
             </v-btn>
         </v-row>
 
+        <v-alert v-if="loaded && !datasetStore.datasets.length" type="info" variant="tonal" class="mt-4">
+            You don't have access to any datasets.
+        </v-alert>
+
         <v-row>
             <!-- One card per dataset; clicking opens the dataset page -->
             <!-- The url slug is the unique key and the route param -->
@@ -55,7 +64,17 @@ function navTo(route: string) {
                             </div>
                         </v-card-subtitle>
                         <v-card-text v-if="dataset.description" class="px-0 py-2">
-                            <div style="display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden">{{ dataset.description }}</div>
+                            <div
+                                style="
+                                    display: -webkit-box;
+                                    -webkit-line-clamp: 3;
+                                    line-clamp: 3;
+                                    -webkit-box-orient: vertical;
+                                    overflow: hidden;
+                                "
+                            >
+                                {{ dataset.description }}
+                            </div>
                         </v-card-text>
                     </v-card-item>
                 </v-card>

@@ -14,7 +14,7 @@ import ChangePasswordDialog from "@src/components/ChangePasswordDialog.vue";
 // Router instance used for programmatic navigation
 const router = useRouter();
 
-// Auth store (login state and current user), user store (saving changes), permission store (edit access)
+// Auth store (login state and current user), user store (saving changes), permission store (edit access), dataset store (admin list)
 const auth = useAuthStore();
 const userStore = useUserStore();
 const permissionStore = usePermissionStore();
@@ -144,7 +144,7 @@ watch(
         </v-alert>
         <template v-if="auth.isAdmin">
             <v-row v-for="dataset in datasetStore.datasets" :key="dataset.url" align="center" class="mx-4">
-                <v-col @click="navTo('/dataset/' + dataset.url)">{{ dataset.name }}</v-col>
+                <v-col @click="navTo('/dataset/' + dataset.url)" class="cursor-pointer">{{ dataset.name }}</v-col>
                 <v-col cols="auto" class="d-flex align-center">
                     <span class="mr-2">Private</span>
                     <v-switch

@@ -29,10 +29,10 @@ Either way:
 - one job at a time (a 15-25 GB object needs tens of GB of RAM: give Docker enough memory); a re-upload during a job stops it and processes
   the new file
 - success sets `READY`; an error or timeout (`PREPROCESS_TIMEOUT_MS`, default 6 h) sets `FAILED` with the end of R's error output in
-  `statusMessage`. A failed run never deletes Parquet that is already in the dataset's folder
+  `statusMessage` (absolute paths are cut down to the file name; the full text is in the backend log). A failed run never deletes Parquet that is already in the dataset's folder
 - while the dataset is not `READY` the viewer is closed (`POST /datasets/:id/viewer` answers 409 and open viewers lose access); the dataset
   page shows the state, and editors get a **Try again** button (`POST /datasets/:id/reprocess`)
-- unfinished jobs are queued again when the backend restarts; deleting a dataset removes its Parquet folder
+- unfinished jobs are queued again when the backend restarts; deleting a dataset removes its Parquet folder, and deleting its current `.rds` file removes the Parquet too and puts the dataset back to `PROCESSING` (waiting for a new upload)
 - `PARQUET_DIR` defaults to `data/parquet` (a sibling of the uploads folder); Shiny reads the same folder
 
 Datasets created before this existed stay `PROCESSING` until someone presses **Try again** (or re-uploads).

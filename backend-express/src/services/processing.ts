@@ -34,6 +34,14 @@ const jobEnv = () =>
 // Longest failure message stored with a dataset
 const MAX_MESSAGE = 500;
 
+/**
+ * The failure message as it is stored: every absolute path is cut down to its last part (".../file.rds"). The message is the tail of
+ * R's or the worker's output and is sent to everyone who can see the dataset, so it must not reveal how the server's folders are laid out.
+ * The full text is still written to the server log
+ */
+export const redactPaths = (message: string) =>
+    message.replace(/(?:\/[^\s/'"`:,;()<>]+){2,}/g, (path) => `.../${path.split("/").pop()}`);
+
 // Asks a job to stop (SIGTERM), and kills it if it has not stopped after 10 seconds
 const terminate = (child: ChildProcess | null) => {
     if (!child || child.exitCode !== null || child.signalCode !== null) return;
@@ -154,7 +162,7 @@ const runJob = async (job: Running) => {
     await setStatus(
         datasetId,
         result.ok ? DatasetStatus.READY : DatasetStatus.FAILED,
-        result.ok ? null : result.message.slice(0, MAX_MESSAGE)
+        result.ok ? null : redactPaths(result.message).slice(0, MAX_MESSAGE)
     );
 };
 
@@ -203,6 +211,16 @@ export const cancel = (datasetId: string) => {
         running.stopped = true;
         terminate(running.child);
     }
+};
+
+/**
+ * Returns a dataset to the "waiting for its data file" state after its current RDS was deleted: stops any job, removes the Parquet built
+ * from that RDS (the viewer would otherwise keep serving it) and sets PROCESSING, as for a new dataset; a later upload starts a new job
+ */
+export const reset = async (datasetId: string) => {
+    cancel(datasetId);
+    await storage.removeParquet(datasetId);
+    await setStatus(datasetId, DatasetStatus.PROCESSING, null);
 };
 
 /** Queues again the datasets a restart left PROCESSING (only those that have a data file; a new dataset waits for its upload) */

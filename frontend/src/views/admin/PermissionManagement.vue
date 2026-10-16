@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Permission management page: table of who holds which permission on which dataset.
-// Admins see every dataset and permission; other users only see datasets they own (the dataset's owner column), since
+// Admins see every dataset and permission; other users only see datasets they own, since
 // only owners may see who a dataset is shared with, and are redirected home if they own none.
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
