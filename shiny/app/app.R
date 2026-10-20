@@ -11,7 +11,6 @@ library(duckdb)
 library(jsonlite)
 library(openssl)
 library(ggplot2)
-library(scales)
 library(scattermore)
 
 PARQUET_DIR <- Sys.getenv("PARQUET_DIR", "/data/parquet")
@@ -66,11 +65,17 @@ CLUSTER_COL <- "seurat_clusters"
 MAX_GROUP_PLOTS <- 8
 # Columns with more distinct values than this are not offered to group or split the UMAP and PCA by
 MAX_GROUPS <- 50
-# The UMAP, PCA and violin plots draw a panel per gene, so they show only the first few picked genes; dot plot and heatmap show all
-MAX_PANEL_GENES <- 10
 
 # The heatmap has a column per cell; above this many cells it draws a random sample
 MAX_HEATMAP_CELLS <- 20000
+
+# Colorblind-friendly colors for n groups, like scCustomize's discrete palettes: Okabe-Ito (without its black, which the labels and
+# points use) for up to 8, then Polychrome 36, then Polychrome 36 stretched for more
+colorblind_palette <- function(n) {
+  if (n <= 8) return(unname(palette.colors(9, "Okabe-Ito")[-1][seq_len(n)]))
+  polychrome <- unname(palette.colors(36, "Polychrome 36"))
+  if (n <= 36) polychrome[seq_len(n)] else colorRampPalette(polychrome)(n)
+}
 
 # Columns of cells.parquet that are not metadata to color by
 COORD_RE <- "^(umap|pca)_[0-9]+$"
@@ -139,7 +144,9 @@ ui <- fluidPage(
     uiOutput("group_picker"),
     uiOutput("split_picker"),
     div(class = "accent", sliderInput("chart_size", "Chart width (px)", min = 300, max = 1200, value = 600, step = 50, ticks = FALSE, width = "100%")),
-    div(class = "accent", style = "margin-top: 25px", checkboxInput("label", "Label clusters", value = TRUE))
+    div(class = "accent", style = "margin-top: 25px", checkboxInput("label", "Label clusters", value = TRUE)),
+    uiOutput("na_cutoff_picker"),
+    uiOutput("violin_options")
   ),
   fluidRow(
     column(12, actionButton("generate", "Update plots", class = "btn-primary"))
@@ -261,12 +268,12 @@ server <- function(input, output, session) {
     if (!ready) return(NULL)
     selectizeInput(
       "plots", "Pick your plots", choices = available_plots, selected = default_plots, multiple = TRUE,
-      options = list(placeholder = "UMAP", plugins = list("remove_button"))
+      options = list(placeholder = "UMAP", plugins = list("remove_button", "clear_button"))
     )
   })
 
   # Like Seurat's group.by / split.by for DimPlot: group colors the cells by a column, split draws one panel per value of a column
-  # Group by matters for the UMAP, PCA and heatmap, split by only for the UMAP and PCA, so each shows while one of its plots is in the plot
+  # Group by matters for the UMAP, PCA and heatmap, split by only for the UMAP, PCA and violin plot, so each shows while one of its plots is in the plot
   # picker (an empty picker means the default plots). The panel is only hidden, not removed, so a choice made earlier is still there when
   # it comes back.
   plot_condition <- function(plots) {
@@ -280,15 +287,31 @@ server <- function(input, output, session) {
     if (length(group_choices()) == 0) return(NULL)
     conditionalPanel(plot_condition(c("UMAP", "PCA", "Heatmap")), selectizeInput(
       "group_by", "Group by (UMAP, PCA, Heatmap)", choices = group_choices(), selected = label_col(), multiple = TRUE, width = "100%",
-      options = list(plugins = list("remove_button"))
+      options = list(plugins = list("remove_button", "clear_button"))
     ))
   })
   output$split_picker <- renderUI({
     if (length(group_choices()) == 0) return(NULL)
     # One column at a time (picking another swaps it); the x that shows on hover, or "None", goes back to no split
-    conditionalPanel(plot_condition(c("UMAP", "PCA")), selectizeInput(
-      "split_by", "Split by (UMAP, PCA)", choices = c("None" = "", group_choices()), selected = "", width = "100%",
+    conditionalPanel(plot_condition(c("UMAP", "PCA", "ViolinPlot")), selectizeInput(
+      "split_by", "Split by (UMAP, PCA, Violin)", choices = c("None" = "", group_choices()), selected = "", width = "100%",
       options = list(plugins = list("clear_button"))
+    ))
+  })
+
+  # scCustomize's na_cutoff: cells expressing a picked gene at or below it are drawn grey under the others (UMAP and PCA only); empty (NA) is no cutoff
+  output$na_cutoff_picker <- renderUI({
+    if (!has_genes) return(NULL)
+    conditionalPanel(plot_condition(c("UMAP", "PCA")), div(class = "accent", numericInput(
+      "na_cutoff", "Grey out expression at or below (UMAP, PCA)", value = NA, min = 0, step = 0.1, width = "100%"
+    )))
+  })
+  output$violin_options <- renderUI({
+    if (!has_genes) return(NULL)
+    conditionalPanel(plot_condition("ViolinPlot"), div(
+      class = "accent", style = "margin-top: 25px",
+      checkboxInput("violin_median", "Show median (Violin)", value = FALSE),
+      checkboxInput("violin_box", "Show boxplot (Violin)", value = FALSE)
     ))
   })
 
@@ -297,7 +320,7 @@ server <- function(input, output, session) {
     if (!has_genes) return(NULL)
     selectizeInput(
       "gene", "Pick your genes", choices = NULL, multiple = TRUE,
-      options = list(placeholder = "Search genes", maxOptions = 50, plugins = list("remove_button"))
+      options = list(placeholder = "Search genes", maxOptions = 50, plugins = list("remove_button", "clear_button"))
     )
   })
   observe({
@@ -310,7 +333,7 @@ server <- function(input, output, session) {
     if (!ready) return(NULL)
     selectizeInput(
       "cell_types", "Pick your cell types", choices = NULL, multiple = TRUE,
-      options = list(placeholder = "All clusters", plugins = list("remove_button"))
+      options = list(placeholder = "All clusters", plugins = list("remove_button", "clear_button"))
     )
   })
   all_clusters <- reactive({
@@ -323,7 +346,9 @@ server <- function(input, output, session) {
   # button, so picking genes or cell types changes nothing until then
   selection <- eventReactive(input$generate, {
     list(plots = input$plots, genes = if (has_genes) input$gene else character(), cell_types = input$cell_types, label = isTRUE(input$label),
-         group_by = input$group_by, split_by = input$split_by %||% "")
+         group_by = input$group_by, split_by = input$split_by %||% "",
+         na_cutoff = input$na_cutoff %||% NA_real_,
+         violin_median = isTRUE(input$violin_median), violin_box = isTRUE(input$violin_box))
   }, ignoreNULL = FALSE)
 
   # The plot shown first: the UMAP, or the first plot the dataset offers when it does not offer that
@@ -401,41 +426,38 @@ server <- function(input, output, session) {
     cells$cluster <- as.character(cells$cluster)
     for (k in paste0("grp", seq_along(group))) cells[[k]] <- as.character(cells[[k]])
     if (!is.null(split)) cells$spl <- as.character(cells$spl)
-    keep <- if (length(sel$cell_types)) cells$cluster %in% sel$cell_types else rep(TRUE, nrow(cells))
+    selected <- if (length(sel$cell_types)) cells$cluster %in% sel$cell_types else rep(TRUE, nrow(cells))
+    in_scope <- rep(TRUE, nrow(cells))
     if (has_treatments()) {
       # Only cells of the dataset's treatments are drawn (there is no picker; the cell type, group and split options narrow the view)
       treatment <- dbGetQuery(con, cells_sql(paste(dbQuoteIdentifier(con, treatment_col()), "AS treatment")))$treatment
-      keep <- keep & as.character(treatment) %in% dataset_treatments
+      in_scope <- as.character(treatment) %in% dataset_treatments
     }
+    keep <- selected & in_scope
     shiny::validate(shiny::need(any(keep), "No cells match the selection")) # jsonlite also exports validate()
     expr <- if (length(sel$genes) > 0) expression_matrix(sel$genes, nrow(cells))[keep, , drop = FALSE] else NULL
     n_total <- nrow(cells)
+    # The UMAP and PCA also draw the cells of the other cell types, in grey (as cells that do not express the gene, when genes are picked)
+    background <- cells[in_scope & !selected, , drop = FALSE]
     cells <- cells[keep, , drop = FALSE]
     list(
-      n_total = n_total, keep_idx = which(keep),
+      n_total = n_total, keep_idx = which(keep), background = background, na_cutoff = sel$na_cutoff,
       cells = cells, expr = expr, genes = sel$genes, clusters = level_order(label_col(), cells$cluster), label = sel$label,
-      group_cols = group, splits = if (!is.null(split)) level_order(split, cells$spl)
+      group_cols = group, splits = if (!is.null(split)) level_order(split, cells$spl),
+      scatter_splits = if (!is.null(split)) level_order(split, c(cells$spl, background$spl))
     )
   })
-
-  # The data restricted to the first MAX_PANEL_GENES genes, for the plots with a panel per gene
-  panel_data <- function(d) {
-    if (length(d$genes) > MAX_PANEL_GENES) {
-      d$expr <- d$expr[, seq_len(MAX_PANEL_GENES), drop = FALSE]
-      d$caption <- sprintf("Showing the first %d of %d picked genes", MAX_PANEL_GENES, length(d$genes))
-      d$genes <- d$genes[seq_len(MAX_PANEL_GENES)]
-    }
-    d
-  }
 
   # One row per cell and gene, for the plots that need expression; asks for genes when none were picked
   long_expression <- function(d) {
     shiny::validate(shiny::need(length(d$genes) > 0, "Pick at least one gene, then press Update plots."))
-    data.frame(
+    df <- data.frame(
       cluster = factor(rep(d$cells$cluster, times = length(d$genes)), levels = d$clusters),
       gene = factor(rep(d$genes, each = nrow(d$cells)), levels = d$genes),
       value = as.vector(d$expr)
     )
+    if (!is.null(d$splits)) df$spl <- factor(rep(d$cells$spl, times = length(d$genes)), levels = d$splits)
+    df
   }
 
   # Width of a plot's box as the browser laid it out, for heights that follow it
@@ -446,22 +468,27 @@ server <- function(input, output, session) {
     as.integer(rows * max(350, min(700, plot_width(id) / cols * 0.75)))
   }
 
-  # Styled like Seurat's DimPlot / FeaturePlot: no grid, axis lines only, discrete groups in ggplot2's hue palette, numeric values
-  # on a lightgrey -> blue gradient with the highest values drawn last. Above 100k cells Seurat rasterizes the points; so do we.
+  # Styled like Seurat's DimPlot / FeaturePlot: no grid, axis lines only, discrete groups in a colorblind-friendly palette, numeric values
+  # on a plasma gradient (dark = high) with the highest values drawn last and cells that do not express the gene grey underneath. Above 100k cells Seurat rasterizes the points; so do we.
   # With genes there is a panel per gene (and per split value, genes down and splits across, like FeaturePlot's split.by) and group.by
   # does not apply, as in FeaturePlot; without genes the cells are colored by the group and split.by makes a panel per value.
   scatter_plot <- function(x, y, i = 1) {
-    d <- panel_data(plot_data())
+    d <- plot_data()
     shiny::validate(shiny::need(all(c(x, y) %in% names(d$cells)), paste("This dataset has no", x, "/", y, "coordinates.")))
     split <- !is.null(d$splits)
     if (length(d$genes) > 0) {
       n <- length(d$genes)
+      # The cells of the cell types that were not picked count as not expressing; they and the cells at or below na_cutoff (when set) are
+      # NA (drawn grey) and sorted first, so the expressing cells are drawn on top of them
+      shown_cells <- rbind(d$cells[c(x, y, if (split) "spl")], d$background[c(x, y, if (split) "spl")])
+      expr <- rbind(d$expr, matrix(NA_real_, nrow(d$background), n))
+      if (!is.na(d$na_cutoff)) expr[!is.na(expr) & expr <= d$na_cutoff] <- NA
       df <- data.frame(
-        x = rep(d$cells[[x]], times = n), y = rep(d$cells[[y]], times = n),
-        color = as.vector(d$expr), gene = factor(rep(d$genes, each = nrow(d$cells)), levels = d$genes)
+        x = rep(shown_cells[[x]], times = n), y = rep(shown_cells[[y]], times = n),
+        color = as.vector(expr), gene = factor(rep(d$genes, each = nrow(shown_cells)), levels = d$genes)
       )
-      if (split) df$spl <- factor(rep(d$cells$spl, times = n), levels = d$splits)
-      df <- df[order(df$color), ]
+      if (split) df$spl <- factor(rep(shown_cells$spl, times = n), levels = d$scatter_splits)
+      df <- df[order(!is.na(df$color), df$color), ]
     } else {
       grp <- d$cells[[paste0("grp", i)]]
       lv <- level_order(d$group_cols[[i]], grp)
@@ -473,13 +500,20 @@ server <- function(input, output, session) {
         lv <- lv[lv %in% grp]
       }
       df <- data.frame(x = d$cells[[x]], y = d$cells[[y]], color = factor(grp, levels = lv))
-      if (split) df$spl <- factor(d$cells$spl, levels = d$splits)
+      if (split) df$spl <- factor(d$cells$spl, levels = d$scatter_splits)
     }
     p <- ggplot(df, aes(x, y, color = color))
-    p <- if (nrow(df) > 1e5) p + geom_scattermore(pointsize = 2) else p + geom_point(size = 1)
-    p <- p + labs(x = x, y = y, color = NULL, caption = d$caption) + theme_classic(base_size = 14)
+    scatter_layer <- function(...) if (nrow(df) > 1e5) geom_scattermore(pointsize = 2, ...) else geom_point(size = 1, ...)
+    # Without genes the cells of the cell types that were not picked are a grey layer under the colored cells
+    if (length(d$genes) == 0 && nrow(d$background) > 0) {
+      bg <- data.frame(x = d$background[[x]], y = d$background[[y]])
+      if (split) bg$spl <- factor(d$background$spl, levels = d$scatter_splits)
+      p <- p + scatter_layer(data = bg, mapping = aes(x, y), color = "lightgrey", inherit.aes = FALSE)
+    }
+    p <- p + scatter_layer()
+    p <- p + labs(x = x, y = y, color = NULL) + theme_classic(base_size = 14)
     if (length(d$genes) > 0) {
-      p <- p + scale_color_gradient(low = "lightgrey", high = "blue") + labs(color = "Expression")
+      p <- p + scale_color_viridis_c(option = "plasma", direction = -1, begin = 0.1, end = 0.9, na.value = "lightgrey") + labs(color = "Expression")
       if (split) p + facet_grid(gene ~ spl) else p + facet_wrap(~gene, ncol = ceiling(sqrt(length(d$genes))))
     } else {
       # Seurat's LabelClusters: the label sits at the median of each group's coordinates (in each panel when split)
@@ -488,12 +522,12 @@ server <- function(input, output, session) {
         p <- p + geom_text(data = centers, aes(label = color), color = "black", size = 5, show.legend = FALSE)
       }
       if (length(d$group_cols) > 1) p <- p + ggtitle(d$group_cols[[i]])
-      p <- p + scale_color_manual(values = hue_pal()(nlevels(df$color)), drop = FALSE) + guides(color = guide_legend(override.aes = list(size = 3)))
+      p <- p + scale_color_manual(values = colorblind_palette(nlevels(df$color)), drop = FALSE) + guides(color = guide_legend(override.aes = list(size = 3)))
       if (split) p + facet_wrap(~spl, ncol = min(nlevels(df$spl), 4)) else p
     }
   }
 
-  n_genes <- function(limit = FALSE) max(1, min(length(selection()$genes), if (limit) MAX_PANEL_GENES else Inf))
+  n_genes <- function() max(1, length(selection()$genes))
   n_clusters <- function() if (length(selection()$cell_types)) length(selection()$cell_types) else length(all_clusters())
 
   # Rows and columns of panels in the UMAP / PCA plot, mirroring the facets in scatter_plot (an upper bound when cells are filtered out)
@@ -502,13 +536,13 @@ server <- function(input, output, session) {
     splits <- if (isTRUE(sel$split_by %in% names(group_counts()))) group_counts()[[sel$split_by]] else 0
     genes <- length(sel$genes) > 0
     if (splits > 0 && genes) {
-      grid_height(id, n_genes(TRUE), splits)
+      grid_height(id, n_genes(), splits)
     } else if (splits > 0) {
       cols <- min(splits, 4)
       grid_height(id, ceiling(splits / cols), cols)
     } else {
-      cols <- ceiling(sqrt(n_genes(TRUE)))
-      grid_height(id, ceiling(n_genes(TRUE) / cols), cols)
+      cols <- ceiling(sqrt(n_genes()))
+      grid_height(id, ceiling(n_genes() / cols), cols)
     }
   }
 
@@ -526,15 +560,36 @@ server <- function(input, output, session) {
   })
 
   # Like Seurat's VlnPlot: one violin per cluster, a panel per gene
-  output$plot_ViolinPlot <- renderPlot(height = function() as.integer(max(350, 230 * n_genes(TRUE) + 30)), {
-    d <- panel_data(plot_data())
+  output$plot_ViolinPlot <- renderPlot(height = function() as.integer(max(350, 230 * n_genes() + 30)), {
+    d <- plot_data()
     df <- long_expression(d)
-    ggplot(df, aes(cluster, value, fill = cluster)) +
-      geom_violin(scale = "width", adjust = 1, trim = TRUE, linewidth = 0.3) +
+    # Every cell is drawn as a jittered point over its violin, unless the boxplot or the median is picked, which replace the points.
+    # Split by: within each cluster one violin per split value, side by side and colored by the value (clusters are colored otherwise)
+    split <- !is.null(d$splits)
+    sel <- selection()
+    dodge <- position_dodge(width = 0.9)
+    p <- if (split) {
+      ggplot(df, aes(cluster, value, fill = spl)) +
+        geom_violin(scale = "width", adjust = 1, trim = TRUE, linewidth = 0.3, position = dodge) +
+        scale_fill_manual(values = colorblind_palette(nlevels(df$spl)), drop = FALSE, name = NULL)
+    } else {
+      ggplot(df, aes(cluster, value, fill = cluster)) +
+        geom_violin(scale = "width", adjust = 1, trim = TRUE, linewidth = 0.3) +
+        scale_fill_manual(values = colorblind_palette(nlevels(df$cluster)), drop = FALSE)
+    }
+    if (sel$violin_box) p <- p + geom_boxplot(width = 0.1, fill = "white", linewidth = 0.3, outlier.shape = NA, position = dodge, show.legend = FALSE)
+    if (!sel$violin_box && !sel$violin_median) {
+      p <- p + if (split) {
+        geom_point(position = position_jitterdodge(jitter.width = 0.4, dodge.width = 0.9, seed = 1), size = 0.3, alpha = 0.4, color = "black", show.legend = FALSE)
+      } else {
+        geom_jitter(width = 0.2, height = 0, size = 0.3, alpha = 0.4, color = "black", show.legend = FALSE)
+      }
+    }
+    if (sel$violin_median) p <- p + stat_summary(fun = median, geom = "point", shape = 23, size = 2.5, fill = "white", color = "black", position = dodge, show.legend = FALSE)
+    p +
       facet_wrap(~gene, ncol = 1, scales = "free_y", strip.position = "left") +
-      scale_fill_manual(values = hue_pal()(nlevels(df$cluster)), drop = FALSE) +
-      labs(x = NULL, y = "Expression", caption = d$caption) + theme_classic(base_size = 14) +
-      theme(legend.position = "none", strip.background = element_blank(), strip.placement = "outside", strip.text.y.left = element_text(angle = 0))
+      labs(x = NULL, y = "Expression") + theme_classic(base_size = 14) +
+      theme(legend.position = if (split) "right" else "none", strip.background = element_blank(), strip.placement = "outside", strip.text.y.left = element_text(angle = 0))
   })
 
   # Mean expression and share of cells expressing, per cluster and gene (the numbers behind the dot plot and the heatmap)
@@ -553,7 +608,7 @@ server <- function(input, output, session) {
     ggplot(sm, aes(gene, cluster, size = pct, color = scaled)) +
       geom_point() +
       scale_size(range = c(0, 8), limits = c(0, 100)) +
-      scale_color_gradient(low = "lightgrey", high = "blue") +
+      scale_color_viridis_c(option = "plasma", direction = -1, begin = 0.1, end = 0.9) +
       labs(x = NULL, y = NULL, size = "% expressed", color = "Avg. expression\n(scaled)") +
       theme_classic(base_size = 14) + theme(axis.text.x = element_text(angle = 45, hjust = 1), panel.grid.major = element_line(color = "grey92"))
   })
@@ -615,7 +670,7 @@ server <- function(input, output, session) {
     right_margin <- max(40, ceiling(0.71 * 7.2 * nchar(labels[[length(labels)]]) + 10))
     ggplot(df, aes(x, y, fill = value)) +
       geom_raster() +
-      annotate("rect", xmin = bar_start, xmax = bar_end, ymin = bar_bottom, ymax = bar_top, fill = hue_pal()(nlevels(group))[runs$values]) +
+      annotate("rect", xmin = bar_start, xmax = bar_end, ymin = bar_bottom, ymax = bar_top, fill = colorblind_palette(nlevels(group))[runs$values]) +
       annotate("text", x = (bar_start + bar_end) / 2, y = bar_top + 0.02 * g, label = labels, angle = 45, hjust = 0, vjust = 0, size = 5) +
       # DoHeatmap spreads its three colors over the range of the values drawn, so the lowest value is always magenta and the highest yellow
       scale_fill_gradientn(colors = c("#FF00FF", "#000000", "#FFFF00"), na.value = "white", name = "Expression") +

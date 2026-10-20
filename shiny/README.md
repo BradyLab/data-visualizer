@@ -71,6 +71,8 @@ The dataset page always sends `?treatments=<JSON array>` with every treatment of
 
 **Chart width** (slider in the options row above **Update plots**, 300-1200 px, applies right away) sets the width of every chart; it starts at 600, and picking the violin plot, the dot plot, the heatmap or a **Split by** column sets it to 1200 (move it afterwards if you like). Charts flow left to right and wrap, so when they are narrow enough several sit side by side (the plots you picked, and the group by charts of the UMAP and PCA); a chart is never wider than the page.
 
+**Colors and expression options** (modeled on scCustomize): groups use a colorblind-friendly palette (Okabe-Ito for up to 8 groups, then Polychrome 36), and expression uses a plasma gradient where dark is high. On the UMAP and PCA, the cells of every cell type you did not pick in **Pick your cell types** are drawn light grey underneath (with genes picked they count as not expressing). With genes picked, **Grey out expression at or below** (scCustomize's `na_cutoff`; empty, the default, means no cutoff) also draws cells at or below that value in grey, under the expressing cells. The violin plot can show a boxplot and the median (**Show boxplot**, **Show median**); either replaces the points of the cells.
+
 The violin, dot and heat maps need at least one gene picked. UMAP, PCA and violin draw a panel per gene, so they show only the first 10 picked genes (a note under the plot says so); the dot plot and heatmap show all picked genes. `TissuePlot` is not drawn yet.
 
 ## Try it
