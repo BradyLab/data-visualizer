@@ -6,6 +6,13 @@ import { fileApi } from "@src/api/file";
 import { useSocketStore } from "@src/stores/socket";
 import { SocketEvent } from "@commons/socket";
 
+// What the progress bar says for each kind of file
+const UPLOAD_LABELS: Record<FileTypes, string> = {
+    [FileTypes.COVER]: "Uploading cover photo",
+    [FileTypes.RDS]: "Uploading .rds file",
+    [FileTypes.TISSUE_PLOT]: "Uploading tissue map",
+};
+
 export const useFileStore = defineStore("file", () => {
     // Cover image object URL per dataset id; null means the dataset has no cover, a missing key means not loaded yet
     const covers = ref<Record<string, string | null>>({});
@@ -57,7 +64,7 @@ export const useFileStore = defineStore("file", () => {
     async function uploadFile(datasetId: string, type: FileTypes, file: File, updates?: string) {
         // Reactive, so updating its fraction below notifies whatever shows `uploading` (a plain object would be wrapped in a separate proxy)
         const progress = reactive({
-            label: type === FileTypes.COVER ? "Uploading cover photo" : "Uploading .rds file",
+            label: UPLOAD_LABELS[type],
             fraction: 0,
         });
         uploading.value = progress;

@@ -49,6 +49,7 @@ const dataset = ref<IDataset>({
 type Picked = File | File[] | undefined;
 const coverFile = ref<Picked>();
 const rdsFile = ref<Picked>();
+const tissueMapFile = ref<Picked>();
 const firstFile = (picked: Picked) => (Array.isArray(picked) ? (picked[0] ?? null) : (picked ?? null));
 // Notes on what changed since the previous version of the .rds file (sent with the .rds upload only)
 const rdsUpdates = ref("");
@@ -209,6 +210,10 @@ async function save() {
             const cover = firstFile(coverFile.value);
             if (cover) await fileStore.uploadFile(saved.id, FileTypes.COVER, cover);
             coverFile.value = undefined;
+            // The tissue map goes before the .rds: a finished .rds upload starts the (memory-hungry) processing job on the server
+            const tissueMap = firstFile(tissueMapFile.value);
+            if (tissueMap) await fileStore.uploadFile(saved.id, FileTypes.TISSUE_PLOT, tissueMap);
+            tissueMapFile.value = undefined;
             const rds = firstFile(rdsFile.value);
             if (rds) await fileStore.uploadFile(saved.id, FileTypes.RDS, rds, rdsUpdates.value.trim());
             rdsFile.value = undefined;
@@ -378,6 +383,22 @@ async function save() {
             hide-details
             class="mb-4 mx-4"
         ></v-textarea>
+
+        <!-- Tissue map for the tissue plot: the CSV of a ggPlantmap table -->
+        <v-row class="mx-4">
+            <v-file-upload
+                v-model="tissueMapFile"
+                density="compact"
+                title="Upload Tissue Map (ggPlantmap .csv)"
+                accept=".csv"
+                clearable
+                :multiple="false"
+                hide-details
+            ></v-file-upload>
+        </v-row>
+        <v-row class="text-body-small mb-4 mx-4">
+            A CSV of a ggPlantmap table (columns ROI.name, ROI.id, point, x, y); ROI.name must match the tissue_type column (else the cell labels). Used by the TissuePlot.
+        </v-row>
 
         <!-- Progress of the file being uploaded after the dataset is saved -->
         <v-row v-if="fileStore.uploading" class="mx-4 mb-4">
