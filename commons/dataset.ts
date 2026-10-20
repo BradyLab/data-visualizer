@@ -35,7 +35,6 @@ export interface IDataset {
     description: string;
     doi: string;
     attribution: string;
-    treatments: string[];
     plots: DatasetPlots[];
     visibility: DatasetVisibility;
     // Processing state of the plot data; set by the server, never by clients

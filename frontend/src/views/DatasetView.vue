@@ -41,7 +41,6 @@ onMounted(() => window.addEventListener("message", onViewerMessage));
 onBeforeUnmount(() => window.removeEventListener("message", onViewerMessage));
 
 // Asks the backend for a viewer ticket and points the iframe at it. A fresh ticket is fetched on every click (it only lives about a minute).
-// The dataset's treatments are not sent: the backend signs them into the viewer's context
 async function generatePlots() {
     error.value = null;
     viewerLoading.value = true;

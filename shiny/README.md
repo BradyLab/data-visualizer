@@ -2,7 +2,7 @@
 
 Interactive plots for one dataset, shown in an iframe on the dataset page. The Shiny server is private: the Express backend proxies
 `/shiny/<dataset slug>/...` to it after checking the viewer ticket/cookie and the dataset permissions
-(`backend-express/src/middleware/shinyProxy.ts`), and tells the app who is asking (dataset id, offered plots, treatments). Shiny Server does not hand request headers to the app, so Express signs them into
+(`backend-express/src/middleware/shinyProxy.ts`), and tells the app who is asking (dataset id, offered plots). Shiny Server does not hand request headers to the app, so Express signs them into
 `?ctx=<payload>.<hmac>` in the iframe URL with `SHINY_SECRET` (set the same value for Express and Shiny); the app verifies it.
 
 - `app/` the Shiny app (served by Shiny Server at `/app/`). No Seurat: it reads Parquet through DuckDB.
@@ -66,8 +66,6 @@ The **Pick your plots** box in the viewer chooses which plots show (applied with
 **Cell labels:** cells are labeled by `seurat_annotations` (cell type names) when `cells.parquet` has that column, else by `seurat_clusters`. The cell type picker, the colors and the violin/dot/heat plots all use those labels.
 
 **Group by / Split by** (in the options row above **Update plots**, like Seurat's `group.by` / `split.by`; Group by shows with the UMAP, PCA or heatmap, Split by with the UMAP, PCA or violin plot) list the text, logical and cluster columns with at most 50 values. Group by takes several columns, each drawn as its own chart (up to 8, titled by the column; default: the cell labels, also used when it is emptied). It does not apply to gene panels, as in `FeaturePlot`. Split by draws one panel per value (without genes, each group in each panel gets its own color and label, e.g. `B_CTRL` and `B_STIM`; colors run through the first panel's groups, then the next panel's), or, with genes picked, genes down and values across.
-
-The signed `ctx` carries every treatment of the dataset (so a viewer cannot change it by editing the URL). There is no treatment picker: when that list is not empty and the data has a treatment column, every plot keeps only cells whose value in that column is one of those treatments (the names must match exactly). The column is the one named by the `TREATMENT_COLUMN` environment variable, else the first column called `treatment`, `treatments`, `condition` or `orig.ident` (any case), else the first whose name contains "treat" or "condition". If there are treatments but no column is found, the viewer lists the available columns.
 
 **Chart width** (slider in the options row above **Update plots**, 300-1200 px, applies right away) sets the width of every chart; it starts at 600, and picking the violin plot, the dot plot, the heatmap or a **Split by** column sets it to 1200 (move it afterwards if you like). Charts flow left to right and wrap, so when they are narrow enough several sit side by side (the plots you picked, and the group by charts of the UMAP and PCA); a chart is never wider than the page.
 

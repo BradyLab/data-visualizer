@@ -26,7 +26,6 @@ const DATASET_FIELDS = [
     "description",
     "doi",
     "attribution",
-    "treatments",
     "plots",
     "visibility",
 ] as const;

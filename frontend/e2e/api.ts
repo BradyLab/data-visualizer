@@ -57,7 +57,6 @@ export const createDataset = async (request: APIRequestContext, session: Session
       description: 'Created by an e2e test',
       doi: '',
       attribution: '',
-      treatments: [],
       plots: [],
       visibility: DatasetVisibility.PRIVATE,
       ...fields,
@@ -260,5 +259,5 @@ export const listDatasets = (request: APIRequestContext, session: Session | null
 export const tryCreateDataset = (request: APIRequestContext, session: Session) =>
   request.post(`${API}/datasets`, {
     headers: bearer(session),
-    data: { name: `Refused ${uid()}`, url: `refused-${uid()}`, description: '', doi: '', attribution: '', treatments: [], plots: [] },
+    data: { name: `Refused ${uid()}`, url: `refused-${uid()}`, description: '', doi: '', attribution: '', plots: [] },
   })

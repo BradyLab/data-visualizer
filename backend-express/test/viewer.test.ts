@@ -129,11 +129,11 @@ test("signShinyContext makes a payload.hmac value Shiny can verify, and without 
     process.env.SHINY_SECRET = "shared";
     process.env.SHINY_URL = "http://shiny:3838";
     assert.equal(viewerEnabled(), true);
-    const token = signShinyContext({ dataset: { id: "d1", plots: ["UMAP"], treatments: ["Control"] } as never });
+    const token = signShinyContext({ dataset: { id: "d1", plots: ["UMAP"] } as never });
     const [payload, sig] = token.split(".") as [string, string];
     assert.equal(sig, createHmac("sha256", "shared").update(payload).digest("hex"));
     const body = JSON.parse(Buffer.from(payload, "base64url").toString());
-    assert.deepEqual({ ...body, exp: undefined }, { dataset_id: "d1", plots: ["UMAP"], treatments: ["Control"], exp: undefined });
+    assert.deepEqual({ ...body, exp: undefined }, { dataset_id: "d1", plots: ["UMAP"], exp: undefined });
     assert.ok(body.exp > Date.now() / 1000);
 });
 

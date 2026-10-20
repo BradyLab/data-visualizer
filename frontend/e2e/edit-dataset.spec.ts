@@ -25,22 +25,18 @@ test.use({ storageState: authFile('lab') })
 const NAME = 'DATASET NAME'
 const DESCRIPTION = 'Type a description of the dataset here'
 
-test('edits a dataset: fields, treatments and plots are saved', async ({ page, request }) => {
+test('edits a dataset: fields and plots are saved', async ({ page, request }) => {
   const lab = await login(request, 'lab')
-  const dataset = await createDataset(request, lab, { treatments: ['Control'] })
+  const dataset = await createDataset(request, lab)
   await page.goto(`/dataset/${dataset.url}/edit`)
   // The form is filled from the saved dataset
   await expect(page.getByPlaceholder(NAME)).toHaveValue(dataset.name)
-  await expect(page.getByText('Control')).toBeVisible()
 
   const name = `Edited ${uid()}`
   await page.getByPlaceholder(NAME).fill(name)
   await page.getByPlaceholder(DESCRIPTION).fill('A new description')
   await page.getByPlaceholder('Add DOI link here').fill('10.1234/e2e')
   await page.getByPlaceholder('Add attribution here').fill('The e2e lab')
-  const treatments = page.locator('xpath=//*[normalize-space(text())="Add Your Treatments"]/following::div[contains(@class,"v-combobox")][1]//input').last()
-  await treatments.fill('Heat shock')
-  await treatments.press('Enter')
   const plots = page.locator('xpath=//*[normalize-space(text())="Pick Your Plots"]/following::div[contains(@class,"v-select")][1]')
   await pickOption(page, plots, DatasetPlots.UMAP)
   await page.keyboard.press('Escape')
@@ -52,7 +48,6 @@ test('edits a dataset: fields, treatments and plots are saved', async ({ page, r
   await expect(page.getByText('A new description')).toBeVisible()
   const saved = await getDataset(request, lab, dataset.id)
   expect(saved).toMatchObject({ name, description: 'A new description', doi: '10.1234/e2e', attribution: 'The e2e lab' })
-  expect(saved.treatments).toEqual(['Control', 'Heat shock'])
   expect(saved.plots).toEqual([DatasetPlots.UMAP])
 })
 

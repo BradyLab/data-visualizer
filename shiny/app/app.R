@@ -49,16 +49,14 @@ verify_context <- function(token) {
   payload
 }
 
-# Who is looking at what: list(dataset_id, plots, treatments) from the signed ctx in the URL, or NULL if there is none that is valid.
+# Who is looking at what: list(dataset_id, plots) from the signed ctx in the URL, or NULL if there is none that is valid.
 # With SHINY_DEV=1 a bare ?dataset=<uuid> is accepted too (every plot)
 viewer_context <- function(query) {
   payload <- verify_context(query$ctx)
   if (!is.null(payload)) {
-    return(list(
-      dataset_id = payload$dataset_id, plots = as.character(unlist(payload$plots)), treatments = as.character(unlist(payload$treatments))
-    ))
+    return(list(dataset_id = payload$dataset_id, plots = as.character(unlist(payload$plots))))
   }
-  if (DEV && !is.null(query$dataset)) return(list(dataset_id = query$dataset, plots = character(), treatments = character()))
+  if (DEV && !is.null(query$dataset)) return(list(dataset_id = query$dataset, plots = character()))
   NULL
 }
 
@@ -101,11 +99,6 @@ outline_at <- function(map, px, py) {
   }
   hit
 }
-
-# The metadata column holding the treatment, which the treatment picker filters on: TREATMENT_COLUMN if set, else the first column
-# named like one of these (ignoring case), else the first whose name contains "treat" or "condition"
-TREATMENT_COLUMN <- Sys.getenv("TREATMENT_COLUMN")
-TREATMENT_COLS <- c("treatment", "treatments", "condition", "orig.ident")
 
 # The columns that label the cells: the annotations (cell type names) when the data has them, else the cluster numbers. They are what
 # the cell type picker filters on and what the plots color, group and label by.
@@ -302,17 +295,6 @@ server <- function(input, output, session) {
     counts[counts <= MAX_GROUPS | names(counts) %in% label_col()]
   })
 
-  # TODO Treatments are not needed: remove them (this filter, TREATMENT_COLUMN, the signed ctx field, the dataset's treatments field and its edit-page input)
-  # Treatments of the dataset (signed); when there are some and the data has a treatment column, only cells of those are drawn
-  dataset_treatments <- context$treatments
-  treatment_col <- reactive({
-    cols <- columns()
-    if (nzchar(TREATMENT_COLUMN)) return(if (TREATMENT_COLUMN %in% cols) TREATMENT_COLUMN else NA_character_)
-    exact <- cols[tolower(cols) %in% TREATMENT_COLS]
-    exact <- exact[order(match(tolower(exact), TREATMENT_COLS))]
-    c(exact, grep("treat|condition", cols, ignore.case = TRUE, value = TRUE), NA_character_)[[1]]
-  })
-  has_treatments <- reactive(ready && length(dataset_treatments) > 0 && !is.na(treatment_col()))
 
   # The tissue map of the dataset (read once per session); the tissue plot needs it, so it is not offered without one
   tissue_path <- TISSUE_PLOT_file(dataset_id)
@@ -457,12 +439,6 @@ server <- function(input, output, session) {
       tags$div(class = "alert alert-danger", "This viewer link is missing, invalid or has expired. Reload the dataset page.")
     } else if (!ready) {
       tags$div(class = "alert alert-warning", "Parquet data not found (dataset not processed yet).")
-    } else if (length(dataset_treatments) > 0 && is.na(treatment_col())) {
-      tags$div(
-        class = "alert alert-warning",
-        "Treatments are ticked, but no treatment column was found. Set TREATMENT_COLUMN to one of: ",
-        paste(setdiff(columns(), c("barcode", grep(COORD_RE, columns(), value = TRUE))), collapse = ", ")
-      )
     } else if (!has_clusters()) {
       tags$div(class = "alert alert-warning", paste("This dataset has no", ANNOTATION_COL, "or", CLUSTER_COL, "column to color the plot by."))
     } else if ("TissuePlot" %in% offered && is.null(TISSUE_PLOT)) {
@@ -499,18 +475,12 @@ server <- function(input, output, session) {
     for (k in paste0("grp", seq_along(group))) cells[[k]] <- as.character(cells[[k]])
     if (!is.null(split)) cells$spl <- as.character(cells$spl)
     selected <- if (length(sel$cell_types)) cells$cluster %in% sel$cell_types else rep(TRUE, nrow(cells))
-    in_scope <- rep(TRUE, nrow(cells))
-    if (has_treatments()) {
-      # Only cells of the dataset's treatments are drawn (there is no picker; the cell type, group and split options narrow the view)
-      treatment <- dbGetQuery(con, cells_sql(paste(dbQuoteIdentifier(con, treatment_col()), "AS treatment")))$treatment
-      in_scope <- as.character(treatment) %in% dataset_treatments
-    }
-    keep <- selected & in_scope
+    keep <- selected
     shiny::validate(shiny::need(any(keep), "No cells match the selection")) # jsonlite also exports validate()
     expr <- if (length(sel$genes) > 0) expression_matrix(sel$genes, nrow(cells))[keep, , drop = FALSE] else NULL
     n_total <- nrow(cells)
     # The UMAP and PCA also draw the cells of the other cell types, in grey (as cells that do not express the gene, when genes are picked)
-    background <- cells[in_scope & !selected, , drop = FALSE]
+    background <- cells[!selected, , drop = FALSE]
     cells <- cells[keep, , drop = FALSE]
     list(
       n_total = n_total, keep_idx = which(keep), background = background, na_cutoff = sel$na_cutoff,

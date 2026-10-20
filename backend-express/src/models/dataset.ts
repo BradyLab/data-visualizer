@@ -75,13 +75,6 @@ export class Datasets extends Model<IDataset> {
     })
     declare attribution: string;
 
-    // Treatment names used in the dataset
-    @Column({
-        type: DataType.ARRAY(DataType.STRING),
-        allowNull: false,
-    })
-    declare treatments: string[];
-
     // Plot types to display; values come from the DatasetPlots enum
     @Column({
         type: DataType.ARRAY(DataType.ENUM(...Object.values(DatasetPlots))),

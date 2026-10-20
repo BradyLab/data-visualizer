@@ -59,11 +59,6 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 allowNull: false,
                 defaultValue: "",
             },
-            // Experimental treatments/conditions in the dataset
-            treatments: {
-                type: DataTypes.ARRAY(DataTypes.STRING),
-                allowNull: false,
-            },
             // Plot types enabled for this dataset: a Postgres array of DatasetPlots ENUM values (creates the enum_Datasets_plots type)
             plots: {
                 type: DataTypes.ARRAY(DataTypes.ENUM(...Object.values(DatasetPlots))),

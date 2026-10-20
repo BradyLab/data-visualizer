@@ -34,7 +34,6 @@ const dataset = ref<IDataset>({
     description: "",
     doi: "",
     attribution: "",
-    treatments: [],
     plots: [],
     // New datasets start private; visibility is changed from the settings page
     visibility: DatasetVisibility.PRIVATE,
@@ -55,7 +54,7 @@ const firstFile = (picked: Picked) => (Array.isArray(picked) ? (picked[0] ?? nul
 const rdsUpdates = ref("");
 
 // The fields the form edits; compared (as a snapshot string) to tell whether another user changed the dataset while it is open
-const EDITABLE_FIELDS = ["name", "url", "description", "doi", "attribution", "treatments", "plots"] as const;
+const EDITABLE_FIELDS = ["name", "url", "description", "doi", "attribution", "plots"] as const;
 const snapshot = (d: IDataset) => JSON.stringify(EDITABLE_FIELDS.map((field) => d[field]));
 // Snapshot of the saved dataset the form started from; replaced after the user's own save so that is not mistaken for someone else's change
 let baseline = "";
@@ -138,7 +137,7 @@ onMounted(async () => {
             return;
         }
         // Copy so edits don't change the store's cached dataset before saving
-        dataset.value = { ...found, treatments: [...found.treatments], plots: [...found.plots] };
+        dataset.value = { ...found, plots: [...found.plots] };
         baseline = snapshot(found);
     } catch {
         error.value = "Unable to load the dataset. Please try again.";
@@ -179,7 +178,7 @@ watch(
 function loadTheirVersion() {
     const theirs = datasetStore.currentDataset;
     if (!theirs) return;
-    dataset.value = { ...theirs, treatments: [...theirs.treatments], plots: [...theirs.plots] };
+    dataset.value = { ...theirs, plots: [...theirs.plots] };
     baseline = snapshot(theirs);
     changedElsewhere.value = false;
 }
@@ -195,7 +194,6 @@ async function save() {
         description: d.description,
         doi: d.doi.trim(),
         attribution: d.attribution.trim(),
-        treatments: d.treatments,
         plots: d.plots,
     };
     try {
@@ -323,19 +321,6 @@ async function save() {
             hide-details
             class="mb-4 mx-4"
         ></v-text-field>
-
-        <!-- Treatments associated with the dataset -->
-        <v-row class="text-body-medium mb-1 mx-4">Add Your Treatments</v-row>
-        <v-combobox
-            v-model="dataset.treatments"
-            placeholder="Type a treatment and press enter"
-            multiple
-            chips
-            closable-chips
-            density="comfortable"
-            hide-details
-            class="mb-4 mx-4"
-        ></v-combobox>
 
         <!-- Plot types available for the dataset -->
         <v-row class="text-body-medium mb-1 mx-4">Pick Your Plots</v-row>

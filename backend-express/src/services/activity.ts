@@ -42,7 +42,7 @@ export const toPlain = (record: object): Record<string, unknown> =>
 
 /**
  * Compares the listed fields of two records and returns { field: { before, after } } for those that differ, or null if none do.
- * Values are compared by their JSON form so arrays (treatments, plots) and dates compare by value, not reference
+ * Values are compared by their JSON form so arrays (plots) and dates compare by value, not reference
  */
 export const diff = (before: object, after: object, fields: readonly string[]) => {
     const changes: Record<string, { before: unknown; after: unknown }> = {};
