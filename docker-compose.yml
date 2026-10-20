@@ -56,8 +56,10 @@ services:
     volumes:
       - ./shiny/app:/srv/shiny-server/app
       - ./data/parquet:/data/parquet:ro
+      - ./data/uploads/tissue:/data/tissue:ro
     environment:
       - PARQUET_DIR=/data/parquet
+      - TISSUE_DIR=/data/tissue
       - SHINY_SECRET=${SHINY_SECRET:?set SHINY_SECRET in .env (see .env.example)}
       - SHINY_DEV=1
 

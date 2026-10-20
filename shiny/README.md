@@ -61,6 +61,7 @@ The **Pick your plots** box in the viewer chooses which plots show (applied with
 | `ViolinPlot` | expression of each picked gene per cluster; **Split by** draws, within each cluster, one violin per value of a column |
 | `DotPlot` | per gene and cluster: dot size = % of cells expressing, color = scaled average expression |
 | `Heatmap` | like Seurat's `DoHeatmap`: a column per cell, grouped by cell label under a colored bar, a row per picked gene, drawing the object's `scale.data` (clipped to ±2.5, colored magenta, black, yellow across the drawn range) with a gap between groups, one heatmap per **Group by** column (titled by the column when there are several); genes missing from it are z-scored across the drawn cells; above 20,000 cells a random sample is drawn |
+| `TissuePlot` | like ggPlantmap: the outlines of the dataset's tissue map (below), each filled with the color of the tissue it stands for (the `tissue_type` column, else the cell labels); with genes picked, a panel per gene filled with the average expression (as in the dot plot) of the cells of that type. Outlines that match no drawn cell type stay grey. Hovering an outline shows a tooltip: its name and, with genes picked, the gene of that panel with its average expression and % of cells expressing. Only offered when the dataset has a readable tissue map |
 
 **Cell labels:** cells are labeled by `seurat_annotations` (cell type names) when `cells.parquet` has that column, else by `seurat_clusters`. The cell type picker, the colors and the violin/dot/heat plots all use those labels.
 
@@ -72,7 +73,15 @@ The signed `ctx` carries every treatment of the dataset (so a viewer cannot chan
 
 **Colors and expression options** (modeled on scCustomize): groups use a colorblind-friendly palette (Okabe-Ito for up to 8 groups, then Polychrome 36), and expression uses a plasma gradient where dark is high. On the UMAP and PCA, the cells of every cell type you did not pick in **Pick your cell types** are drawn light grey underneath (with genes picked they count as not expressing). With genes picked, **Grey out expression at or below** (scCustomize's `na_cutoff`; empty, the default, means no cutoff) also draws cells at or below that value in grey, under the expressing cells. The violin plot can show a boxplot and the median (**Show boxplot**, **Show median**); either replaces the points of the cells.
 
-The violin, dot and heat maps need at least one gene picked. UMAP, PCA and violin draw a panel per gene, and every plot shows all the picked genes. `TissuePlot` is not drawn yet.
+The violin, dot and heat maps need at least one gene picked. UMAP, PCA and violin draw a panel per gene, and every plot shows all the picked genes.
+
+## Tissue map
+
+The tissue plot draws a [ggPlantmap](https://github.com/leonardojo/ggPlantmap) table, uploaded on the dataset's edit page as a **CSV** (in R: `write.csv(map, "map.csv", row.names = FALSE)`). The backend keeps the current one in
+`data/uploads/tissue/<dataset id>_TISSUE_PLOT_v<n>.csv` (type `TISSUE_PLOT`, at most 50 MB), and Shiny reads it from there (mounted read-only, `TISSUE_DIR`). It is plain text on purpose: the viewer never loads an R object from an
+upload. The ggPlantmap package is installed in the Shiny image (from GitHub, pinned to a commit in `shiny/Dockerfile`) and does the drawing: `ggPlantmap.merge` adds the average expression of each cell type to the map and
+`ggPlantmap.heatmap` / `ggPlantmap.plot` draw it. Columns: `ROI.name` (the cell type an outline stands for, which must equal the values of the dataset's `tissue_type` metadata column, case and spelling, to be colored; without that column the cell labels are used instead, with a note under the plot), `ROI.id` (tells the outlines apart), `x`, `y`, and `point`
+(the order of the vertices; the rows are taken to be in order without it); `Level1`, `Level2` and others are ignored. The dataset must also list `TissuePlot` in its plots. It is independent of the preprocessing: uploading a map does not reprocess the dataset.
 
 ## Try it
 

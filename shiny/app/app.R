@@ -12,8 +12,11 @@ library(jsonlite)
 library(openssl)
 library(ggplot2)
 library(scattermore)
+library(ggPlantmap)
 
 PARQUET_DIR <- Sys.getenv("PARQUET_DIR", "/data/parquet")
+# Tissue maps the editors upload (backend/src/services/storage.ts names them <dataset id>_TISSUE_PLOT_v<version>.csv)
+TISSUE_DIR <- Sys.getenv("TISSUE_DIR", "/data/tissue")
 SECRET <- Sys.getenv("SHINY_SECRET")
 DEV <- identical(Sys.getenv("SHINY_DEV"), "1")
 UUID_RE <- "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
@@ -61,6 +64,44 @@ viewer_context <- function(query) {
 
 `%||%` <- function(a, b) if (is.null(a)) b else a
 
+# The dataset's current tissue map file (a CSV of a ggPlantmap table), or NULL when none was uploaded or the id is not a UUID
+TISSUE_PLOT_file <- function(dataset_id) {
+  if (is.null(dataset_id) || length(dataset_id) != 1 || !grepl(UUID_RE, dataset_id)) return(NULL)
+  files <- list.files(TISSUE_DIR, pattern = sprintf("^%s_TISSUE_PLOT_v[0-9]+\\.csv$", tolower(dataset_id)), full.names = TRUE)
+  if (length(files) == 0) return(NULL)
+  files[which.max(as.integer(sub(".*_v([0-9]+)\\.csv$", "\\1", files)))]
+}
+
+# A tissue map as a ggPlantmap table (a tibble with one row per outline vertex: ROI.name, ROI.id, point, x, y), or NULL if the file
+# cannot be read. ROI.name names the cell type an outline stands for, which has to match the cell labels of the dataset to get a color.
+# Without `point` the rows are taken to be in drawing order; without ROI.name the outlines cannot be matched, so the file is refused.
+read_TISSUE_PLOT <- function(path) {
+  raw <- tryCatch(read.csv(path, check.names = FALSE, stringsAsFactors = FALSE), error = function(e) NULL)
+  if (is.null(raw) || !all(c("ROI.name", "ROI.id", "x", "y") %in% names(raw))) return(NULL)
+  map <- data.frame(ROI.name = as.character(raw$ROI.name), ROI.id = raw$ROI.id, x = suppressWarnings(as.numeric(raw$x)),
+                    y = suppressWarnings(as.numeric(raw$y)), stringsAsFactors = FALSE)
+  map$point <- if ("point" %in% names(raw)) raw$point else ave(seq_len(nrow(map)), map$ROI.id, FUN = seq_along)
+  map <- map[stats::complete.cases(map), , drop = FALSE]
+  if (nrow(map) == 0) return(NULL)
+  dplyr::as_tibble(map[order(map$ROI.id, map$point), ])
+}
+
+# Whether the point (px, py) is inside the polygon with these corners (ray casting: count the edges a ray to the right crosses)
+point_in_polygon <- function(px, py, x, y) {
+  j <- c(length(x), seq_len(length(x) - 1))
+  sum(((y > py) != (y[j] > py)) & (px < (x[j] - x) * (py - y) / (y[j] - y) + x)) %% 2 == 1
+}
+
+# The outline of a tissue map table under the point (px, py), as the first row of its vertices, or NULL; where outlines overlap, the one
+# drawn last (the one on top) wins
+outline_at <- function(map, px, py) {
+  hit <- NULL
+  for (part in split(map, map$ROI.id)) {
+    if (px >= min(part$x) && px <= max(part$x) && py >= min(part$y) && py <= max(part$y) && point_in_polygon(px, py, part$x, part$y)) hit <- part[1, , drop = FALSE]
+  }
+  hit
+}
+
 # The metadata column holding the treatment, which the treatment picker filters on: TREATMENT_COLUMN if set, else the first column
 # named like one of these (ignoring case), else the first whose name contains "treat" or "condition"
 TREATMENT_COLUMN <- Sys.getenv("TREATMENT_COLUMN")
@@ -70,6 +111,8 @@ TREATMENT_COLS <- c("treatment", "treatments", "condition", "orig.ident")
 # the cell type picker filters on and what the plots color, group and label by.
 ANNOTATION_COL <- "seurat_annotations"
 CLUSTER_COL <- "seurat_clusters"
+# The column the tissue plot averages by: its values are matched to the ROI.name of the tissue map. Without it the cell labels are used.
+TISSUE_COL <- "tissue_type"
 # Most charts one UMAP or PCA plot can fan out into, one per picked group by column
 MAX_GROUP_PLOTS <- 8
 # Columns with more distinct values than this are not offered to group or split the UMAP and PCA by
@@ -104,7 +147,7 @@ document.addEventListener('DOMContentLoaded', function () {
 "
 
 # Plots this viewer can draw, by the names the dataset page uses (commons/dataset.ts); UMAP is what shows unless the page asks for more
-SUPPORTED_PLOTS <- c("UMAP", "PCA", "ViolinPlot", "DotPlot", "Heatmap")
+SUPPORTED_PLOTS <- c("UMAP", "PCA", "ViolinPlot", "DotPlot", "Heatmap", "TissuePlot")
 
 # Cluster ids are usually numbers stored as text: order them 2 before 10
 sort_clusters <- function(x) {
@@ -271,8 +314,13 @@ server <- function(input, output, session) {
   })
   has_treatments <- reactive(ready && length(dataset_treatments) > 0 && !is.na(treatment_col()))
 
+  # The tissue map of the dataset (read once per session); the tissue plot needs it, so it is not offered without one
+  tissue_path <- TISSUE_PLOT_file(dataset_id)
+  TISSUE_PLOT <- if (is.null(tissue_path)) NULL else read_TISSUE_PLOT(tissue_path)
+
   # Plots to choose from: what the dataset offers (all of them when there is no offered list, which only happens with SHINY_DEV)
   available_plots <- if (length(offered) > 0) SUPPORTED_PLOTS[SUPPORTED_PLOTS %in% offered] else SUPPORTED_PLOTS
+  if (is.null(TISSUE_PLOT)) available_plots <- setdiff(available_plots, "TissuePlot")
 
   output$plot_picker <- renderUI({
     if (!ready) return(NULL)
@@ -391,7 +439,16 @@ server <- function(input, output, session) {
     }))
     div(
       style = "display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start;",
-      lapply(ids, function(id) div(style = sprintf("width: %dpx; max-width: 100%%;", size), plotOutput(id, width = "100%", height = "auto")))
+      lapply(ids, function(id) {
+        if (id == "plot_TissuePlot") {
+          # Hovering an outline shows its numbers (tissue_tip), placed relative to the chart
+          div(
+            style = sprintf("width: %dpx; max-width: 100%%; position: relative;", size),
+            plotOutput(id, width = "100%", height = "auto", hover = hoverOpts("tissue_hover", delay = 80, delayType = "debounce")),
+            uiOutput("tissue_tip")
+          )
+        } else div(style = sprintf("width: %dpx; max-width: 100%%;", size), plotOutput(id, width = "100%", height = "auto"))
+      })
     )
   })
 
@@ -408,6 +465,11 @@ server <- function(input, output, session) {
       )
     } else if (!has_clusters()) {
       tags$div(class = "alert alert-warning", paste("This dataset has no", ANNOTATION_COL, "or", CLUSTER_COL, "column to color the plot by."))
+    } else if ("TissuePlot" %in% offered && is.null(TISSUE_PLOT)) {
+      tags$div(
+        class = "alert alert-info",
+        "The tissue plot is not available: this dataset has no readable tissue map (a CSV of a ggPlantmap table, with the columns ROI.name, ROI.id, x and y)."
+      )
     }
   })
 
@@ -621,6 +683,102 @@ server <- function(input, output, session) {
       scale_color_viridis_c(option = "plasma", direction = -1, begin = 0.1, end = 0.9) +
       labs(x = NULL, y = NULL, size = "% expressed", color = "Avg. expression\n(scaled)") +
       theme_classic(base_size = 14) + theme(axis.text.x = element_text(angle = 45, hjust = 1), panel.grid.major = element_line(color = "grey92"))
+  })
+
+  # The column whose values name the outlines of the tissue map: tissue_type, else the cell labels (with a note under the plot)
+  tissue_col <- reactive(if (TISSUE_COL %in% columns()) TISSUE_COL else label_col())
+  tissue_note <- reactive(if (TISSUE_COL %in% columns()) NULL else sprintf("No %s column in this dataset; outlines are matched to %s.", TISSUE_COL, label_col()))
+
+  # What the tissue plot draws, as a ggPlantmap table: with genes picked, one copy of the map per gene with the average expression of each
+  # outline's cell type (ggPlantmap.merge adds the values; avg_expression is log1p of the dot plot's average, pct_expressed its % of
+  # cells expressing; NA for outlines whose ROI.name matches no drawn cell type); without, the map with its cell type. Also what the hover reads.
+  tissue_data <- reactive({
+    shiny::validate(shiny::need(!is.null(TISSUE_PLOT), "This dataset has no tissue map."))
+    d <- plot_data()
+    # The cells that pass the filters, by their tissue instead of their cell label (the rest of the plot data is shared with the other plots)
+    tissue <- as.character(dbGetQuery(con, cells_sql(dbQuoteIdentifier(con, tissue_col())))[[1]])[d$keep_idx]
+    d$cells$cluster <- tissue
+    d$clusters <- level_order(tissue_col(), tissue)
+    map <- TISSUE_PLOT
+    if (length(d$genes) > 0) {
+      sm <- cluster_summary(long_expression(d))
+      quant <- do.call(rbind, lapply(d$genes, function(g) {
+        s <- sm[sm$gene == g, ]
+        values <- data.frame(ROI.name = as.character(s$cluster), avg_expression = log1p(s$avg), pct_expressed = s$pct)
+        cbind(ggPlantmap.merge(map, values, id.x = "ROI.name"), gene = g)
+      }))
+      quant$gene <- factor(quant$gene, levels = d$genes)
+      list(table = quant, genes = TRUE, d = d)
+    } else {
+      map$cell_type <- factor(ifelse(map$ROI.name %in% d$clusters, map$ROI.name, NA), levels = d$clusters)
+      list(table = map, genes = FALSE, d = d)
+    }
+  })
+
+  # Drawn with ggPlantmap: ggPlantmap.heatmap fills each outline with its average expression, a panel per gene; without genes
+  # ggPlantmap.plot fills it with the cell type's color. Outlines that match no drawn cell type stay grey.
+  # The map keeps its proportions and sits in the middle of the chart, so any height beyond the panels' shows as white space above and
+  # below: the height is that of the panels (the chart width less the legend, shared by the columns, times the map's height/width),
+  # their titles and the caption, estimated a little short, which only narrows the panels
+  output$plot_TissuePlot <- renderPlot(height = function() {
+    panels <- max(1, length(selection()$genes))
+    cols <- ceiling(sqrt(panels))
+    aspect <- if (is.null(TISSUE_PLOT)) 1 else diff(range(TISSUE_PLOT$y)) / max(diff(range(TISSUE_PLOT$x)), 1e-9)
+    legend <- if (length(selection()$genes) > 0) 110 else 170
+    panel_width <- max(100, (plot_width("plot_TissuePlot") - legend) / cols)
+    strip <- if (length(selection()$genes) > 0) 25 else 0
+    as.integer(max(150, ceiling(panels / cols) * (panel_width * aspect + strip) + 20))
+  }, {
+    td <- tissue_data()
+    d <- td$d
+    if (td$genes) {
+      ggPlantmap.heatmap(td$table, value.quant = avg_expression) +
+        scale_fill_viridis_c(option = "plasma", direction = -1, begin = 0.1, end = 0.9, na.value = "grey85") +
+        labs(fill = "Avg. expression", caption = tissue_note()) + facet_wrap(~gene, ncol = ceiling(sqrt(length(d$genes)))) + theme(text = element_text(size = 14))
+    } else {
+      p <- ggPlantmap.plot(td$table, layer = cell_type) +
+        scale_fill_manual(values = setNames(colorblind_palette(length(d$clusters)), d$clusters), na.value = "grey85", drop = TRUE, name = NULL) +
+        labs(caption = tissue_note()) + theme(text = element_text(size = 14))
+      if (isTRUE(d$label)) {
+        # A label at the middle of the corners of each outline that has a cell type
+        centers <- aggregate(cbind(x, y) ~ ROI.id + ROI.name, td$table[td$table$ROI.name %in% d$clusters, ], function(v) mean(range(v)))
+        p <- p + geom_text(aes(x, y, label = ROI.name), centers, inherit.aes = FALSE, size = 4, check_overlap = TRUE)
+      }
+      p
+    }
+  })
+
+  # The box that follows the mouse over the tissue plot: the outline's name and, with genes, the gene (the panel hovered) with its average
+  # expression and % of cells expressing. It sits left of the pointer in the right part of the chart, so it stays inside it.
+  output$tissue_tip <- renderUI({
+    h <- input$tissue_hover
+    if (is.null(h)) return(NULL)
+    td <- tissue_data()
+    tbl <- td$table
+    if (td$genes) {
+      if (is.null(h$panelvar1)) return(NULL)
+      tbl <- tbl[as.character(tbl$gene) == as.character(h$panelvar1), , drop = FALSE]
+    }
+    hit <- outline_at(tbl, h$x, h$y)
+    if (is.null(hit)) return(NULL)
+    body <- if (td$genes) {
+      if (is.na(hit$avg_expression)) {
+        list(tags$b(hit$ROI.name), tags$br(), "no matching cell type")
+      } else {
+        list(tags$b(hit$ROI.name), tags$br(), paste0(hit$gene, ": ", signif(hit$avg_expression, 3), " avg. expression"), tags$br(), paste0(round(hit$pct_expressed, 1), "% of cells expressing"))
+      }
+    } else {
+      list(tags$b(hit$ROI.name), if (is.na(hit$cell_type)) list(tags$br(), "no matching cell type"))
+    }
+    x <- h$coords_css$x
+    side <- if (x > plot_width("plot_TissuePlot") * 0.6) sprintf("right: %dpx;", as.integer(plot_width("plot_TissuePlot") - x + 12)) else sprintf("left: %dpx;", as.integer(x + 12))
+    tags$div(
+      style = paste0(
+        "position: absolute; z-index: 100; pointer-events: none; padding: 4px 8px; font-size: 12px; background: rgba(255, 255, 255, 0.95); ",
+        "border: 1px solid #ccc; border-radius: 4px; ", side, sprintf(" top: %dpx;", as.integer(h$coords_css$y + 12))
+      ),
+      body
+    )
   })
 
   # Like Seurat's DoHeatmap, one heatmap per Group by column (i-th of them): a column per cell, grouped by cell label under a colored identity bar with the group names above it, a row
