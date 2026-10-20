@@ -6,7 +6,7 @@ const SEND_TIMEOUT_MS = 10_000;
 export interface InviteEmail {
     name: string;
     email: string;
-    // The admin who sent the invite: named in the email and set as Reply-To
+    // The admin who sent the invite; passed to the template as admin_name and admin_email
     invitedBy: { name: string; email: string };
 }
 
@@ -24,7 +24,7 @@ export const isEmailConfigured = () =>
     );
 
 /**
- * Emails the invited user a link to the login page. Returns true if EmailJS accepted it, false if email is not configured or sending failed;
+ * Sends the invite email (the EmailJS template decides its text). Returns true if EmailJS accepted it, false if email is not configured or sending failed;
  * it never throws, because the user already exists by the time it is called and a failed email must not fail the invite.
  * The EmailJS template can use the variables invitee_name, invitee_email, admin_name, admin_email
  */

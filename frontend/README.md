@@ -7,7 +7,7 @@ Stack: Vue 3 (`<script setup>`, TypeScript), Vite, Vuetify 4, Pinia, Vue Router,
 
 ## Running locally
 
-Requires Node 24 (24.12+, below 25; the version in `.nvmrc`) and a running backend (see [`../backend-express`](../backend-express/README.md)).
+Requires Node 24 (24.12+, below 25; the version in the repo root `.nvmrc`) and a running backend (see [`../backend-express`](../backend-express/README.md)).
 
 ```sh
 cp .env.example .env

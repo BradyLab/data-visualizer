@@ -51,7 +51,7 @@ const typeLabels: Record<ActivityType, string> = {
     [ActivityType.FILE_DELETED]: "File Deleted",
 };
 
-// Shows the user's name, falling back to the id if the user isn't loaded
+// Shows the user's name, falling back to the id if the user isn't loaded, or "Deleted user" when the activity has no user id
 const userName = (id: string | null) => (id ? (userStore.getById(id)?.name ?? id) : "Deleted user");
 
 // The current page of activities (already filtered by the server), with the user's name added for display

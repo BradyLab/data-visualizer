@@ -122,7 +122,7 @@ watch(
             </v-col>
             <v-col cols="auto">
                 <v-btn prepend-icon="mdi-shield-key-outline" @click="router.push({ name: 'permissions' })">
-                    Permission Management
+                    Permissions Management
                 </v-btn>
             </v-col>
             <v-col v-if="auth.isAdmin" cols="auto">

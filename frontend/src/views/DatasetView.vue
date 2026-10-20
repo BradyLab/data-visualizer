@@ -40,14 +40,13 @@ function onViewerMessage(event: MessageEvent) {
 onMounted(() => window.addEventListener("message", onViewerMessage));
 onBeforeUnmount(() => window.removeEventListener("message", onViewerMessage));
 
-// Asks the backend for a viewer ticket and points the iframe at it. A fresh ticket is fetched on every click (it only lives about a minute),
-// and every treatment of the dataset is passed along (the viewer only draws cells of those treatments)
+// Asks the backend for a viewer ticket and points the iframe at it. A fresh ticket is fetched on every click (it only lives about a minute).
+// The dataset's treatments are not sent: the backend signs them into the viewer's context
 async function generatePlots() {
     error.value = null;
     viewerLoading.value = true;
     try {
-        const params = { treatments: JSON.stringify(datasetStore.currentDataset!.treatments) };
-        viewerUrl.value = await datasetApi.getViewerUrl(datasetStore.currentDataset!.id, params);
+        viewerUrl.value = await datasetApi.getViewerUrl(datasetStore.currentDataset!.id);
     } catch (err) {
         error.value =
             axios.isAxiosError(err) && err.response?.status === 503

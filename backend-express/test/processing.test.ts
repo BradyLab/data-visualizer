@@ -96,6 +96,13 @@ test("a failing job marks the dataset FAILED with the end of the error output an
     assert.equal(await exists(`${existing}.tmp`), false);
 });
 
+test("removeParquet also deletes the .tmp and .old folders next to the dataset's Parquet folder", async () => {
+    const dir = storage.parquetPath("g1");
+    for (const d of [dir, `${dir}.tmp`, `${dir}.old`]) await mkdir(d, { recursive: true });
+    await storage.removeParquet("g1");
+    for (const d of [dir, `${dir}.tmp`, `${dir}.old`]) assert.equal(await exists(d), false);
+});
+
 test("a missing program is reported on the dataset, not thrown", async () => {
     process.env.PREPROCESS_COMMAND = "definitely-not-installed-rscript";
     try {
@@ -275,7 +282,9 @@ test("worker.sh refuses paths outside the upload and parquet folders", async () 
 
 test("redactPaths cuts absolute paths down to their last part and leaves the rest of the message", () => {
     assert.equal(
-        processing.redactPaths("Error: cannot open '/data/uploads/rds/abc_RDS_v1.rds': No such file (also /data/parquet/abc.tmp)"),
+        processing.redactPaths(
+            "Error: cannot open '/data/uploads/rds/abc_RDS_v1.rds': No such file (also /data/parquet/abc.tmp)"
+        ),
         "Error: cannot open '.../abc_RDS_v1.rds': No such file (also .../abc.tmp)"
     );
     assert.equal(processing.redactPaths("took 3/4 of the time, see /tmp"), "took 3/4 of the time, see /tmp");

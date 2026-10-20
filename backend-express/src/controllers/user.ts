@@ -1,5 +1,6 @@
 // Request handlers for Users; thin wrappers that call the user service and shape the HTTP response
 import { Request, Response } from "express";
+import { ForeignKeyConstraintError } from "sequelize";
 import * as service from "@src/services/user.ts";
 import * as datasetService from "@src/services/dataset.ts";
 import { diff, logActivity, toPlain } from "@src/services/activity.ts";
@@ -177,6 +178,7 @@ export const remove = async (req: Request, res: Response) => {
         console.log("[USER CONTROLLER] User not found");
         return res.status(404).json({ error: "User not found" });
     }
+    // Friendly early check; a dataset assigned to this user after it is caught below, when the delete hits the owner FK
     if (await datasetService.countOwnedBy(id))
         return res.status(409).json({ error: "This user owns datasets; reassign them first or deactivate the user instead" });
     const deleted = toPlain(target);
@@ -189,6 +191,8 @@ export const remove = async (req: Request, res: Response) => {
         await service.remove(id);
     } catch (err) {
         if (err instanceof service.LastAdminError) return res.status(409).json({ error: err.message });
+        if (err instanceof ForeignKeyConstraintError)
+            return res.status(409).json({ error: "This user owns datasets; reassign them first or deactivate the user instead" });
         throw err;
     }
     await removeStored(files);

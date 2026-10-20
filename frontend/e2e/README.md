@@ -13,7 +13,7 @@ Locally at most 4 workers run at once (`E2E_WORKERS=n` overrides this), so machi
 
 ## The stack
 
-Separate ports and database, so it never touches the dev stack (see `stack.ts`): Postgres 5433 (`docker-compose.e2e.yml`, wiped every run), backend 3101, frontend 3100. The backend migrates and seeds `backend-express/seeders-e2e/` on start: an admin, a lab member and an external user, all ACTIVE.
+Separate ports and database, so it never touches the dev stack (see `stack.ts`): Postgres 5433 (`docker-compose.e2e.yml`, wiped every run), backend 3101, frontend 3100. The backend runs with `EMAIL_DISABLED=true`, so no invite emails are sent. It migrates and seeds `backend-express/seeders-e2e/` on start: an admin, a lab member and an external user, all ACTIVE.
 
 ## Writing specs
 

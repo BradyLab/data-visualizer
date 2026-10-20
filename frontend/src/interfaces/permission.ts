@@ -1,3 +1,4 @@
+// Request payload types for the permission API
 import { type IPermission } from "@commons/permissions";
 
 /** Payload for granting a permission */

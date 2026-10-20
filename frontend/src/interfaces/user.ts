@@ -1,3 +1,4 @@
+// Request and response types for the user API
 import { type IUser, type IUserName } from "@commons/user";
 import { type ServerFields } from "@src/interfaces/general";
 

@@ -14,6 +14,7 @@ import { NextFunction, Request, Response } from "express";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import {
     authorizeViewer,
+    sessionExpiry,
     sessionMaxAgeSeconds,
     signShinyContext,
     signViewerSession,
@@ -51,7 +52,8 @@ export const slugFromUrl = (url: string | undefined) => {
 };
 
 // True for the app's page itself (/shiny/<slug> or /shiny/<slug>/), as opposed to its assets and connections
-const isPage = (url: URL) => /^\/shiny\/[^/]+\/?$/.test(url.pathname);
+const PAGE_URL = new RegExp(`^${SHINY_PREFIX}/[^/]+/?$`);
+const isPage = (url: URL) => PAGE_URL.test(url.pathname);
 
 /** Value of one cookie in a Cookie header, or null (a tiny parser, so this needs no cookie dependency) */
 export const readCookie = (header: string | undefined, name: string) => {
@@ -127,7 +129,7 @@ export const shinyProxy = async (req: Request, res: Response, next: NextFunction
     if (!ctx) return res.status(404).json({ error: "Dataset not found" });
     // A page request without the signed context (e.g. the bare /shiny/<slug>/ URL, or a link from before it was added) gets a fresh one
     if (req.method === "GET" && isPage(url) && !url.searchParams.has(SHINY_CONTEXT_PARAM)) {
-        url.searchParams.set(SHINY_CONTEXT_PARAM, signShinyContext(ctx));
+        url.searchParams.set(SHINY_CONTEXT_PARAM, signShinyContext(ctx, sessionExpiry(session!)));
         return res.redirect(303, url.pathname + url.search);
     }
     stripCredentials(req);

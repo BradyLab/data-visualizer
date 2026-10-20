@@ -37,7 +37,7 @@ declare global {
             // Lifetime of the viewer ticket and of the viewer cookie session (e.g. "60s", "1h")
             VIEWER_TICKET_EXPIRES_IN?: string;
             VIEWER_SESSION_EXPIRES_IN?: string;
-            // Where the Shiny plot data (one Parquet folder per dataset) is kept; /data/parquet next to UPLOAD_DIR's parent unless set
+            // Where the Shiny plot data (one Parquet folder per dataset) is kept; a "parquet" folder next to UPLOAD_DIR (/data/parquet) unless set
             PARQUET_DIR?: string;
             // Program and script of the preprocessing job (defaults: Rscript and shiny/preprocess/preprocess.R) and its time limit in ms
             PREPROCESS_COMMAND?: string;

@@ -31,6 +31,7 @@ export const useSocketStore = defineStore("socket", () => {
 
     // Not reactive: the socket is an implementation detail, only `connected` is state
     let socket: AppSocket | null = null;
+    // True after the first successful connect, so later connects count as reconnects
     let hasConnected = false;
     // Handlers registered with on(), kept here (not on the socket) so they stay attached when the socket is replaced at login
     const handlers = new Map<SocketEvent, Set<(...args: never[]) => void>>();

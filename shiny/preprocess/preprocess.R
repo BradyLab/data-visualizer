@@ -2,7 +2,7 @@
 #
 #   Rscript preprocess.R <input.rds> <output dir> [assay]
 #
-# The output dir is built next to its final place and renamed into it at the end, so the app never sees a half-written dataset.
+# The output dir is built next to its final place and renamed into it at the end, so the app never sees a half-written dataset (and, when it replaces one, is without it only for an instant).
 # Names the output after the dataset: use /data/parquet/<dataset uuid>. Needs RAM for the whole object (often 2-5x the file size),
 # so run it on a big machine rather than on the web server. Only reads trusted files: readRDS can run code embedded in an RDS.
 #
@@ -131,6 +131,15 @@ expression <- expression[order(expression$gene_idx, expression$cell_idx), ]
 write_parquet(expression, file.path(tmp_dir, "expression.parquet"), compression = "zstd", chunk_size = 1e6)
 
 # ---- publish -------------------------------------------------------------------------------------------------------
-unlink(out_dir, recursive = TRUE)
-if (!file.rename(tmp_dir, out_dir)) stop("could not move ", tmp_dir, " to ", out_dir)
+# A re-run replaces an existing dataset: the old dir is renamed aside first (not deleted), so the app is without a dataset for only the
+# moment between the two renames, not for as long as deleting takes, and the old one comes back if the second rename fails
+old_dir <- paste0(out_dir, ".old")
+unlink(old_dir, recursive = TRUE)
+had_old <- file.exists(out_dir)
+if (had_old && !file.rename(out_dir, old_dir)) stop("could not move ", out_dir, " to ", old_dir)
+if (!file.rename(tmp_dir, out_dir)) {
+  if (had_old) file.rename(old_dir, out_dir)
+  stop("could not move ", tmp_dir, " to ", out_dir)
+}
+unlink(old_dir, recursive = TRUE)
 message("Done: ", out_dir)

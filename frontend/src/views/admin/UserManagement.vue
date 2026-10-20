@@ -25,6 +25,7 @@ const headers = [
 const roleFilter = ref<UserRoles[]>([]);
 const statusFilter = ref<UserStatus[]>([]);
 const roleOptions = ASSIGNABLE_ROLES;
+// Unlike the edit popup, the filter offers every status, including INVITED
 const statusOptions = Object.values(UserStatus);
 
 // Users matching any selected status and any selected role

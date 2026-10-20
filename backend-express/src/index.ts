@@ -78,6 +78,9 @@ export const get = () => {
         // e.g. a non-UUID in /:id or an unknown enum value in a filter. Must come after the subclasses above
         if (err instanceof DatabaseError && (err.parent as { code?: string } | undefined)?.code === "22P02")
             return res.status(400).json({ error: "Invalid value in request" });
+        // body-parser errors (malformed JSON, payload too large) are http-errors: a 4xx status, and `expose` marks the message as safe to show
+        const { status, expose } = err as { status?: number; expose?: boolean };
+        if (status && status >= 400 && status < 500 && expose) return res.status(status).json({ error: err.message });
         console.error("[ERROR HANDLER] Unhandled error:", err.stack);
         res.status(500).json({ error: "Internal Server Error" });
     });

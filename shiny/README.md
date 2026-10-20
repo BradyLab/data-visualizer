@@ -2,8 +2,7 @@
 
 Interactive plots for one dataset, shown in an iframe on the dataset page. The Shiny server is private: the Express backend proxies
 `/shiny/<dataset slug>/...` to it after checking the viewer ticket/cookie and the dataset permissions
-(`backend-express/src/middleware/shinyProxy.ts`), and tells the app who is asking through trusted headers
-(dataset id, offered plots). Shiny Server does not hand request headers to the app, so Express signs them into
+(`backend-express/src/middleware/shinyProxy.ts`), and tells the app who is asking (dataset id, offered plots, treatments). Shiny Server does not hand request headers to the app, so Express signs them into
 `?ctx=<payload>.<hmac>` in the iframe URL with `SHINY_SECRET` (set the same value for Express and Shiny); the app verifies it.
 
 - `app/` the Shiny app (served by Shiny Server at `/app/`). No Seurat: it reads Parquet through DuckDB.
@@ -59,21 +58,21 @@ The **Pick your plots** box in the viewer chooses which plots show (applied with
 | Plot | What it shows |
 | --- | --- |
 | `UMAP`, `PCA` | cells (PC1 vs PC2 for PCA) colored by the cell labels (or **Group by**), or one expression panel per picked gene; **Split by** draws a panel per value of a column |
-| `ViolinPlot` | expression of each picked gene per cluster |
+| `ViolinPlot` | expression of each picked gene per cluster; **Split by** draws, within each cluster, one violin per value of a column |
 | `DotPlot` | per gene and cluster: dot size = % of cells expressing, color = scaled average expression |
 | `Heatmap` | like Seurat's `DoHeatmap`: a column per cell, grouped by cell label under a colored bar, a row per picked gene, drawing the object's `scale.data` (clipped to ±2.5, colored magenta, black, yellow across the drawn range) with a gap between groups, one heatmap per **Group by** column (titled by the column when there are several); genes missing from it are z-scored across the drawn cells; above 20,000 cells a random sample is drawn |
 
 **Cell labels:** cells are labeled by `seurat_annotations` (cell type names) when `cells.parquet` has that column, else by `seurat_clusters`. The cell type picker, the colors and the violin/dot/heat plots all use those labels.
 
-**Group by / Split by** (in the options row above **Update plots**, like Seurat's `group.by` / `split.by`; Group by shows with the UMAP, PCA or heatmap, Split by with the UMAP or PCA) list the text, logical and cluster columns with at most 50 values. Group by takes several columns, each drawn as its own chart (up to 8, titled by the column; default: the cell labels, also used when it is emptied). It does not apply to gene panels, as in `FeaturePlot`. Split by draws one panel per value (without genes, each group in each panel gets its own color and label, e.g. `B_CTRL` and `B_STIM`; colors run through the first panel's groups, then the next panel's), or, with genes picked, genes down and values across.
+**Group by / Split by** (in the options row above **Update plots**, like Seurat's `group.by` / `split.by`; Group by shows with the UMAP, PCA or heatmap, Split by with the UMAP, PCA or violin plot) list the text, logical and cluster columns with at most 50 values. Group by takes several columns, each drawn as its own chart (up to 8, titled by the column; default: the cell labels, also used when it is emptied). It does not apply to gene panels, as in `FeaturePlot`. Split by draws one panel per value (without genes, each group in each panel gets its own color and label, e.g. `B_CTRL` and `B_STIM`; colors run through the first panel's groups, then the next panel's), or, with genes picked, genes down and values across.
 
-The dataset page always sends `?treatments=<JSON array>` with every treatment of the dataset. There is no treatment picker: when that list is not empty and the data has a treatment column, every plot keeps only cells whose value in that column is one of those treatments (the names must match exactly). The column is the one named by the `TREATMENT_COLUMN` environment variable, else the first column called `treatment`, `treatments`, `condition` or `orig.ident` (any case), else the first whose name contains "treat" or "condition". If there are treatments but no column is found, the viewer lists the available columns.
+The signed `ctx` carries every treatment of the dataset (so a viewer cannot change it by editing the URL). There is no treatment picker: when that list is not empty and the data has a treatment column, every plot keeps only cells whose value in that column is one of those treatments (the names must match exactly). The column is the one named by the `TREATMENT_COLUMN` environment variable, else the first column called `treatment`, `treatments`, `condition` or `orig.ident` (any case), else the first whose name contains "treat" or "condition". If there are treatments but no column is found, the viewer lists the available columns.
 
 **Chart width** (slider in the options row above **Update plots**, 300-1200 px, applies right away) sets the width of every chart; it starts at 600, and picking the violin plot, the dot plot, the heatmap or a **Split by** column sets it to 1200 (move it afterwards if you like). Charts flow left to right and wrap, so when they are narrow enough several sit side by side (the plots you picked, and the group by charts of the UMAP and PCA); a chart is never wider than the page.
 
 **Colors and expression options** (modeled on scCustomize): groups use a colorblind-friendly palette (Okabe-Ito for up to 8 groups, then Polychrome 36), and expression uses a plasma gradient where dark is high. On the UMAP and PCA, the cells of every cell type you did not pick in **Pick your cell types** are drawn light grey underneath (with genes picked they count as not expressing). With genes picked, **Grey out expression at or below** (scCustomize's `na_cutoff`; empty, the default, means no cutoff) also draws cells at or below that value in grey, under the expressing cells. The violin plot can show a boxplot and the median (**Show boxplot**, **Show median**); either replaces the points of the cells.
 
-The violin, dot and heat maps need at least one gene picked. UMAP, PCA and violin draw a panel per gene, so they show only the first 10 picked genes (a note under the plot says so); the dot plot and heatmap show all picked genes. `TissuePlot` is not drawn yet.
+The violin, dot and heat maps need at least one gene picked. UMAP, PCA and violin draw a panel per gene, and every plot shows all the picked genes. `TissuePlot` is not drawn yet.
 
 ## Try it
 
@@ -81,7 +80,7 @@ The Shiny port is not published, so `localhost:3838` does not work with a plain 
 
 1. `docker compose up` (needs `SHINY_URL` and `SHINY_SECRET`, which compose sets for the backend and the `shiny` service), log in at http://localhost:3000, open a dataset.
 2. Click **Generate Plots**. The frontend asks the backend for a viewer ticket and shows the Shiny app in an iframe.
-3. The UMAP, colored by the cell labels, is drawn as soon as the viewer loads. Optionally pick genes in **Pick your genes** (searchable, one UMAP panel per gene, up to 10, needs `genes.parquet` and `expression.parquet`) instead of coloring by the cell labels; **Pick your cell types** keeps only the chosen labels. Clear a picker to undo it.
+3. The UMAP, colored by the cell labels, is drawn as soon as the viewer loads. Optionally pick genes in **Pick your genes** (searchable, one UMAP panel per gene, needs `genes.parquet` and `expression.parquet`) instead of coloring by the cell labels; **Pick your cell types** keeps only the chosen labels. Clear a picker to undo it.
 4. Click **Update plots** inside the iframe to apply the pickers (the pickers, **Group by**, **Split by** and **Label clusters** all wait for the button; only **Chart width** applies right away).
 
 Running the backend outside Docker: add `SHINY_URL=http://localhost:3838` and `SHINY_SECRET=<same as the shiny container>` to `backend-express/.env` and publish the port

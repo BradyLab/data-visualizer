@@ -17,6 +17,7 @@ const isSelf = computed(() => !!props.user && props.user.id === auth.user.id);
 
 // GUEST is the logged-out placeholder role, so it isn't offered for real users
 const roleOptions = ASSIGNABLE_ROLES;
+// INVITED is not selectable: invited users become ACTIVE by changing their password
 const statusOptions: UserStatus[] = Object.values(UserStatus).filter((s) => s !== UserStatus.INVITED);
 
 const role = ref<UserRoles>(UserRoles.EXTERNAL);

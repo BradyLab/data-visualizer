@@ -33,7 +33,7 @@ export const MAX_COVER_BYTES = 20 * 1024 * 1024;
 /** Lowercased extension of an uploaded file name (including the dot), or "" */
 export const extensionOf = (ogName: string) => path.extname(ogName).toLowerCase();
 
-/** Creates the upload folders if they do not exist yet */
+/** Creates the upload, temporary and Parquet folders if they do not exist yet */
 export const ensureDirs = async () => {
     await Promise.all([TMP_DIR, PARQUET_DIR, ...Object.values(TYPE_DIRS)].map((dir) => mkdir(dir, { recursive: true })));
 };
@@ -65,11 +65,12 @@ export const hasParquet = (datasetId: string) =>
         () => false
     );
 
-/** Deletes a dataset's Parquet folder, and the half-built one the preprocessing job leaves next to it when it fails */
+/** Deletes a dataset's Parquet folder, and the half-built (.tmp) and replaced (.old) ones the preprocessing job can leave next to it */
 export const removeParquet = async (datasetId: string) => {
     await Promise.all([
         rm(parquetPath(datasetId), { recursive: true, force: true }),
         rm(`${parquetPath(datasetId)}.tmp`, { recursive: true, force: true }),
+        rm(`${parquetPath(datasetId)}.old`, { recursive: true, force: true }),
     ]);
 };
 

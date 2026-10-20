@@ -51,7 +51,8 @@ function navTo(route: string) {
         <v-row>
             <!-- One card per dataset; clicking opens the dataset page -->
             <!-- The url slug is the unique key and the route param -->
-            <v-col cols="6" class="d-flex" v-for="dataset in datasetStore.datasets" :key="dataset.url">
+            <!-- One card per row on phones, two from the sm breakpoint up -->
+            <v-col cols="12" sm="6" class="d-flex" v-for="dataset in datasetStore.datasets" :key="dataset.url">
                 <v-card class="flex-grow-1 d-flex flex-column" @click="navTo('/dataset/' + dataset.url)">
                     <!-- Cover image, or a color block when the dataset has none -->
                     <DatasetCover :dataset-id="dataset.id" :height="110" />

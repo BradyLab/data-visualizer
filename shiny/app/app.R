@@ -24,14 +24,21 @@ dataset_dir <- function(dataset_id) {
   file.path(PARQUET_DIR, tolower(dataset_id))
 }
 
+# Whether two strings are equal, looking at every byte so the time taken does not reveal how much of a signature was right
+same_string <- function(a, b) {
+  a <- as.integer(charToRaw(a))
+  b <- as.integer(charToRaw(b))
+  length(a) == length(b) && sum(a != b) == 0
+}
+
 # The payload (a list) of a context made by Express, or NULL if it is missing, forged, malformed or expired
 verify_context <- function(token) {
   if (is.null(token) || length(token) != 1 || !nzchar(SECRET)) return(NULL)
   parts <- strsplit(token, ".", fixed = TRUE)[[1]]
   if (length(parts) != 2) return(NULL)
-  # as.character keeps the "hash" class, which would make identical() fail even for equal text, so drop it
+  # as.character keeps the "hash" class, which would make an equality test fail even for equal text, so drop it
   expected <- unclass(as.character(sha256(charToRaw(parts[[1]]), key = charToRaw(SECRET))))
-  if (!identical(expected, parts[[2]])) return(NULL)
+  if (!same_string(expected, parts[[2]])) return(NULL)
   b64 <- chartr("-_", "+/", parts[[1]])
   b64 <- paste0(b64, strrep("=", (4 - nchar(b64) %% 4) %% 4))
   payload <- tryCatch(fromJSON(rawToChar(base64_decode(b64)), simplifyVector = FALSE), error = function(e) NULL)
@@ -39,14 +46,16 @@ verify_context <- function(token) {
   payload
 }
 
-# Who is looking at what: list(dataset_id, plots) from the signed ctx in the URL, or NULL if there is none that is valid.
+# Who is looking at what: list(dataset_id, plots, treatments) from the signed ctx in the URL, or NULL if there is none that is valid.
 # With SHINY_DEV=1 a bare ?dataset=<uuid> is accepted too (every plot)
 viewer_context <- function(query) {
   payload <- verify_context(query$ctx)
   if (!is.null(payload)) {
-    return(list(dataset_id = payload$dataset_id, plots = as.character(unlist(payload$plots))))
+    return(list(
+      dataset_id = payload$dataset_id, plots = as.character(unlist(payload$plots)), treatments = as.character(unlist(payload$treatments))
+    ))
   }
-  if (DEV && !is.null(query$dataset)) return(list(dataset_id = query$dataset, plots = character()))
+  if (DEV && !is.null(query$dataset)) return(list(dataset_id = query$dataset, plots = character(), treatments = character()))
   NULL
 }
 
@@ -111,8 +120,8 @@ ordered_levels <- function(table, column, values) {
   c(intersect(known, values), sort_clusters(setdiff(values, known)))
 }
 
-# html/body: the parent sizes the iframe to the content, so the page itself never scrolls. The rest paints the Update plots button, the
-# chart width slider and the label checkbox in the accent color.
+# html/body: the parent sizes the iframe to the content, so the page itself never scrolls. .options-row lays out the option controls; the
+# rest paints the Update plots button, the chart width slider and the label checkbox in the accent color.
 ACCENT <- "#103819"
 STYLE <- paste0("
 html, body { overflow-y: hidden; }
@@ -250,8 +259,9 @@ server <- function(input, output, session) {
     counts[counts <= MAX_GROUPS | names(counts) %in% label_col()]
   })
 
-  # Treatments of the dataset (?treatments=<JSON array>); when there are some and the data has a treatment column, only cells of those are drawn
-  dataset_treatments <- if (is.null(query$treatments)) character() else tryCatch(as.character(unlist(fromJSON(query$treatments))), error = function(e) character())
+  # TODO Treatments are not needed: remove them (this filter, TREATMENT_COLUMN, the signed ctx field, the dataset's treatments field and its edit-page input)
+  # Treatments of the dataset (signed); when there are some and the data has a treatment column, only cells of those are drawn
+  dataset_treatments <- context$treatments
   treatment_col <- reactive({
     cols <- columns()
     if (nzchar(TREATMENT_COLUMN)) return(if (TREATMENT_COLUMN %in% cols) TREATMENT_COLUMN else NA_character_)
@@ -360,8 +370,8 @@ server <- function(input, output, session) {
     if (length(chosen) == 0) default_plots else SUPPORTED_PLOTS[SUPPORTED_PLOTS %in% chosen]
   })
 
-  # Split plots (a panel per value), violin plots (a violin per cluster) and dot plots (a column per gene) and heatmaps (a tile per cluster and gene) are wide, so picking either sets the width slider to its
-  # maximum, and going back to neither sets the default; the slider can still be moved afterwards. An empty plot picker means the defaults.
+  # A split by column or the violin, dot or heat plot makes the charts wide, so picking one sets the width slider to its maximum, and
+  # going back to none sets the default; the slider can still be moved afterwards. An empty plot picker means the defaults.
   observe({
     plots <- if (length(input$plots)) input$plots else default_plots
     wide <- nzchar(input$split_by %||% "") || any(c("ViolinPlot", "DotPlot", "Heatmap") %in% plots)
@@ -407,9 +417,9 @@ server <- function(input, output, session) {
     group <- intersect(selection()$group_by, names(group_counts()))
     if (length(group) == 0) label_col() else head(group, MAX_GROUP_PLOTS)
   })
-  # Genes color the cells by expression, so group by does not apply and one chart is enough
   # The heatmap needs genes, so unlike the UMAP and PCA it is drawn once per group by column even when genes are picked
   n_heatmaps <- reactive(if (!has_clusters()) 1 else length(group_cols()))
+  # Genes color the cells by expression, so group by does not apply and one chart is enough
   n_group_plots <- reactive(if (!has_clusters() || length(selection()$genes) > 0) 1 else length(group_cols()))
 
   # ---- data shared by the plots (computed once per press of the button) ------------------------------------------------------------
@@ -639,7 +649,7 @@ server <- function(input, output, session) {
     if (length(missing) > 0 && has_scaled) {
       caption <- paste(c(caption, paste("Not in scale.data, so scaled across the drawn cells:", paste(d$genes[missing], collapse = ", "))), collapse = "\n")
     }
-    # Cells are grouped by the first Group by column (the cell labels unless changed), in the object's level order
+    # Cells are grouped by this heatmap's Group by column (the cell labels unless changed), in the object's level order
     grp <- cells[[paste0("grp", i)]]
     group <- factor(grp, levels = level_order(d$group_cols[[i]], grp))
     ord <- order(group)

@@ -5,6 +5,8 @@ import { PostgresStore } from "@src/middleware/rateLimitStore.ts";
 
 // Counters are kept in Postgres (see rateLimitStore.ts), so they survive restarts and are shared across instances.
 // Each limiter gets its own store prefix. If the database is unreachable the request fails with an error rather than skipping the limit
+
+// Length of every limiter's counting window
 const WINDOW_MS = 15 * 60 * 1000;
 // Body shared by the two login limiters; the client shows this message on HTTP 429
 const TOO_MANY = { error: "Too many login attempts. Please try again later." };
