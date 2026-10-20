@@ -1,4 +1,4 @@
-// On-disk storage for uploaded files: RDS files go in <UPLOAD_DIR>/rds and cover photos in <UPLOAD_DIR>/cover
+// On-disk storage for uploaded files: RDS files go in <UPLOAD_DIR>/rds, cover photos in <UPLOAD_DIR>/cover and tissue maps in <UPLOAD_DIR>/tissue
 // Each stored file is named <dataset_id>_<type>_v<version><extension> (extension lowercased from the original name), so its path can always be rebuilt from its record
 // Only the current version of a file is kept on disk; older versions stay in the Files table without a file
 import { mkdir, rename, rm, stat } from "node:fs/promises";
@@ -16,6 +16,7 @@ export const PARQUET_DIR = process.env.PARQUET_DIR || path.join(path.dirname(UPL
 const TYPE_DIRS: Record<FileTypes, string> = {
     [FileTypes.RDS]: path.join(UPLOAD_DIR, "rds"),
     [FileTypes.COVER]: path.join(UPLOAD_DIR, "cover"),
+    [FileTypes.TISSUE_PLOT]: path.join(UPLOAD_DIR, "tissue"),
 };
 
 // Incoming uploads land here first (same filesystem as the final folders, so the move is a cheap rename) until they are validated
@@ -25,10 +26,12 @@ export const TMP_DIR = path.join(UPLOAD_DIR, "tmp");
 export const ALLOWED_EXTENSIONS: Record<FileTypes, string[]> = {
     [FileTypes.RDS]: [".rds"],
     [FileTypes.COVER]: [".jpg", ".jpeg", ".png", ".webp", ".gif"],
+    [FileTypes.TISSUE_PLOT]: [".csv"],
 };
 
-// Largest accepted cover photo; RDS files are only bound by MAX_UPLOAD_BYTES in services/tus.ts
+// Largest accepted cover photo and tissue map; RDS files are only bound by MAX_UPLOAD_BYTES in services/tus.ts
 export const MAX_COVER_BYTES = 20 * 1024 * 1024;
+export const MAX_TISSUE_PLOT_BYTES = 50 * 1024 * 1024;
 
 /** Lowercased extension of an uploaded file name (including the dot), or "" */
 export const extensionOf = (ogName: string) => path.extname(ogName).toLowerCase();

@@ -5,6 +5,7 @@ import type { Timestamp } from "./general.ts";
 export enum FileTypes {
     COVER = "COVER",
     RDS = "RDS",
+    TISSUE_PLOT = "TISSUE_PLOT",
 }
 
 // A file record as stored in the Files table

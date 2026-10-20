@@ -53,6 +53,8 @@ const parseMetadata = (metadata: Record<string, string | null | undefined> = {},
         return `A ${fields.type} file must have one of these extensions: ${allowed.join(", ")}`;
     if (fields.type === FileTypes.COVER && size > storage.MAX_COVER_BYTES)
         return `A COVER file must be at most ${storage.MAX_COVER_BYTES / 1024 / 1024} MB`;
+    if (fields.type === FileTypes.TISSUE_PLOT && size > storage.MAX_TISSUE_PLOT_BYTES)
+        return `A TISSUE_PLOT file must be at most ${storage.MAX_TISSUE_PLOT_BYTES / 1024 / 1024} MB`;
     // Update notes are only collected for RDS files
     if (fields.updates && fields.type !== FileTypes.RDS) return "updates are only allowed on RDS files";
     return fields;
