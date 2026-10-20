@@ -25,6 +25,8 @@ export const BACKEND_ENV = {
   JWT_SECRET: 'e2e-only-secret',
   JWT_EXPIRES_IN: '8h',
   UPLOAD_DIR,
+  // The backend loads .env, which may hold real EmailJS keys; e2e must never send real invite emails
+  EMAIL_DISABLED: 'true',
 }
 
 export const FRONTEND_ENV = { VITE_BACKEND_URL: BACKEND_URL, VITE_API_PATH: '/api' }

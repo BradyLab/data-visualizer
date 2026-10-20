@@ -6,14 +6,34 @@ import { sendInviteEmail } from "@src/services/email.ts";
 const invite = { name: "New User", email: "new@example.com", invitedBy: { name: "Ada Admin", email: "ada@example.com" } };
 const KEYS = ["EMAILJS_SERVICE_ID", "EMAILJS_TEMPLATE_ID", "EMAILJS_PUBLIC_KEY", "EMAILJS_PRIVATE_KEY"] as const;
 const realFetch = globalThis.fetch;
+const realNodeEnv = process.env.NODE_ENV;
 
+// `npm test` runs with NODE_ENV=test, which disables sending; these tests turn it back on but only ever against a mocked fetch
 beforeEach(() => {
+    process.env.NODE_ENV = "development";
+    delete process.env.EMAIL_DISABLED;
     process.env.FRONTEND_URL = "https://viz.example.com";
     for (const key of KEYS) process.env[key] = `test-${key}`;
 });
 
 afterEach(() => {
     globalThis.fetch = realFetch;
+    process.env.NODE_ENV = realNodeEnv;
+    delete process.env.EMAIL_DISABLED;
+});
+
+test("sendInviteEmail makes no request under NODE_ENV=test or EMAIL_DISABLED, even when fully configured", async () => {
+    let calls = 0;
+    globalThis.fetch = (async () => {
+        calls++;
+        return new Response("ok");
+    }) as typeof fetch;
+    process.env.NODE_ENV = "test";
+    assert.equal(await sendInviteEmail(invite), false);
+    process.env.NODE_ENV = "development";
+    process.env.EMAIL_DISABLED = "true";
+    assert.equal(await sendInviteEmail(invite), false);
+    assert.equal(calls, 0);
 });
 
 test("sendInviteEmail does nothing and returns false when EmailJS is not configured", async () => {

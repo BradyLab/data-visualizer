@@ -31,6 +31,7 @@ npm run dev               # tsx watch, http://localhost:3001
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD` | PostgreSQL connection (all required) |
 | `DEFAULT_PASSWORD` | Password given to seeded users until they change it (invited users get a random temporary password) |
 | `EMAILJS_SERVICE_ID`, `EMAILJS_TEMPLATE_ID`, `EMAILJS_PUBLIC_KEY`, `EMAILJS_PRIVATE_KEY` | Optional. [EmailJS](https://www.emailjs.com) settings for the invite email; all four are needed, otherwise no email is sent. See [Invite emails](#invite-emails) |
+| `EMAIL_DISABLED` | Optional. `true` sends no email even if EmailJS is configured. It is also off whenever `NODE_ENV=test`; `npm test` and the e2e stack both set this so tests never call the real API |
 | `JWT_SECRET` | Signing secret for login tokens; the server refuses to start without it |
 | `JWT_EXPIRES_IN` | Token lifetime, e.g. `8h` |
 | `UPLOAD_DIR` | Where uploads are stored (default `/data/uploads`); `rds/`, `cover/` and `tmp/` are created inside |

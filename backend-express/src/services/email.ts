@@ -10,8 +10,12 @@ export interface InviteEmail {
     invitedBy: { name: string; email: string };
 }
 
-/** True if every EmailJS setting is present; without them invites are still created but no email goes out */
+/** True when tests (NODE_ENV=test) or EMAIL_DISABLED=true ask for no real requests, whatever the EmailJS settings in .env say */
+const isEmailDisabled = () => process.env.NODE_ENV === "test" || process.env.EMAIL_DISABLED === "true";
+
+/** True if every EmailJS setting is present and sending is not disabled; otherwise invites are still created but no email goes out */
 export const isEmailConfigured = () =>
+    !isEmailDisabled() &&
     !!(
         process.env.EMAILJS_SERVICE_ID &&
         process.env.EMAILJS_TEMPLATE_ID &&
@@ -26,7 +30,7 @@ export const isEmailConfigured = () =>
  */
 export const sendInviteEmail = async ({ name, email, invitedBy }: InviteEmail) => {
     if (!isEmailConfigured()) {
-        console.log("[EMAIL SERVICE] EmailJS is not configured, skipping the invite email");
+        console.log("[EMAIL SERVICE] EmailJS is not configured or is disabled, skipping the invite email");
         return false;
     }
     try {
@@ -52,6 +56,8 @@ export const sendInviteEmail = async ({ name, email, invitedBy }: InviteEmail) =
             console.error(`[EMAIL SERVICE] EmailJS refused the invite email (${response.status}): ${await response.text()}`);
             return false;
         }
+
+        console.log("[EMAIL SERVICE] Invite email sent successfully");
         return true;
     } catch (err) {
         console.error("[EMAIL SERVICE] Could not send the invite email", err);
