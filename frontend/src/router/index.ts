@@ -94,6 +94,7 @@ const router = createRouter({
             component: () => import("@src/views/admin/PermissionManagement.vue"),
             meta: { hideFooter: false, requiresAuth: true },
         },
+        // TODO 404
     ],
 });
 

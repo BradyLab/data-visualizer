@@ -23,6 +23,7 @@ const confirmPassword = ref("");
 const saving = ref(false);
 const error = ref<string | null>(null);
 const success = ref(false);
+// The v-form, used to run the field rules before saving
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 
 // Field rules; each returns true when valid or an error message when not
@@ -81,6 +82,7 @@ async function submit() {
 </script>
 
 <template>
+    <!-- Cannot be dismissed while saving, or while an invited user still has to replace the default password -->
     <v-dialog v-model="open" max-width="480" :persistent="saving || mustChange">
         <v-card class="pa-4">
             <v-card-title>Change Password</v-card-title>

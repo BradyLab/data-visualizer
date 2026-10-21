@@ -19,16 +19,7 @@ import { DatasetStatus } from "@commons/dataset.ts";
 import { FileTypes } from "@commons/file.ts";
 
 // Whitelist of columns clients may set (see utils/pick.ts)
-const DATASET_FIELDS = [
-    "name",
-    "owner",
-    "url",
-    "description",
-    "doi",
-    "attribution",
-    "plots",
-    "visibility",
-] as const;
+const DATASET_FIELDS = ["name", "owner", "url", "description", "doi", "attribution", "plots", "visibility"] as const;
 // Same whitelist minus owner, which is set when the dataset is created and cannot be changed afterwards
 const DATASET_UPDATE_FIELDS = DATASET_FIELDS.filter((f) => f !== "owner");
 
@@ -57,7 +48,7 @@ export const getByUrl = async (req: Request, res: Response) => {
 };
 
 /**
- * POST /:id/viewer : returns { url } for the dataset's Shiny viewer (200): a path under /shiny with a one-minute ticket the proxy
+ * POST /:id/viewer : returns { url } for the dataset's Shiny viewer (200): a path under /shiny with a short-lived ticket the proxy
  * swaps for a cookie session. Needs VIEW access (404 if the dataset does not exist or is not visible), and 503 if Shiny is not configured
  */
 export const viewer = async (req: Request, res: Response) => {
@@ -155,9 +146,13 @@ export const remove = async (req: Request, res: Response) => {
     // A running or queued processing job is dropped, and the plot data it made goes with the dataset
     processing.cancel(found.dataset.id);
     await service.remove(found.dataset.id);
-    await removeStored(files);
-    await removeParquet(found.dataset.id);
+    // The dataset is gone once the rows are deleted, so record and announce it before the file cleanup,
+    // which must not stop either if it fails
     await logActivity(res, ActivityType.DATASET_DELETED, toPlain(found.dataset));
     await emitDatasetDeleted(found.dataset.id);
+    await removeStored(files).catch((err) => console.error("[DATASET CONTROLLER] Failed to remove stored files:", err));
+    await removeParquet(found.dataset.id).catch((err) =>
+        console.error("[DATASET CONTROLLER] Failed to remove parquet data:", err)
+    );
     res.status(204).send();
 };

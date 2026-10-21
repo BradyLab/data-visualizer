@@ -49,7 +49,6 @@ onMounted(() => {
 const canManagePermissions = computed(() => auth.isAdmin || datasetStore.datasets.some((d) => permissionStore.canManage(d)));
 
 // Value of the name field in the user settings form
-const name = ref(auth.user.name);
 
 // Vuetify validation rule factory: fails on empty or whitespace-only input
 const required = (label: string) => (v: string) => !!v?.trim() || `${label} is required`;
@@ -65,7 +64,7 @@ async function saveName() {
     nameSaving.value = true;
     nameMessage.value = null;
     try {
-        auth.user = await userStore.editUser(auth.user.id, { name: name.value.trim() });
+        auth.user = await userStore.editUser(auth.user.id, { name: auth.user.name.trim() });
         nameMessage.value = { type: "success", text: "Name updated." };
     } catch {
         nameMessage.value = { type: "error", text: "Unable to update your name. Please try again." };
@@ -95,7 +94,7 @@ watch(
         <v-form ref="nameForm" @submit.prevent="saveName">
             <v-row class="mb-6 mx-4">
                 <v-col cols="12" md="6">
-                    <v-text-field v-model="name" label="Name" :rules="[required('Name')]" />
+                    <v-text-field v-model="auth.user.name" label="Name" :rules="[required('Name')]" />
                     <v-alert v-if="nameMessage" :type="nameMessage.type" variant="tonal" density="compact" class="mb-3">
                         {{ nameMessage.text }}
                     </v-alert>

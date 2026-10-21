@@ -22,7 +22,9 @@ const saving = ref(false);
 const error = ref<string | null>(null);
 // Set once the invite went through; switches the popup from the form to the one-time password
 const invited = ref<InviteUserResult | null>(null);
+// True after the password was copied, to show a check icon
 const copied = ref(false);
+// The v-form, used to run the field rules before saving
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 
 // Field rules: name required, email required and shaped like an address
@@ -71,6 +73,7 @@ async function copyPassword() {
 <template>
     <!-- Cannot be dismissed while the invite request is in flight, or while the one-time password is showing -->
     <v-dialog v-model="open" max-width="480" :persistent="saving || !!invited">
+        <!-- Step 2: the one-time temporary password -->
         <v-card v-if="invited" class="pa-4">
             <v-card-title>User Invited</v-card-title>
             <v-card-text class="px-4 pb-0">
@@ -98,6 +101,7 @@ async function copyPassword() {
                 <v-btn color="white" variant="tonal" @click="open = false">Done</v-btn>
             </v-card-actions>
         </v-card>
+        <!-- Step 1: the invite form -->
         <v-card v-else class="pa-4">
             <v-card-title>Invite User</v-card-title>
             <v-card-text class="px-4 pb-0">

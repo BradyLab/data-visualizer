@@ -34,7 +34,7 @@ npm run dev               # tsx watch, http://localhost:3001
 | `EMAIL_DISABLED` | Optional. `true` sends no email even if EmailJS is configured. It is also off whenever `NODE_ENV=test`; `npm test` and the e2e stack both set this so tests never call the real API |
 | `JWT_SECRET` | Signing secret for login tokens; the server refuses to start without it |
 | `JWT_EXPIRES_IN` | Token lifetime, e.g. `8h` |
-| `UPLOAD_DIR` | Where uploads are stored (default `/data/uploads`); `rds/`, `cover/` and `tmp/` are created inside |
+| `UPLOAD_DIR` | Where uploads are stored (default `/data/uploads`); `rds/`, `cover/`, `tissue/` and `tmp/` are created inside |
 | `UPLOAD_MAX_BYTES` | Largest accepted upload (default 30 GiB) |
 | `SHINY_URL`, `SHINY_SECRET` | Internal URL of the Shiny server and the secret shared with it. Without both, the viewer is disabled (`POST /datasets/:id/viewer` answers 503). Use the same `SHINY_SECRET` for Shiny; see [`../shiny/README.md`](../shiny/README.md) |
 | `VIEWER_TICKET_EXPIRES_IN`, `VIEWER_SESSION_EXPIRES_IN` | Lifetime of the one-time viewer ticket (default `60s`) and of the viewer cookie session (default `1h`) |
@@ -110,7 +110,7 @@ Authentication is a `Bearer` JWT from `/auth/login`. Users in the `INVITED` stat
 ## Things worth knowing
 
 - **Access control** is centralized in `services/access.ts`. A dataset a caller cannot see returns `404`, not `403`, so private datasets are not revealed.
-- **File storage:** files live on disk as `<UPLOAD_DIR>/{rds,cover}/<dataset_id>_<TYPE>_v<version>.<ext>`; the `Files` row is the source of truth. Only the current version is kept on disk. RDS files must be `.rds`; covers are images up to 20 MB.
+- **File storage:** files live on disk as `<UPLOAD_DIR>/{rds,cover,tissue}/<dataset_id>_<TYPE>_v<version>.<ext>`; the `Files` row is the source of truth. Only the current version is kept on disk. RDS files must be `.rds`; covers are images up to 20 MB; tissue maps (`TISSUE_PLOT`) are `.csv` files up to 50 MB.
 - **Uploads** go to `<UPLOAD_DIR>/tmp` first and are moved into place once complete. Unfinished uploads expire after 48 hours and are swept hourly. Node's request/socket timeouts are disabled so multi-GB uploads are not cut off.
 - **Processing:** a finished `.rds` upload sets the dataset's `status` to `PROCESSING` and queues one R job at a time (in-process `Rscript`, or the worker container when `PREPROCESS_SPOOL_DIR` is set). It ends `READY` or `FAILED` (with `statusMessage`); unfinished jobs are re-queued on restart. Details in [`../shiny/README.md`](../shiny/README.md).
 - **Shiny viewer:** the frontend gets a short-lived ticket, opens `/shiny/<url>?viewer_ticket=...` in an iframe, and the proxy swaps it for a cookie session, re-checking dataset access. WebSocket upgrades are authorized in `index.ts`. Shiny only trusts a `?ctx=` value signed with `SHINY_SECRET`.

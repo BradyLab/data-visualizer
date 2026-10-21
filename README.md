@@ -2,7 +2,7 @@
 
 Access & visualize pre-processed and pre-annotated Brady Lab single cell RNA sequencing datasets.
 
-Lab members and admins upload datasets (a Seurat `.rds` file plus a cover image), choose who may see them, and
+Lab members and admins upload datasets (a Seurat `.rds` file plus a cover image and, optionally, a tissue map CSV for the tissue plot), choose who may see them, and
 visitors browse them in the web app and explore interactive plots (UMAP etc.) of each dataset. Large `.rds` files (often multi-GB) are uploaded with resumable
 [tus](https://tus.io) uploads.
 
@@ -16,7 +16,7 @@ Full documentation: [Google Doc](https://docs.google.com/document/d/1VB1B6OtJmUq
 | [`backend-express/`](backend-express/README.md) | Express 5 REST API + Socket.IO + tus uploads on PostgreSQL (Sequelize) |
 | [`shiny/`](shiny/README.md) | The R Shiny plot viewer (private, reached only through the backend's proxy) and the R job that turns a `.rds` into Parquet |
 | `commons/` | TypeScript types, enums and constants shared by both sides (imported as `@commons/...`) |
-| `data/` | Local storage used by the Docker setup: uploads (`data/uploads/{rds,cover,tmp}`), plot data (`data/parquet/<dataset id>/`) and preprocessing jobs (`data/jobs/`). Git-ignored |
+| `data/` | Local storage used by the Docker setup: uploads (`data/uploads/{rds,cover,tissue,tmp}`), plot data (`data/parquet/<dataset id>/`) and preprocessing jobs (`data/jobs/`). Git-ignored |
 | `docker-compose.yml` | Dev stack: Postgres, backend (port 3001), frontend (port 3000), Shiny (internal only) and the preprocess worker |
 | `docker-compose.e2e.yml` | Throwaway Postgres (port 5433) for the e2e tests |
 

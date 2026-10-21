@@ -40,7 +40,7 @@ export class Files extends Model<IFile> {
     })
     declare dataset_id: string;
 
-    // User who uploaded the file
+    // User who uploaded the file (their files are deleted with them, see the file migration)
     @ForeignKey(() => Users)
     @Column({
         type: DataType.UUID,

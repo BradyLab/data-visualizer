@@ -10,9 +10,6 @@ import { usePermissionStore } from "@src/stores/permission";
 import { useSocketStore } from "@src/stores/socket";
 import { useUserStore } from "@src/stores/user";
 
-// What a viewer may see depends on who they are, so when they log in or out (the user id changes) drop the
-// permissions and cover images loaded for the previous viewer and reload the dataset list. Otherwise private datasets would stay
-// visible after logging out, and a new login would keep showing the guest's list
 const auth = useAuthStore();
 const datasetStore = useDatasetStore();
 const permissionStore = usePermissionStore();
@@ -22,6 +19,10 @@ const router = useRouter();
 useSocketStore();
 // Creating the user store subscribes to the user events, so the viewer's own live role/name/status changes (and session end) are heard on every page
 useUserStore();
+
+// What a viewer may see depends on who they are, so when they log in or out (the user id changes) drop the
+// permissions and cover images loaded for the previous viewer and reload the dataset list. Otherwise private datasets would stay
+// visible after logging out, and a new login would keep showing the guest's list
 watch(
     () => auth.user.id,
     () => {

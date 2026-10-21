@@ -2,7 +2,7 @@
 // short-lived "ticket" (POST /datasets/:id/viewer), opens the viewer URL with it, and the proxy swaps it for a cookie session.
 // Both are signed with JWT_SECRET but carry a `typ` claim and no login-token fields, so none of them works as an API Bearer
 // token (verifyToken needs id + pv) or a download link (verifyDownloadToken needs purpose), and vice versa
-import { createHmac } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import jwt from "jsonwebtoken";
 import { Datasets } from "@src/models/dataset.ts";
 import { Users } from "@src/models/user.ts";
@@ -56,7 +56,7 @@ export const sessionExpiry = (token: string) => (jwt.decode(token) as { exp: num
 
 // Signs a viewer token of the given kind (typ) for a dataset and user (null = guest)
 const sign = (typ: string, expiresIn: NonNullable<jwt.SignOptions["expiresIn"]>, datasetId: string, userId: string | null) => {
-    return jwt.sign({ typ, dataset_id: datasetId, user_id: userId }, jwtSecret(), { expiresIn });
+    return jwt.sign({ typ, dataset_id: datasetId, user_id: userId }, jwtSecret(), { expiresIn, jwtid: randomUUID() });
 };
 
 /** Signs the short-lived ticket (60s by default) handed to the frontend; the caller must already have checked VIEW access. userId is null for a guest */
@@ -73,17 +73,31 @@ const verify = (token: string, typ: string) => {
             typ?: string;
             dataset_id?: unknown;
             user_id?: unknown;
+            jti?: unknown;
+            exp?: unknown;
         };
         if (p.typ !== typ || typeof p.dataset_id !== "string") return null;
         if (p.user_id !== null && typeof p.user_id !== "string") return null;
-        return { datasetId: p.dataset_id, userId: p.user_id };
+        return { datasetId: p.dataset_id, userId: p.user_id, jti: String(p.jti), exp: Number(p.exp) };
     } catch {
         return null;
     }
 };
 
-/** Claims of a valid viewer ticket, or null (session tokens are not tickets) */
-export const verifyViewerTicket = (token: string) => verify(token, TICKET);
+// Ids (jti) of tickets already exchanged for a session, with their expiry in epoch seconds. In memory, so a replay is only refused by the
+// process that saw the first use (fine for a single Express instance); entries are dropped once the ticket would be expired anyway
+const usedTickets = new Map<string, number>();
+
+/** Claims of a valid viewer ticket, or null (session tokens are not tickets). A ticket works once: a replay returns null */
+export const verifyViewerTicket = (token: string) => {
+    const claims = verify(token, TICKET);
+    if (!claims) return null;
+    const now = Math.floor(Date.now() / 1000);
+    for (const [jti, exp] of usedTickets) if (exp <= now) usedTickets.delete(jti);
+    if (usedTickets.has(claims.jti)) return null;
+    usedTickets.set(claims.jti, claims.exp);
+    return claims;
+};
 
 /** Claims of a valid viewer session token, or null (tickets are not sessions) */
 export const verifyViewerSession = (token: string) => verify(token, SESSION);

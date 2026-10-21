@@ -71,6 +71,9 @@ export const fileApi = {
         const response = await axios.post<{ token: string }>(`${path}/download-token`);
         const link = document.createElement("a");
         link.href = `${path}/content?token=${encodeURIComponent(response.data.token)}`;
+        // Attached while clicked, because some browsers (older Firefox) ignore click() on a detached anchor
+        document.body.appendChild(link);
         link.click();
+        link.remove();
     },
 };

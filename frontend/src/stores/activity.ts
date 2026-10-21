@@ -35,9 +35,8 @@ export const useActivityStore = defineStore("activity", () => {
         return activities.value.find((a) => a.id === id) ?? userActivities.value.find((a) => a.id === id) ?? null;
     }
 
-    // A new activity was logged (admins only). If the admin is looking at a list it belongs to, it counts toward the total, and on
-    // the first page (newest first) it is shown right away; on later pages it only changes the page count, so the rows don't shift under the reader
-    // The per-user list follows the same rule: a new activity of that user appears at the top of its first page
+    // A new activity was logged (admins only). If it belongs to the list being viewed it counts toward the total, and on the first
+    // page (newest first) it is shown right away; on later pages the rows stay put. The per-user list follows the same rule
     const socket = useSocketStore();
     socket.on(SocketEvent.ACTIVITY_CREATED, ({ activity }) => {
         const own = lastUserQuery;

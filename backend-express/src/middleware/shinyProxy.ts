@@ -106,6 +106,7 @@ export const shinyProxy = async (req: Request, res: Response, next: NextFunction
     const url = new URL(req.url, "http://placeholder");
     const ticket = url.searchParams.get(VIEWER_TICKET_PARAM);
     if (ticket) {
+        // verifyViewerTicket accepts each ticket once, so a copy from a log or history cannot start another session
         const ctx = await authorizeViewer(verifyViewerTicket(ticket), slug);
         if (!ctx) return res.status(404).json({ error: "Dataset not found" });
         const secure = process.env.FRONTEND_URL.startsWith("https:");

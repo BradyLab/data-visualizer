@@ -22,6 +22,7 @@ declare global {
             EMAILJS_TEMPLATE_ID?: string;
             EMAILJS_PUBLIC_KEY?: string;
             EMAILJS_PRIVATE_KEY?: string;
+            // "true" skips sending the invite email even when the EmailJS settings above are set
             EMAIL_DISABLED?: string;
             // Secret used to sign login tokens, and how long they last (e.g. "8h")
             JWT_SECRET: string;

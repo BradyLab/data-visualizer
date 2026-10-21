@@ -13,7 +13,8 @@ import { grantError, PermissionOptions } from "@commons/permissions.ts";
 
 // Whitelist of columns clients may set (see utils/pick.ts)
 const PERMISSION_FIELDS = ["user_id", "dataset_id", "perm"] as const;
-// Only a dataset's OWNER (or an admin) may see or change who it is shared with, so these checks are all OWNER-level.
+// Only a dataset's OWNER (or an admin) may see or change who it is shared with, so the routes below are all OWNER-level.
+
 // Checks that perm is a valid level for the user receiving it (rules shared with the frontend, see commons/permissions.ts);
 // returns the error message, or null if fine. OWNER is not a permission (it is the dataset's owner column), so it is never valid here
 const checkGrant = async (dataset: Datasets, userId: string, perm: unknown) => {

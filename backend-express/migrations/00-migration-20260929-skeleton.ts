@@ -1,6 +1,5 @@
 // Migration 00: skeleton; intentionally creates no tables
-// This is an empty template migration; copy it as a starting point for new migrations
-// Migration: up() applies schema changes, down() reverts them
+// Empty template migration; copy it as a starting point for new migrations (up() applies schema changes, down() reverts them)
 "use strict";
 
 import { DataTypes, type QueryInterface, type Sequelize } from "sequelize";

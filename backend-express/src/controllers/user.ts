@@ -21,6 +21,8 @@ import {
 } from "@src/services/socket.ts";
 import { SessionRevokedReason } from "@commons/socket.ts";
 import { removeStored } from "@src/services/storage.ts";
+import * as processing from "@src/services/processing.ts";
+import { FileTypes } from "@commons/file.ts";
 import { sendInviteEmail } from "@src/services/email.ts";
 
 // Columns clients may change on an existing user; the password is deliberately absent so it can only be
@@ -196,6 +198,9 @@ export const remove = async (req: Request, res: Response) => {
         throw err;
     }
     await removeStored(files);
+    // As when a file is deleted on its own: plot data built from a deleted current RDS must go, and the dataset waits for a new upload
+    const orphaned = new Set(files.filter((f) => f.type === FileTypes.RDS && f.isCurrent).map((f) => f.dataset_id));
+    for (const datasetId of orphaned) await processing.reset(datasetId);
     await logActivity(res, ActivityType.USER_DELETED, deleted);
     await emitUserDeleted(id);
     await emitPermissionsChanged(permissions, true);

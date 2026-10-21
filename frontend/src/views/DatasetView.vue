@@ -67,6 +67,7 @@ watch(plotsReady, (ready) => {
     viewerUrl.value = null;
     viewerHeight.value = null;
 });
+// True while the reprocess request is in flight (shown as loading on the Try again button)
 const reprocessing = ref(false);
 
 // Asks the server to rebuild the plot data (after a failure); the status then follows the live updates
@@ -118,9 +119,11 @@ watch(
 );
 
 // Loads the dataset (and, for logged-in users, their permissions) whenever the url slug changes
+// A route without the slug (navigating away, e.g. to the edit page, before this component unmounts) is ignored, so it neither looks up an undefined slug nor clears currentDataset
 watch(
     () => route.params.datasetURL as string,
     async (url) => {
+        if (!url) return;
         // Responses can arrive out of order, so only the latest request may update the page state
         const isLatest = () => url === (route.params.datasetURL as string);
         loading.value = true;

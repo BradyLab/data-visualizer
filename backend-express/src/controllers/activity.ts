@@ -13,7 +13,9 @@ const strList = (v: unknown) => {
     return list.length ? list : undefined;
 };
 
+// Matches the UUID format of user ids, so a malformed filter is rejected with a 400 before it reaches Postgres
 const UUID_FORMAT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Valid values for the type filter
 const ACTIVITY_TYPES: string[] = Object.values(ActivityType);
 
 // Reads ?limit= and ?offset= into a page: limit is clamped to 1..MAX_PAGE_SIZE (default DEFAULT_PAGE_SIZE) and offset is at least 0

@@ -1,5 +1,5 @@
 // Migration 01: creates the Users table (account identity, role, and status)
-// Migration: up() applies schema changes, down() reverts them
+// up() applies schema changes, down() reverts them
 "use strict";
 
 import { UserRoles, UserStatus } from "@commons/user.ts";

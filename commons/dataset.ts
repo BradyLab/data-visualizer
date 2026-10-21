@@ -37,9 +37,7 @@ export interface IDataset {
     attribution: string;
     plots: DatasetPlots[];
     visibility: DatasetVisibility;
-    // Processing state of the plot data; set by the server, never by clients
     status: DatasetStatus;
-    // Why the processing failed (shown to editors); null unless status is FAILED
     statusMessage: string | null;
     createdAt: Timestamp;
     updatedAt: Timestamp | null;

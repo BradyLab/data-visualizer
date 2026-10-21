@@ -30,7 +30,7 @@ export async function up(queryInterface: QueryInterface, sequelize: Sequelize) {
                 type: DataTypes.STRING,
                 allowNull: false,
             },
-            // Foreign key to Users.id: the user who owns the dataset
+            // Foreign key to Users.id: the user who owns the dataset (no ON DELETE action, so a user who still owns datasets cannot be deleted)
             owner: {
                 type: DataTypes.UUID,
                 allowNull: false,

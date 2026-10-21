@@ -33,9 +33,6 @@ export default (app: App) => {
     // Global default props for components, so individual views do not repeat them
     const tableDefaults = {
         style: "background-color: rgba(var(--v-theme-primary), 0.12); color: rgb(var(--v-theme-primary)); --v-theme-on-surface: var(--v-theme-primary);",
-        VBtn: {
-            color: "primary",
-        },
     };
     const defaults = {
         VBtn: {

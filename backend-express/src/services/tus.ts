@@ -72,13 +72,18 @@ export const tusServer = new Server({
     // The browser app is the only origin that may upload
     allowedOrigins: process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : [],
 
-    // A finished or half-finished upload can only be continued or inspected by the user who created it
+    // A finished or half-finished upload can only be continued or inspected by the user who created it, and only while they still have
+    // EDIT access to the dataset (access can be revoked mid-upload; the final chunk is a request too, so this also guards the finish)
     onIncomingRequest: async (req, uploadId) => {
         if (req.method === "OPTIONS" || !uploadId) return;
         const upload = await datastore.getUpload(uploadId).catch(() => null);
         if (!upload) return; // unknown id: tus answers 404 itself
         const user = await userFromHeader(req.headers.get("authorization"));
         if (!user || upload.metadata?.user_id !== user.id) throw reject(403, "Forbidden");
+        const dataset = upload.metadata?.dataset_id ? await Datasets.findByPk(upload.metadata.dataset_id) : null;
+        const access = dataset ? await getAccess(user, dataset) : null;
+        if (!access) throw reject(404, "Dataset not found");
+        if (!hasAccess(access, PermissionOptions.EDIT)) throw reject(403, "Forbidden");
     },
 
     // Validates a new upload before any bytes are accepted

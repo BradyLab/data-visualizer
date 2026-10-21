@@ -146,6 +146,7 @@ function inviteUser() {
             </v-chip>
         </div>
 
+        <!-- One row per user, with buttons to edit them or jump to their permissions and activity logs -->
         <v-data-table :headers="headers" :items="filteredUsers" item-value="id">
             <template v-slot:item="{ item: user }">
                 <tr>

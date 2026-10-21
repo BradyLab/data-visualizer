@@ -22,6 +22,7 @@ const datasetId = ref<string | null>(null);
 const perm = ref<PermissionOptions | null>(null);
 const saving = ref(false);
 const error = ref<string | null>(null);
+// The v-form, used to run the field rules before saving
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 
 // Users who can be granted something: not deactivated users, admins, nor the chosen dataset's owner, who already have full access to it

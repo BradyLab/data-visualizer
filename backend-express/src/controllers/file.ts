@@ -68,7 +68,7 @@ export const update = async (req: Request, res: Response) => {
     if (fields.updates && file.type !== FileTypes.RDS)
         return res.status(400).json({ error: "updates are only allowed on RDS files" });
     const updated = await service.update(file.id, fields);
-    // There is no FILE_UPDATED type, so a changed file record (version or update notes) is logged as FILE_UPLOADED
+    // There is no FILE_UPDATED type, so a changed file record (only its update notes can change) is logged as FILE_UPLOADED
     const changes = updated && diff(file, updated, FILE_UPDATE_FIELDS);
     if (changes) await logActivity(res, ActivityType.FILE_UPLOADED, { file_id: file.id, dataset_id: file.dataset_id, changes });
     res.status(200).json(updated);

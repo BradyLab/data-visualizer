@@ -49,11 +49,12 @@ function navTo(route: string) {
         </v-alert>
 
         <v-row>
-            <!-- One card per dataset; clicking opens the dataset page -->
+            <!-- One card per dataset, linking to the dataset page -->
             <!-- The url slug is the unique key and the route param -->
             <!-- One card per row on phones, two from the sm breakpoint up -->
             <v-col cols="12" sm="6" class="d-flex" v-for="dataset in datasetStore.datasets" :key="dataset.url">
-                <v-card class="flex-grow-1 d-flex flex-column" @click="navTo('/dataset/' + dataset.url)">
+                <!-- :to makes the card a real link, so it can be tabbed to and opened in a new tab -->
+                <v-card class="flex-grow-1 d-flex flex-column" :to="'/dataset/' + dataset.url">
                     <!-- Cover image, or a color block when the dataset has none -->
                     <DatasetCover :dataset-id="dataset.id" :height="110" />
                     <v-card-item>
@@ -64,6 +65,7 @@ function navTo(route: string) {
                                 Attribution: {{ dataset.attribution }}
                             </div>
                         </v-card-subtitle>
+                        <!-- Description clamped to three lines -->
                         <v-card-text v-if="dataset.description" class="px-0 py-2">
                             <div
                                 style="

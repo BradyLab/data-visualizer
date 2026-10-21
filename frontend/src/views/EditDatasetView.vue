@@ -238,7 +238,7 @@ async function save() {
 }
 </script>
 
-<!-- Form for creating or editing a dataset, including its cover photo and .rds file -->
+<!-- Form for creating or editing a dataset, including its cover photo, .rds file and tissue map -->
 <template>
     <v-container class="py-6 px-12">
         <!-- Load/save error message -->
@@ -335,7 +335,7 @@ async function save() {
             class="mb-8 mx-4"
         ></v-select>
 
-        <!-- Cover photo and .rds file uploads -->
+        <!-- Cover photo and .rds file uploads (the tissue map upload follows) -->
         <v-row class="mx-4">
             <v-file-upload
                 v-model="coverFile"
@@ -382,7 +382,8 @@ async function save() {
             ></v-file-upload>
         </v-row>
         <v-row class="text-body-small mb-4 mx-4">
-            A CSV of a ggPlantmap table (columns ROI.name, ROI.id, point, x, y); ROI.name must match the tissue_type column (else the cell labels). Used by the TissuePlot.
+            A CSV of a ggPlantmap table (columns ROI.name, ROI.id, point, x, y); ROI.name must match the tissue_type column (else
+            the cell labels). Used by the TissuePlot.
         </v-row>
 
         <!-- Progress of the file being uploaded after the dataset is saved -->

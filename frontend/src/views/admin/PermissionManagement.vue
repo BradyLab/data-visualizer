@@ -155,9 +155,17 @@ async function changePerm(
     }
 }
 
-// The row awaiting delete confirmation (null = the confirm popup is closed) and whether the delete is in flight
+// The row awaiting delete confirmation, whether the confirm popup is open, and whether the delete is in flight
+// toDelete is kept when the popup closes, so its text does not go blank while the popup fades out
 const toDelete = ref<{ userId: string; datasetId: string; userName: string; datasetName: string } | null>(null);
+const confirmOpen = ref(false);
 const deleting = ref(false);
+
+// Opens the confirm popup for a row
+function openDelete(perm: NonNullable<typeof toDelete.value>) {
+    toDelete.value = perm;
+    confirmOpen.value = true;
+}
 
 // Revokes the confirmed row's permission and closes the popup; on failure the popup closes and the page shows an error
 async function confirmDelete() {
@@ -170,7 +178,7 @@ async function confirmDelete() {
         error.value = "Unable to delete the permission. Please try again.";
     } finally {
         deleting.value = false;
-        toDelete.value = null;
+        confirmOpen.value = false;
     }
 }
 </script>
@@ -258,6 +266,7 @@ async function confirmDelete() {
             </v-chip>
         </div>
 
+        <!-- One row per permission; the level is edited in place and the bin button opens the delete confirmation -->
         <v-data-table :headers="headers" :items="rows" item-value="key">
             <template v-slot:item="{ item: perm }">
                 <tr>
@@ -291,7 +300,7 @@ async function confirmDelete() {
                             variant="text"
                             aria-label="Delete permission"
                             :disabled="savingKey === perm.key"
-                            @click="toDelete = perm"
+                            @click="openDelete(perm)"
                         ></v-btn>
                     </td>
                 </tr>
@@ -299,7 +308,7 @@ async function confirmDelete() {
         </v-data-table>
 
         <!-- Cannot be dismissed while the delete is in flight -->
-        <v-dialog :model-value="!!toDelete" max-width="480" :persistent="deleting" @update:model-value="toDelete = null">
+        <v-dialog v-model="confirmOpen" max-width="480" :persistent="deleting">
             <v-card class="pa-4">
                 <v-card-title>Delete Permission</v-card-title>
                 <v-card-text>
@@ -307,7 +316,7 @@ async function confirmDelete() {
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <v-btn :disabled="deleting" color="white" @click="toDelete = null">Cancel</v-btn>
+                    <v-btn :disabled="deleting" color="white" @click="confirmOpen = false">Cancel</v-btn>
                     <v-btn :loading="deleting" color="error" variant="tonal" @click="confirmDelete">Delete</v-btn>
                 </v-card-actions>
             </v-card>

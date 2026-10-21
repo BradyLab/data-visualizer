@@ -65,7 +65,7 @@ The router guard only improves navigation; the backend enforces all access rules
 
 - **Plot viewer:** the dataset page shows the dataset's processing `status`. When `READY`, **Generate Plots** asks the backend for a short-lived viewer ticket and shows the Shiny app in an iframe; while `PROCESSING` or `FAILED` it shows a message, and editors get a **Try again** button. Needs the Shiny service running (see [`../shiny/README.md`](../shiny/README.md)).
 - **Live updates:** the `socket` store connects to the backend's Socket.IO server after login and updates the other stores when datasets, permissions, files, users or activity change, so no manual refresh is needed. Event types are in `../commons/socket.ts`.
-- **Uploads** use tus, so a large `.rds` upload can resume after a dropped connection. File downloads use a short-lived token from the backend so the browser can download directly.
+- **Uploads** use tus (the `.rds`, the cover and the optional tissue map CSV, all from the edit page), so a large `.rds` upload can resume after a dropped connection. File downloads use a short-lived token from the backend so the browser can download directly.
 - **Session:** if the saved login can't be verified because the server is down, the app keeps the token and shows a banner offering a reload instead of logging the user out.
 - **Vite** polls for file changes (`usePolling`) so hot reload works in Docker/WSL2.
 
