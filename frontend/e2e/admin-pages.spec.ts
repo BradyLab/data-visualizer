@@ -210,7 +210,7 @@ test.describe('settings', () => {
 
     test('the visibility switch publishes and hides a dataset', async ({ page, request }) => {
       const lab = await login(request, 'lab')
-      const dataset = await createDataset(request, lab)
+      const dataset = await createDataset(request, lab, { doi: '10.1234/e2e', attribution: 'The e2e lab' })
       await page.goto('/settings')
       const row = page.locator('.v-row', { hasText: dataset.name })
       await expect(row).toBeVisible()
@@ -218,6 +218,39 @@ test.describe('settings', () => {
       await expect.poll(async () => (await getDataset(request, lab, dataset.id)).visibility).toBe(DatasetVisibility.PUBLIC)
       await row.getByRole('checkbox').setChecked(false)
       await expect.poll(async () => (await getDataset(request, lab, dataset.id)).visibility).toBe(DatasetVisibility.PRIVATE)
+    })
+
+    test('a dataset without a DOI or attribution cannot be made public, and the popup offers the edit page', async ({ page, request }) => {
+      const lab = await login(request, 'lab')
+      const dataset = await createDataset(request, lab, { attribution: 'The e2e lab' })
+      await page.goto('/settings')
+      const row = page.locator('.v-row', { hasText: dataset.name })
+      // A click, not setChecked: the switch springs back, which setChecked would report as a failed click
+      await row.getByRole('checkbox').click()
+      const dialog = page.getByRole('dialog')
+      await expect(dialog).toContainText("Can't make this dataset public yet")
+      await expect(dialog).toContainText('has no DOI')
+      await expect(dialog).not.toContainText('has no DOI and')
+
+      // Cancel leaves it private and the switch off
+      await dialog.getByRole('button', { name: 'Cancel' }).click()
+      await expect(dialog).toHaveCount(0)
+      await expect(row.getByRole('checkbox')).not.toBeChecked()
+      expect((await getDataset(request, lab, dataset.id)).visibility).toBe(DatasetVisibility.PRIVATE)
+
+      // The edit button goes to the edit page of that dataset
+      await row.getByRole('checkbox').click()
+      await page.getByRole('dialog').getByRole('button', { name: 'Edit dataset' }).click()
+      await expect(page).toHaveURL(new RegExp(`/dataset/${dataset.url}/edit$`))
+      expect((await getDataset(request, lab, dataset.id)).visibility).toBe(DatasetVisibility.PRIVATE)
+    })
+
+    test('the popup names both fields when both are missing, and a blank value counts as missing', async ({ page, request }) => {
+      const lab = await login(request, 'lab')
+      const dataset = await createDataset(request, lab, { doi: '   ' })
+      await page.goto('/settings')
+      await page.locator('.v-row', { hasText: dataset.name }).getByRole('checkbox').click()
+      await expect(page.getByRole('dialog')).toContainText('has no DOI and attribution')
     })
 
     test('shows the management links', async ({ page }) => {

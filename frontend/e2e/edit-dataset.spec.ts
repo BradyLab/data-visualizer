@@ -16,7 +16,7 @@ import {
   uid,
   updateDataset,
 } from './api'
-import { pickOption } from './admin'
+import { pickPlot, pickUmapOnly } from './dataset-form'
 import { loginLive } from './login'
 import { authFile, LOGGED_OUT } from './users'
 
@@ -37,9 +37,7 @@ test('edits a dataset: fields and plots are saved', async ({ page, request }) =>
   await page.getByPlaceholder(DESCRIPTION).fill('A new description')
   await page.getByPlaceholder('Add DOI link here').fill('10.1234/e2e')
   await page.getByPlaceholder('Add attribution here').fill('The e2e lab')
-  const plots = page.locator('xpath=//*[normalize-space(text())="Pick Your Plots"]/following::div[contains(@class,"v-select")][1]')
-  await pickOption(page, plots, DatasetPlots.UMAP)
-  await page.keyboard.press('Escape')
+  await pickPlot(page, DatasetPlots.UMAP)
   await page.getByRole('button', { name: 'Save Changes' }).click()
 
   // Saving opens the dataset page, which shows the new values
@@ -86,6 +84,7 @@ test.describe('url rules when creating', () => {
     await page.getByPlaceholder('dataset-url').fill(`My Own URL ${suffix}`)
     await page.getByPlaceholder(NAME).fill(`Renamed ${suffix}`)
     await expect(page.getByPlaceholder('dataset-url')).toHaveValue(`My Own URL ${suffix}`)
+    await pickUmapOnly(page)
     await page.getByRole('button', { name: 'Create New Dataset' }).click()
     const url = slugify(`My Own URL ${suffix}`)
     await expect(page).toHaveURL(new RegExp(`/dataset/${url}$`))
@@ -97,6 +96,7 @@ test.describe('url rules when creating', () => {
     await page.goto('/dataset/new')
     await page.getByPlaceholder(NAME).fill(`Second ${uid()}`)
     await page.getByPlaceholder('dataset-url').fill(existing.url)
+    await pickUmapOnly(page)
     await page.getByRole('button', { name: 'Create New Dataset' }).click()
     await expect(page.getByText('The url is already in use by another dataset.')).toBeVisible()
     await expect(page).toHaveURL(/\/dataset\/new$/)

@@ -1,9 +1,10 @@
 // Tissue map uploads (the CSV of a ggPlantmap table): a valid map is stored and replaced by newer versions, a wrong file is refused with the reason,
 // access follows the dataset's rules, and the edit form reports a refused map
-import { test, expect } from '@playwright/test'
-import { DatasetVisibility } from '@commons/dataset'
+import { test, expect, type Page } from '@playwright/test'
+import { DatasetPlots, DatasetVisibility } from '@commons/dataset'
 import { FileTypes } from '@commons/file'
 import { createDataset, download, getDatasetByUrl, listFiles, login, readFile, uploadFile, uploadFileOk } from './api'
+import { attachTissueMap, pickPlot, pickUmapOnly, TISSUE_MAP } from './dataset-form'
 import { authFile } from './users'
 
 test.use({ storageState: authFile('lab') })
@@ -95,4 +96,53 @@ test('a tissue map follows the dataset rules: only editors upload, and downloadi
   expect(await uploadFile(request, external, dataset.id, FileTypes.TISSUE_PLOT, 'x.csv', MAP('B'))).toBe(403)
   expect((await download(request, external, dataset.id, FileTypes.TISSUE_PLOT)).status).toBe(403)
   expect((await download(request, null, dataset.id, FileTypes.TISSUE_PLOT)).status).toBe(401)
+})
+
+test.describe('a new dataset needs a tissue map when it offers the tissue plot', () => {
+  const NAME = 'DATASET NAME'
+  const create = (page: Page) => page.getByRole('button', { name: 'Create New Dataset' })
+  const required = (page: Page) => page.getByText('A tissue map is required because this dataset offers the tissue plot')
+
+  test('picking no plots offers all of them, so a map is required until one is attached', async ({ page }) => {
+    await page.goto('/dataset/new')
+    await page.getByPlaceholder(NAME).fill(`Needs a map ${Date.now()}`)
+    await expect(required(page)).toBeVisible()
+    await expect(create(page)).toBeDisabled()
+    await attachTissueMap(page)
+    await expect(required(page)).toHaveCount(0)
+    await expect(create(page)).toBeEnabled()
+  })
+
+  test('picking the tissue plot requires a map, and any plot that leaves it out does not', async ({ page }) => {
+    await page.goto('/dataset/new')
+    await page.getByPlaceholder(NAME).fill(`Plot choice ${Date.now()}`)
+    await pickUmapOnly(page)
+    await expect(required(page)).toHaveCount(0)
+    await expect(create(page)).toBeEnabled()
+    await pickPlot(page, DatasetPlots.TISSUE)
+    await expect(required(page)).toBeVisible()
+    await expect(create(page)).toBeDisabled()
+  })
+
+  test('a dataset created with the map stores it', async ({ page, request }) => {
+    const lab = await login(request, 'lab')
+    const slug = `with-map-${Date.now()}`
+    await page.goto('/dataset/new')
+    await page.getByPlaceholder(NAME).fill(`With map ${slug}`)
+    await page.getByPlaceholder('dataset-url').fill(slug)
+    await attachTissueMap(page)
+    await create(page).click()
+    await expect(page).toHaveURL(new RegExp(`/dataset/${slug}$`))
+    const dataset = await (await getDatasetByUrl(request, lab, slug)).json()
+    expect((await download(request, lab, dataset.id, FileTypes.TISSUE_PLOT)).body).toEqual(TISSUE_MAP)
+  })
+
+  test('editing an existing dataset never requires one', async ({ page, request }) => {
+    const lab = await login(request, 'lab')
+    const dataset = await createDataset(request, lab)
+    await page.goto(`/dataset/${dataset.url}/edit`)
+    await expect(page.getByPlaceholder(NAME)).toHaveValue(dataset.name)
+    await expect(required(page)).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Save Changes' })).toBeEnabled()
+  })
 })

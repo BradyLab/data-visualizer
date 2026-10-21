@@ -20,11 +20,38 @@ const userStore = useUserStore();
 const permissionStore = usePermissionStore();
 const datasetStore = useDatasetStore();
 
+// A public dataset needs a DOI and an attribution. Switching one on without them opens a popup that names what is missing and offers the edit
+// page or cancelling (the switch follows the store, so the dataset simply stays private)
+const missingPublicFields = (dataset: IDataset) => [
+    ...(dataset.doi.trim() ? [] : ["DOI"]),
+    ...(dataset.attribution.trim() ? [] : ["attribution"]),
+];
+const incomplete = ref<{ dataset: IDataset; missing: string[] } | null>(null);
+// The switch shows its own flipped state until its value changes, so a refused flip re-creates the switches (they are keyed on this)
+const switchResets = ref(0);
+const incompleteOpen = computed({
+    get: () => incomplete.value !== null,
+    set: (open: boolean) => {
+        if (!open) incomplete.value = null;
+    },
+});
+function editIncomplete() {
+    const dataset = incomplete.value?.dataset;
+    incomplete.value = null;
+    if (dataset) router.push(`/dataset/${dataset.url}/edit`);
+}
+
 // Sets a dataset public or private; the switch follows the store, so a failed save leaves it unchanged
 // (the switch reports null when it is cleared, which is treated the same as off, i.e. private)
 const visibilityError = ref<string | null>(null);
 async function setVisibility(dataset: IDataset, isPublic: boolean | null) {
     visibilityError.value = null;
+    const missing = isPublic ? missingPublicFields(dataset) : [];
+    if (missing.length) {
+        incomplete.value = { dataset, missing };
+        switchResets.value++;
+        return;
+    }
     try {
         await datasetStore.editDataset(dataset.id, {
             visibility: isPublic ? DatasetVisibility.PUBLIC : DatasetVisibility.PRIVATE,
@@ -147,6 +174,7 @@ watch(
                 <v-col cols="auto" class="d-flex align-center">
                     <span class="mr-2">Private</span>
                     <v-switch
+                        :key="switchResets"
                         :model-value="dataset.visibility === DatasetVisibility.PUBLIC"
                         @update:model-value="(value) => setVisibility(dataset, value)"
                         color="primary"
@@ -163,6 +191,23 @@ watch(
                 </v-col>
             </v-row>
         </template>
+
+        <!-- Shown when a dataset without a DOI or attribution is switched to public -->
+        <v-dialog v-model="incompleteOpen" max-width="480">
+            <v-card class="pa-4">
+                <v-card-title>Can't make this dataset public yet</v-card-title>
+                <v-card-text>
+                    A public dataset needs a DOI and an attribution. {{ incomplete?.dataset.name }} has no
+                    {{ incomplete?.missing.join(" and ") }}. It stays private until you add
+                    {{ incomplete?.missing.length === 1 ? "it" : "them" }} on the edit page.
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="white" @click="incompleteOpen = false">Cancel</v-btn>
+                    <v-btn color="white" variant="tonal" @click="editIncomplete">Edit dataset</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
 
         <ChangePasswordDialog v-model="passwordDialogOpen" />
     </v-container>

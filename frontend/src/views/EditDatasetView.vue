@@ -101,10 +101,19 @@ function onUrlInput(value: string) {
 // Problem with the url as it will be saved (empty, or a reserved slug such as "new"), shown under the field; null while the field is empty
 const urlError = computed(() => (dataset.value.url ? datasetUrlError(slugify(dataset.value.url)) : null));
 
-// Save is blocked while busy, without a name or owner, or with an unusable url; in edit mode the dataset must have loaded (id set)
+// A new dataset needs a tissue map (a .csv) when it offers the tissue plot, which includes picking no plots at all since that offers every plot.
+// An existing dataset may already have one, so editing never requires it
+const tissueMapRequired = computed(
+    () => !isEdit.value && (dataset.value.plots.length === 0 || dataset.value.plots.includes(DatasetPlots.TISSUE))
+);
+const tissueMapMissing = computed(() => tissueMapRequired.value && !firstFile(tissueMapFile.value));
+
+// Save is blocked while busy, without a name or owner, with an unusable url, or without a required tissue map; in edit mode the dataset must
+// have loaded (id set)
 const canSave = computed(
     () =>
         !saving.value &&
+        !tissueMapMissing.value &&
         !loading.value &&
         !removed.value &&
         !!dataset.value.name.trim() &&
@@ -380,6 +389,10 @@ async function save() {
                 :multiple="false"
                 hide-details
             ></v-file-upload>
+        </v-row>
+        <v-row v-if="tissueMapMissing" class="text-body-small text-error mb-1 mx-4">
+            A tissue map is required because this dataset offers the tissue plot (picking no plots offers all of them). Upload a
+            .csv or pick the plots you want.
         </v-row>
         <v-row class="text-body-small mb-4 mx-4">
             A CSV of a ggPlantmap table (columns ROI.name, ROI.id, x, y, and optionally point); x and y must be numbers and

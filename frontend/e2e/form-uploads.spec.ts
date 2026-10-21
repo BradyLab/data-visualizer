@@ -2,6 +2,7 @@
 import { test, expect } from '@playwright/test'
 import { FileTypes } from '@commons/file'
 import { createDataset, download, getDatasetByUrl, listFiles, login, readFile, uid, uploadFileOk } from './api'
+import { pickUmapOnly } from './dataset-form'
 import { authFile } from './users'
 
 test.use({ storageState: authFile('lab') })
@@ -22,6 +23,7 @@ test('a new dataset takes a cover and an .rds file together', async ({ page, req
   await page.getByPlaceholder('dataset-url').fill(slug)
   await page.locator('input[type="file"][accept="image/*"]').setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: PNG })
   await page.locator('input[type="file"][accept=".rds"]').setInputFiles({ name: 'both.rds', mimeType: 'application/octet-stream', buffer: rds })
+  await pickUmapOnly(page)
   await page.getByRole('button', { name: 'Create New Dataset' }).click()
   await expect(page).toHaveURL(new RegExp(`/dataset/${slug}$`))
 
@@ -61,6 +63,7 @@ test('a failed upload keeps the saved dataset and stays on its edit page with th
   await page.getByPlaceholder('dataset-url').fill(slug)
   // The picker's accept filter is only a hint: the server is what refuses a wrong extension
   await page.locator('input[type="file"][accept="image/*"]').setInputFiles({ name: 'cover.txt', mimeType: 'text/plain', buffer: Buffer.from('not an image') })
+  await pickUmapOnly(page)
   await page.getByRole('button', { name: 'Create New Dataset' }).click()
 
   await expect(page.getByText('The dataset was saved, but a file could not be uploaded.')).toBeVisible()

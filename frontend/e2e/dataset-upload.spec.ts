@@ -1,5 +1,6 @@
 // Core journey: a lab member creates a dataset with an .rds file through the form, then opens its page
 import { test, expect } from '@playwright/test'
+import { pickUmapOnly } from './dataset-form'
 import { authFile } from './users'
 
 test.use({ storageState: authFile('lab') })
@@ -19,6 +20,7 @@ test('creates a dataset with an .rds upload and shows it', async ({ page }) => {
     mimeType: 'application/octet-stream',
     buffer: Buffer.from('not a real rds file; the backend only checks the extension'),
   })
+  await pickUmapOnly(page)
   await page.getByRole('button', { name: 'Create New Dataset' }).click()
 
   // After saving and uploading, the app leaves the form for the dataset page
