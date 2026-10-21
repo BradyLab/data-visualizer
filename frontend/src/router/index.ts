@@ -94,7 +94,13 @@ const router = createRouter({
             component: () => import("@src/views/admin/PermissionManagement.vue"),
             meta: { hideFooter: false, requiresAuth: true },
         },
-        // TODO 404
+        // Catch-all for URLs that match no other route; must stay last
+        {
+            path: "/:pathMatch(.*)*",
+            name: "not-found",
+            component: () => import("@src/views/NotFoundView.vue"),
+            meta: { hideFooter: false },
+        },
     ],
 });
 

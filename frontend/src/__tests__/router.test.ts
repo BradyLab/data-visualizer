@@ -71,4 +71,9 @@ describe("route guard", () => {
         expect(router.resolve("/dataset/new").name).toBe("new");
         expect(router.resolve("/dataset/my-data").name).toBe("dataset");
     });
+
+    it("shows the not-found page for unknown URLs", () => {
+        expect(router.resolve("/no/such/page").name).toBe("not-found");
+        expect(router.resolve("/admin/nope").name).toBe("not-found");
+    });
 });

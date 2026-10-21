@@ -382,8 +382,9 @@ async function save() {
             ></v-file-upload>
         </v-row>
         <v-row class="text-body-small mb-4 mx-4">
-            A CSV of a ggPlantmap table (columns ROI.name, ROI.id, point, x, y); ROI.name must match the tissue_type column (else
-            the cell labels). Used by the TissuePlot.
+            A CSV of a ggPlantmap table (columns ROI.name, ROI.id, x, y, and optionally point); x and y must be numbers and
+            ROI.name must match the tissue_type column (else the cell labels). A file without these columns is refused. Used by
+            the TissuePlot.
         </v-row>
 
         <!-- Progress of the file being uploaded after the dataset is saved -->

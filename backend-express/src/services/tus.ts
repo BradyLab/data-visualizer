@@ -13,6 +13,7 @@ import { logActivityAs, toPlain } from "@src/services/activity.ts";
 import * as service from "@src/services/file.ts";
 import * as storage from "@src/services/storage.ts";
 import * as processing from "@src/services/processing.ts";
+import { tissueMapFileError } from "@src/services/tissue.ts";
 import { emitFileUploaded } from "@src/services/socket.ts";
 import { randomUUID } from "node:crypto";
 
@@ -31,7 +32,7 @@ const reject = (status_code: number, message: string) => ({ status_code, body: `
 const METADATA_KEYS = ["dataset_id", "type", "filename", "version", "updates"] as const;
 
 // File records need the metadata as a typed object; this also validates it, returning an error message or the parsed values
-const parseMetadata = (metadata: Record<string, string | null | undefined> = {}, size: number | undefined) => {
+export const parseMetadata = (metadata: Record<string, string | null | undefined> = {}, size: number | undefined) => {
     const { dataset_id, type, filename, version, updates } = metadata;
     if (!dataset_id) return "dataset_id is required";
     if (!type) return "type is required";
@@ -114,6 +115,11 @@ export const tusServer = new Server({
         const tmpPath = upload.storage?.path;
         if (!tmpPath) throw reject(500, "Upload not found on disk");
         try {
+            // A tissue map is plain text on purpose (Shiny never loads an R object from an upload), so its content can be checked here
+            if (parsed.type === FileTypes.TISSUE_PLOT) {
+                const problem = await tissueMapFileError(tmpPath);
+                if (problem) throw reject(400, problem);
+            }
             const latest = await service.latestVersion(parsed.dataset_id, parsed.type);
             const version = parsed.version ?? latest + 1;
             if (version <= latest) throw reject(409, `version must be higher than the latest version (${latest})`);

@@ -81,6 +81,8 @@ upload. The ggPlantmap package is installed in the Shiny image (from GitHub, pin
 `ggPlantmap.heatmap` / `ggPlantmap.plot` draw it. Columns: `ROI.name` (the cell type an outline stands for, which must equal the values of the dataset's `tissue_type` metadata column, case and spelling, to be colored; without that column the cell labels are used instead, with a note under the plot), `ROI.id` (tells the outlines apart), `x`, `y`, and `point`
 (the order of the vertices; the rows are taken to be in order without it); `Level1`, `Level2` and others are ignored. The dataset must also list `TissuePlot` in its plots. It is independent of the preprocessing: uploading a map does not reprocess the dataset.
 
+The backend checks the CSV when the upload finishes (`backend-express/src/services/tissue.ts`) and refuses it with a 400 and the reason, keeping the current map, if the header lacks `ROI.name`, `ROI.id`, `x` or `y`, or no row has numeric `x` and `y` (only the first 64 KB are read). It cannot check that `ROI.name` matches the dataset's cell types: a map that matches none of them draws every outline grey.
+
 ## Try it
 
 The Shiny port is not published, so `localhost:3838` does not work with a plain `docker compose up`. Go through the app, as users do:
