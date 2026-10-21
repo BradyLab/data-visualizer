@@ -51,6 +51,15 @@ jobs:
       - run: npm run test:unit
       - run: npm run build-only
 
+  # Air is a standalone formatter, so this needs no R; it fails instead of rewriting files, like prettier --check does for the TypeScript
+  r-format:
+    name: R format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: posit-dev/setup-air@v1
+      - run: air format --check shiny
+
   # The R services have no package manifest: the Dockerfile is the only place their dependencies are declared, so building the
   # images is what catches a missing package (library(x) failing at startup)
   shiny:

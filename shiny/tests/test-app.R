@@ -100,7 +100,9 @@ test("dataset_dir only builds a path from a UUID, lowercased", {
 
 test("TISSUE_PLOT_file finds the newest version of the dataset's map, and nothing else", {
   expect(is.null(app$TISSUE_PLOT_file(ID)), "found a map where there is none")
-  for (name in c("_TISSUE_PLOT_v1.csv", "_TISSUE_PLOT_v2.csv", "_TISSUE_PLOT_v10.csv")) file.create(file.path(work, "tissue", paste0(ID, name)))
+  for (name in c("_TISSUE_PLOT_v1.csv", "_TISSUE_PLOT_v2.csv", "_TISSUE_PLOT_v10.csv")) {
+    file.create(file.path(work, "tissue", paste0(ID, name)))
+  }
   file.create(file.path(work, "tissue", "11111111-5a4d-4e6f-9b7a-1c2d3e4f5a6b_TISSUE_PLOT_v99.csv"))
   file.create(file.path(work, "tissue", paste0(ID, "_TISSUE_PLOT_v3.csv.bak")))
   expect_equal(basename(app$TISSUE_PLOT_file(ID)), paste0(ID, "_TISSUE_PLOT_v10.csv"), "10 must beat 2")
@@ -117,7 +119,14 @@ write_map <- function(lines) {
 }
 
 test("read_TISSUE_PLOT reads a ggPlantmap table and orders each outline by point", {
-  map <- app$read_TISSUE_PLOT(write_map(c('"ROI.name","ROI.id","point","x","y"', '"B",2,1,5,5', '"A",1,2,1,0', '"A",1,1,0,0', '"A",1,3,1,1', '"B",2,2,6,5')))
+  map <- app$read_TISSUE_PLOT(write_map(c(
+    '"ROI.name","ROI.id","point","x","y"',
+    '"B",2,1,5,5',
+    '"A",1,2,1,0',
+    '"A",1,1,0,0',
+    '"A",1,3,1,1',
+    '"B",2,2,6,5'
+  )))
   expect(!is.null(map))
   expect_equal(names(map)[1:5], c("ROI.name", "ROI.id", "x", "y", "point"))
   expect_equal(map$ROI.id, c(1, 1, 1, 2, 2))

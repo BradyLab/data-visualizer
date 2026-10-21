@@ -1,0 +1,6 @@
+# Formatter settings for the R code under shiny/ (https://posit-dev.github.io/air/). The code has long comment and call lines,
+# so the width is raised from the default 80 to keep the first format small
+[format]
+line-width = 150
+indent-style = "space"
+indent-width = 2

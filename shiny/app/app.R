@@ -23,7 +23,9 @@ UUID_RE <- "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-f
 
 # Dataset folder for an id, or NULL unless the id is a UUID (it becomes part of a path, so nothing else may through)
 dataset_dir <- function(dataset_id) {
-  if (is.null(dataset_id) || length(dataset_id) != 1 || !grepl(UUID_RE, dataset_id)) return(NULL)
+  if (is.null(dataset_id) || length(dataset_id) != 1 || !grepl(UUID_RE, dataset_id)) {
+    return(NULL)
+  }
   file.path(PARQUET_DIR, tolower(dataset_id))
 }
 
@@ -36,16 +38,24 @@ same_string <- function(a, b) {
 
 # The payload (a list) of a context made by Express, or NULL if it is missing, forged, malformed or expired
 verify_context <- function(token) {
-  if (is.null(token) || length(token) != 1 || !nzchar(SECRET)) return(NULL)
+  if (is.null(token) || length(token) != 1 || !nzchar(SECRET)) {
+    return(NULL)
+  }
   parts <- strsplit(token, ".", fixed = TRUE)[[1]]
-  if (length(parts) != 2) return(NULL)
+  if (length(parts) != 2) {
+    return(NULL)
+  }
   # as.character keeps the "hash" class, which would make an equality test fail even for equal text, so drop it
   expected <- unclass(as.character(sha256(charToRaw(parts[[1]]), key = charToRaw(SECRET))))
-  if (!same_string(expected, parts[[2]])) return(NULL)
+  if (!same_string(expected, parts[[2]])) {
+    return(NULL)
+  }
   b64 <- chartr("-_", "+/", parts[[1]])
   b64 <- paste0(b64, strrep("=", (4 - nchar(b64) %% 4) %% 4))
   payload <- tryCatch(fromJSON(rawToChar(base64_decode(b64)), simplifyVector = FALSE), error = function(e) NULL)
-  if (is.null(payload) || !is.numeric(payload$exp) || payload$exp < as.numeric(Sys.time())) return(NULL)
+  if (is.null(payload) || !is.numeric(payload$exp) || payload$exp < as.numeric(Sys.time())) {
+    return(NULL)
+  }
   payload
 }
 
@@ -56,7 +66,9 @@ viewer_context <- function(query) {
   if (!is.null(payload)) {
     return(list(dataset_id = payload$dataset_id, plots = as.character(unlist(payload$plots))))
   }
-  if (DEV && !is.null(query$dataset)) return(list(dataset_id = query$dataset, plots = character()))
+  if (DEV && !is.null(query$dataset)) {
+    return(list(dataset_id = query$dataset, plots = character()))
+  }
   NULL
 }
 
@@ -64,9 +76,13 @@ viewer_context <- function(query) {
 
 # The dataset's current tissue map file (a CSV of a ggPlantmap table), or NULL when none was uploaded or the id is not a UUID
 TISSUE_PLOT_file <- function(dataset_id) {
-  if (is.null(dataset_id) || length(dataset_id) != 1 || !grepl(UUID_RE, dataset_id)) return(NULL)
+  if (is.null(dataset_id) || length(dataset_id) != 1 || !grepl(UUID_RE, dataset_id)) {
+    return(NULL)
+  }
   files <- list.files(TISSUE_DIR, pattern = sprintf("^%s_TISSUE_PLOT_v[0-9]+\\.csv$", tolower(dataset_id)), full.names = TRUE)
-  if (length(files) == 0) return(NULL)
+  if (length(files) == 0) {
+    return(NULL)
+  }
   files[which.max(as.integer(sub(".*_v([0-9]+)\\.csv$", "\\1", files)))]
 }
 
@@ -75,12 +91,21 @@ TISSUE_PLOT_file <- function(dataset_id) {
 # Without `point` the rows are taken to be in drawing order; without ROI.name the outlines cannot be matched, so the file is refused.
 read_TISSUE_PLOT <- function(path) {
   raw <- tryCatch(read.csv(path, check.names = FALSE, stringsAsFactors = FALSE), error = function(e) NULL)
-  if (is.null(raw) || !all(c("ROI.name", "ROI.id", "x", "y") %in% names(raw))) return(NULL)
-  map <- data.frame(ROI.name = as.character(raw$ROI.name), ROI.id = raw$ROI.id, x = suppressWarnings(as.numeric(raw$x)),
-                    y = suppressWarnings(as.numeric(raw$y)), stringsAsFactors = FALSE)
+  if (is.null(raw) || !all(c("ROI.name", "ROI.id", "x", "y") %in% names(raw))) {
+    return(NULL)
+  }
+  map <- data.frame(
+    ROI.name = as.character(raw$ROI.name),
+    ROI.id = raw$ROI.id,
+    x = suppressWarnings(as.numeric(raw$x)),
+    y = suppressWarnings(as.numeric(raw$y)),
+    stringsAsFactors = FALSE
+  )
   map$point <- if ("point" %in% names(raw)) raw$point else ave(seq_len(nrow(map)), map$ROI.id, FUN = seq_along)
   map <- map[stats::complete.cases(map), , drop = FALSE]
-  if (nrow(map) == 0) return(NULL)
+  if (nrow(map) == 0) {
+    return(NULL)
+  }
   dplyr::as_tibble(map[order(map$ROI.id, map$point), ])
 }
 
@@ -95,7 +120,9 @@ point_in_polygon <- function(px, py, x, y) {
 outline_at <- function(map, px, py) {
   hit <- NULL
   for (part in split(map, map$ROI.id)) {
-    if (px >= min(part$x) && px <= max(part$x) && py >= min(part$y) && py <= max(part$y) && point_in_polygon(px, py, part$x, part$y)) hit <- part[1, , drop = FALSE]
+    if (px >= min(part$x) && px <= max(part$x) && py >= min(part$y) && py <= max(part$y) && point_in_polygon(px, py, part$x, part$y)) {
+      hit <- part[1, , drop = FALSE]
+    }
   }
   hit
 }
@@ -117,7 +144,9 @@ MAX_HEATMAP_CELLS <- 20000
 # Colorblind-friendly colors for n groups, like scCustomize's discrete palettes: Okabe-Ito (without its black, which the labels and
 # points use) for up to 8, then Polychrome 36, then Polychrome 36 stretched for more
 colorblind_palette <- function(n) {
-  if (n <= 8) return(unname(palette.colors(9, "Okabe-Ito")[-1][seq_len(n)]))
+  if (n <= 8) {
+    return(unname(palette.colors(9, "Okabe-Ito")[-1][seq_len(n)]))
+  }
   polychrome <- unname(palette.colors(36, "Polychrome 36"))
   if (n <= 36) polychrome[seq_len(n)] else colorRampPalette(polychrome)(n)
 }
@@ -159,17 +188,35 @@ ordered_levels <- function(table, column, values) {
 # html/body: the parent sizes the iframe to the content, so the page itself never scrolls. .options-row lays out the option controls; the
 # rest paints the Update plots button, the chart width slider and the label checkbox in the accent color.
 ACCENT <- "#103819"
-STYLE <- paste0("
+STYLE <- paste0(
+  "
 html, body { overflow-y: hidden; }
-#generate { background-color: ", ACCENT, "; border-color: ", ACCENT, "; color: #fff; }
-#generate:hover, #generate:focus, #generate:active { background-color: ", ACCENT, "; border-color: ", ACCENT, "; filter: brightness(1.25); }
+#generate { background-color: ",
+  ACCENT,
+  "; border-color: ",
+  ACCENT,
+  "; color: #fff; }
+#generate:hover, #generate:focus, #generate:active { background-color: ",
+  ACCENT,
+  "; border-color: ",
+  ACCENT,
+  "; filter: brightness(1.25); }
 .options-row { display: flex; flex-wrap: wrap; gap: 0 30px; }
 .options-row > .shiny-html-output { display: contents; }
 .options-row > .accent, .options-row .shiny-panel-conditional { width: calc((100% - 90px) / 4); } /* the width of a column in the row above */
-.accent .irs--shiny .irs-bar, .accent .irs--shiny .irs-handle { background: ", ACCENT, "; border-color: ", ACCENT, "; }
-.accent .irs--shiny .irs-single, .accent .irs--shiny .irs-from, .accent .irs--shiny .irs-to { background-color: ", ACCENT, "; }
-.accent input[type=checkbox] { accent-color: ", ACCENT, "; }
-")
+.accent .irs--shiny .irs-bar, .accent .irs--shiny .irs-handle { background: ",
+  ACCENT,
+  "; border-color: ",
+  ACCENT,
+  "; }
+.accent .irs--shiny .irs-single, .accent .irs--shiny .irs-from, .accent .irs--shiny .irs-to { background-color: ",
+  ACCENT,
+  "; }
+.accent input[type=checkbox] { accent-color: ",
+  ACCENT,
+  "; }
+"
+)
 
 ui <- fluidPage(
   tags$head(
@@ -188,7 +235,10 @@ ui <- fluidPage(
     class = "options-row",
     uiOutput("group_picker"),
     uiOutput("split_picker"),
-    div(class = "accent", sliderInput("chart_size", "Chart width (px)", min = 300, max = 1200, value = 600, step = 50, ticks = FALSE, width = "100%")),
+    div(
+      class = "accent",
+      sliderInput("chart_size", "Chart width (px)", min = 300, max = 1200, value = 600, step = 50, ticks = FALSE, width = "100%")
+    ),
     div(class = "accent", style = "margin-top: 25px", checkboxInput("label", "Label clusters", value = TRUE)),
     uiOutput("na_cutoff_picker"),
     uiOutput("violin_options")
@@ -224,7 +274,11 @@ server <- function(input, output, session) {
   has_genes <- ready && file.exists(genes_file) && file.exists(expression_file)
   # The level order of the object's factor columns; datasets processed before it was written lack the file
   levels_file <- if (is.null(dir)) NULL else file.path(dir, "column_levels.parquet")
-  levels_table <- if (ready && file.exists(levels_file)) dbGetQuery(con, sprintf("SELECT * FROM read_parquet(%s)", dbQuoteString(con, levels_file))) else NULL
+  levels_table <- if (ready && file.exists(levels_file)) {
+    dbGetQuery(con, sprintf("SELECT * FROM read_parquet(%s)", dbQuoteString(con, levels_file)))
+  } else {
+    NULL
+  }
   level_order <- function(column, values) ordered_levels(levels_table, column, values)
 
   # The object's scale.data (what DoHeatmap draws), for the genes it has; datasets processed before it was written lack the file
@@ -241,13 +295,21 @@ server <- function(input, output, session) {
   expression_matrix <- function(genes, n_cells) {
     found <- dbGetQuery(
       con,
-      sprintf("SELECT gene_idx, gene FROM read_parquet(%s) WHERE gene IN (%s)", dbQuoteString(con, genes_file), paste(dbQuoteString(con, genes), collapse = ", "))
+      sprintf(
+        "SELECT gene_idx, gene FROM read_parquet(%s) WHERE gene IN (%s)",
+        dbQuoteString(con, genes_file),
+        paste(dbQuoteString(con, genes), collapse = ", ")
+      )
     )
     m <- matrix(0, nrow = n_cells, ncol = length(genes), dimnames = list(NULL, genes))
     if (nrow(found) > 0) {
       nz <- dbGetQuery(
         con,
-        sprintf("SELECT gene_idx, cell_idx, value FROM read_parquet(%s) WHERE gene_idx IN (%s)", dbQuoteString(con, expression_file), paste(found$gene_idx, collapse = ", "))
+        sprintf(
+          "SELECT gene_idx, cell_idx, value FROM read_parquet(%s) WHERE gene_idx IN (%s)",
+          dbQuoteString(con, expression_file),
+          paste(found$gene_idx, collapse = ", ")
+        )
       )
       m[cbind(nz$cell_idx + 1, match(found$gene, genes)[match(nz$gene_idx, found$gene_idx)])] <- nz$value
     }
@@ -264,12 +326,20 @@ server <- function(input, output, session) {
     m <- matrix(NA_real_, nrow = n_cells, ncol = length(genes), dimnames = list(NULL, genes))
     found <- dbGetQuery(
       con,
-      sprintf("SELECT gene_idx, gene FROM read_parquet(%s) WHERE gene IN (%s)", dbQuoteString(con, genes_file), paste(dbQuoteString(con, genes), collapse = ", "))
+      sprintf(
+        "SELECT gene_idx, gene FROM read_parquet(%s) WHERE gene IN (%s)",
+        dbQuoteString(con, genes_file),
+        paste(dbQuoteString(con, genes), collapse = ", ")
+      )
     )
     if (nrow(found) > 0) {
       sc <- dbGetQuery(
         con,
-        sprintf("SELECT gene_idx, cell_idx, value FROM read_parquet(%s) WHERE gene_idx IN (%s)", dbQuoteString(con, scale_file), paste(found$gene_idx, collapse = ", "))
+        sprintf(
+          "SELECT gene_idx, cell_idx, value FROM read_parquet(%s) WHERE gene_idx IN (%s)",
+          dbQuoteString(con, scale_file),
+          paste(found$gene_idx, collapse = ", ")
+        )
       )
       m[cbind(sc$cell_idx + 1, match(found$gene, genes)[match(sc$gene_idx, found$gene_idx)])] <- sc$value
     }
@@ -288,13 +358,14 @@ server <- function(input, output, session) {
     info <- column_info()
     cols <- setdiff(info$column_name, c("barcode", grep(COORD_RE, info$column_name, value = TRUE)))
     cols <- cols[info$column_type[match(cols, info$column_name)] %in% c("VARCHAR", "BOOLEAN") | cols %in% c(CLUSTER_COL, label_col())]
-    if (length(cols) == 0) return(integer())
+    if (length(cols) == 0) {
+      return(integer())
+    }
     q <- dbQuoteIdentifier(con, cols)
     counts <- unlist(dbGetQuery(con, cells_sql(paste0("COUNT(DISTINCT ", q, ") AS c", seq_along(cols), collapse = ", "))))
     names(counts) <- cols
     counts[counts <= MAX_GROUPS | names(counts) %in% label_col()]
   })
-
 
   # The tissue map of the dataset (read once per session); the tissue plot needs it, so it is not offered without one
   tissue_path <- TISSUE_PLOT_file(dataset_id)
@@ -302,12 +373,20 @@ server <- function(input, output, session) {
 
   # Plots to choose from: what the dataset offers (all of them when there is no offered list, which only happens with SHINY_DEV)
   available_plots <- if (length(offered) > 0) SUPPORTED_PLOTS[SUPPORTED_PLOTS %in% offered] else SUPPORTED_PLOTS
-  if (is.null(TISSUE_PLOT)) available_plots <- setdiff(available_plots, "TissuePlot")
+  if (is.null(TISSUE_PLOT)) {
+    available_plots <- setdiff(available_plots, "TissuePlot")
+  }
 
   output$plot_picker <- renderUI({
-    if (!ready) return(NULL)
+    if (!ready) {
+      return(NULL)
+    }
     selectizeInput(
-      "plots", "Pick your plots", choices = available_plots, selected = default_plots, multiple = TRUE,
+      "plots",
+      "Pick your plots",
+      choices = available_plots,
+      selected = default_plots,
+      multiple = TRUE,
       options = list(placeholder = "UMAP", plugins = list("remove_button", "clear_button"))
     )
   })
@@ -324,42 +403,85 @@ server <- function(input, output, session) {
 
   group_choices <- reactive(if (has_clusters()) names(group_counts()) else character())
   output$group_picker <- renderUI({
-    if (length(group_choices()) == 0) return(NULL)
-    conditionalPanel(plot_condition(c("UMAP", "PCA", "Heatmap")), selectizeInput(
-      "group_by", "Group by (UMAP, PCA, Heatmap)", choices = group_choices(), selected = label_col(), multiple = TRUE, width = "100%",
-      options = list(plugins = list("remove_button", "clear_button"))
-    ))
+    if (length(group_choices()) == 0) {
+      return(NULL)
+    }
+    conditionalPanel(
+      plot_condition(c("UMAP", "PCA", "Heatmap")),
+      selectizeInput(
+        "group_by",
+        "Group by (UMAP, PCA, Heatmap)",
+        choices = group_choices(),
+        selected = label_col(),
+        multiple = TRUE,
+        width = "100%",
+        options = list(plugins = list("remove_button", "clear_button"))
+      )
+    )
   })
   output$split_picker <- renderUI({
-    if (length(group_choices()) == 0) return(NULL)
+    if (length(group_choices()) == 0) {
+      return(NULL)
+    }
     # One column at a time (picking another swaps it); the x that shows on hover, or "None", goes back to no split
-    conditionalPanel(plot_condition(c("UMAP", "PCA", "ViolinPlot")), selectizeInput(
-      "split_by", "Split by (UMAP, PCA, Violin)", choices = c("None" = "", group_choices()), selected = "", width = "100%",
-      options = list(plugins = list("clear_button"))
-    ))
+    conditionalPanel(
+      plot_condition(c("UMAP", "PCA", "ViolinPlot")),
+      selectizeInput(
+        "split_by",
+        "Split by (UMAP, PCA, Violin)",
+        choices = c("None" = "", group_choices()),
+        selected = "",
+        width = "100%",
+        options = list(plugins = list("clear_button"))
+      )
+    )
   })
 
   # scCustomize's na_cutoff: cells expressing a picked gene at or below it are drawn grey under the others (UMAP and PCA only); empty (NA) is no cutoff
   output$na_cutoff_picker <- renderUI({
-    if (!has_genes) return(NULL)
-    conditionalPanel(plot_condition(c("UMAP", "PCA")), div(class = "accent", numericInput(
-      "na_cutoff", "Grey out expression at or below (UMAP, PCA)", value = NA, min = 0, step = 0.1, width = "100%"
-    )))
+    if (!has_genes) {
+      return(NULL)
+    }
+    conditionalPanel(
+      plot_condition(c("UMAP", "PCA")),
+      div(
+        class = "accent",
+        numericInput(
+          "na_cutoff",
+          "Grey out expression at or below (UMAP, PCA)",
+          value = NA,
+          min = 0,
+          step = 0.1,
+          width = "100%"
+        )
+      )
+    )
   })
   output$violin_options <- renderUI({
-    if (!has_genes) return(NULL)
-    conditionalPanel(plot_condition("ViolinPlot"), div(
-      class = "accent", style = "margin-top: 25px",
-      checkboxInput("violin_median", "Show median (Violin)", value = FALSE),
-      checkboxInput("violin_box", "Show boxplot (Violin)", value = FALSE)
-    ))
+    if (!has_genes) {
+      return(NULL)
+    }
+    conditionalPanel(
+      plot_condition("ViolinPlot"),
+      div(
+        class = "accent",
+        style = "margin-top: 25px",
+        checkboxInput("violin_median", "Show median (Violin)", value = FALSE),
+        checkboxInput("violin_box", "Show boxplot (Violin)", value = FALSE)
+      )
+    )
   })
 
   # Server-side selectize: the browser only receives the matches for what is typed, which matters with tens of thousands of genes
   output$gene_picker <- renderUI({
-    if (!has_genes) return(NULL)
+    if (!has_genes) {
+      return(NULL)
+    }
     selectizeInput(
-      "gene", "Pick your genes", choices = NULL, multiple = TRUE,
+      "gene",
+      "Pick your genes",
+      choices = NULL,
+      multiple = TRUE,
       options = list(placeholder = "Search genes", maxOptions = 50, plugins = list("remove_button", "clear_button"))
     )
   })
@@ -370,9 +492,14 @@ server <- function(input, output, session) {
 
   # Cell types are the clusters; nothing selected means all cells
   output$cell_type_picker <- renderUI({
-    if (!ready) return(NULL)
+    if (!ready) {
+      return(NULL)
+    }
     selectizeInput(
-      "cell_types", "Pick your cell types", choices = NULL, multiple = TRUE,
+      "cell_types",
+      "Pick your cell types",
+      choices = NULL,
+      multiple = TRUE,
       options = list(placeholder = "All clusters", plugins = list("remove_button", "clear_button"))
     )
   })
@@ -384,12 +511,23 @@ server <- function(input, output, session) {
 
   # What the plots show. Read on startup (the button starts at 0, which ignoreNULL = FALSE lets through) and on every press of the
   # button, so picking genes or cell types changes nothing until then
-  selection <- eventReactive(input$generate, {
-    list(plots = input$plots, genes = if (has_genes) input$gene else character(), cell_types = input$cell_types, label = isTRUE(input$label),
-         group_by = input$group_by, split_by = input$split_by %||% "",
-         na_cutoff = input$na_cutoff %||% NA_real_,
-         violin_median = isTRUE(input$violin_median), violin_box = isTRUE(input$violin_box))
-  }, ignoreNULL = FALSE)
+  selection <- eventReactive(
+    input$generate,
+    {
+      list(
+        plots = input$plots,
+        genes = if (has_genes) input$gene else character(),
+        cell_types = input$cell_types,
+        label = isTRUE(input$label),
+        group_by = input$group_by,
+        split_by = input$split_by %||% "",
+        na_cutoff = input$na_cutoff %||% NA_real_,
+        violin_median = isTRUE(input$violin_median),
+        violin_box = isTRUE(input$violin_box)
+      )
+    },
+    ignoreNULL = FALSE
+  )
 
   # The plot shown first: the UMAP, or the first plot the dataset offers when it does not offer that
   default_plots <- if ("UMAP" %in% available_plots) "UMAP" else head(available_plots, 1)
@@ -415,9 +553,13 @@ server <- function(input, output, session) {
     # side by side. The slider is not held back by Update plots; it is debounced so dragging it does not redraw on every step.
     size <- chart_size()
     ids <- unlist(lapply(shown(), function(p) {
-      if (p %in% c("UMAP", "PCA")) paste0("plot_", p, "_", seq_len(n_group_plots()))
-      else if (p == "Heatmap") paste0("plot_Heatmap_", seq_len(n_heatmaps()))
-      else paste0("plot_", p)
+      if (p %in% c("UMAP", "PCA")) {
+        paste0("plot_", p, "_", seq_len(n_group_plots()))
+      } else if (p == "Heatmap") {
+        paste0("plot_Heatmap_", seq_len(n_heatmaps()))
+      } else {
+        paste0("plot_", p)
+      }
     }))
     div(
       style = "display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start;",
@@ -429,7 +571,9 @@ server <- function(input, output, session) {
             plotOutput(id, width = "100%", height = "auto", hover = hoverOpts("tissue_hover", delay = 80, delayType = "debounce")),
             uiOutput("tissue_tip")
           )
-        } else div(style = sprintf("width: %dpx; max-width: 100%%;", size), plotOutput(id, width = "100%", height = "auto"))
+        } else {
+          div(style = sprintf("width: %dpx; max-width: 100%%;", size), plotOutput(id, width = "100%", height = "auto"))
+        }
       })
     )
   })
@@ -470,10 +614,27 @@ server <- function(input, output, session) {
     group <- group_cols()
     split <- if (isTRUE(sel$split_by %in% names(group_counts()))) sel$split_by else NULL
     q <- function(col, as) paste(dbQuoteIdentifier(con, col), "AS", as)
-    cells <- dbGetQuery(con, cells_sql(paste(c("umap_1", "umap_2", pcs, q(label_col(), "cluster"), q(group, paste0("grp", seq_along(group))), if (!is.null(split)) q(split, "spl")), collapse = ", ")))
+    cells <- dbGetQuery(
+      con,
+      cells_sql(paste(
+        c(
+          "umap_1",
+          "umap_2",
+          pcs,
+          q(label_col(), "cluster"),
+          q(group, paste0("grp", seq_along(group))),
+          if (!is.null(split)) q(split, "spl")
+        ),
+        collapse = ", "
+      ))
+    )
     cells$cluster <- as.character(cells$cluster)
-    for (k in paste0("grp", seq_along(group))) cells[[k]] <- as.character(cells[[k]])
-    if (!is.null(split)) cells$spl <- as.character(cells$spl)
+    for (k in paste0("grp", seq_along(group))) {
+      cells[[k]] <- as.character(cells[[k]])
+    }
+    if (!is.null(split)) {
+      cells$spl <- as.character(cells$spl)
+    }
     selected <- if (length(sel$cell_types)) cells$cluster %in% sel$cell_types else rep(TRUE, nrow(cells))
     keep <- selected
     shiny::validate(shiny::need(any(keep), "No cells match the selection")) # jsonlite also exports validate()
@@ -483,9 +644,17 @@ server <- function(input, output, session) {
     background <- cells[!selected, , drop = FALSE]
     cells <- cells[keep, , drop = FALSE]
     list(
-      n_total = n_total, keep_idx = which(keep), background = background, na_cutoff = sel$na_cutoff,
-      cells = cells, expr = expr, genes = sel$genes, clusters = level_order(label_col(), cells$cluster), label = sel$label,
-      group_cols = group, splits = if (!is.null(split)) level_order(split, cells$spl),
+      n_total = n_total,
+      keep_idx = which(keep),
+      background = background,
+      na_cutoff = sel$na_cutoff,
+      cells = cells,
+      expr = expr,
+      genes = sel$genes,
+      clusters = level_order(label_col(), cells$cluster),
+      label = sel$label,
+      group_cols = group,
+      splits = if (!is.null(split)) level_order(split, cells$spl),
       scatter_splits = if (!is.null(split)) level_order(split, c(cells$spl, background$spl))
     )
   })
@@ -498,7 +667,9 @@ server <- function(input, output, session) {
       gene = factor(rep(d$genes, each = nrow(d$cells)), levels = d$genes),
       value = as.vector(d$expr)
     )
-    if (!is.null(d$splits)) df$spl <- factor(rep(d$cells$spl, times = length(d$genes)), levels = d$splits)
+    if (!is.null(d$splits)) {
+      df$spl <- factor(rep(d$cells$spl, times = length(d$genes)), levels = d$splits)
+    }
     df
   }
 
@@ -524,12 +695,18 @@ server <- function(input, output, session) {
       # NA (drawn grey) and sorted first, so the expressing cells are drawn on top of them
       shown_cells <- rbind(d$cells[c(x, y, if (split) "spl")], d$background[c(x, y, if (split) "spl")])
       expr <- rbind(d$expr, matrix(NA_real_, nrow(d$background), n))
-      if (!is.na(d$na_cutoff)) expr[!is.na(expr) & expr <= d$na_cutoff] <- NA
+      if (!is.na(d$na_cutoff)) {
+        expr[!is.na(expr) & expr <= d$na_cutoff] <- NA
+      }
       df <- data.frame(
-        x = rep(shown_cells[[x]], times = n), y = rep(shown_cells[[y]], times = n),
-        color = as.vector(expr), gene = factor(rep(d$genes, each = nrow(shown_cells)), levels = d$genes)
+        x = rep(shown_cells[[x]], times = n),
+        y = rep(shown_cells[[y]], times = n),
+        color = as.vector(expr),
+        gene = factor(rep(d$genes, each = nrow(shown_cells)), levels = d$genes)
       )
-      if (split) df$spl <- factor(rep(shown_cells$spl, times = n), levels = d$scatter_splits)
+      if (split) {
+        df$spl <- factor(rep(shown_cells$spl, times = n), levels = d$scatter_splits)
+      }
       df <- df[order(!is.na(df$color), df$color), ]
     } else {
       grp <- d$cells[[paste0("grp", i)]]
@@ -549,13 +726,17 @@ server <- function(input, output, session) {
     # Without genes the cells of the cell types that were not picked are a grey layer under the colored cells
     if (length(d$genes) == 0 && nrow(d$background) > 0) {
       bg <- data.frame(x = d$background[[x]], y = d$background[[y]])
-      if (split) bg$spl <- factor(d$background$spl, levels = d$scatter_splits)
+      if (split) {
+        bg$spl <- factor(d$background$spl, levels = d$scatter_splits)
+      }
       p <- p + scatter_layer(data = bg, mapping = aes(x, y), color = "lightgrey", inherit.aes = FALSE)
     }
     p <- p + scatter_layer()
     p <- p + labs(x = x, y = y, color = NULL) + theme_classic(base_size = 14)
     if (length(d$genes) > 0) {
-      p <- p + scale_color_viridis_c(option = "plasma", direction = -1, begin = 0.1, end = 0.9, na.value = "lightgrey") + labs(color = "Expression")
+      p <- p +
+        scale_color_viridis_c(option = "plasma", direction = -1, begin = 0.1, end = 0.9, na.value = "lightgrey") +
+        labs(color = "Expression")
       if (split) p + facet_grid(gene ~ spl) else p + facet_wrap(~gene, ncol = ceiling(sqrt(length(d$genes))))
     } else {
       # Seurat's LabelClusters: the label sits at the median of each group's coordinates (in each panel when split)
@@ -563,8 +744,12 @@ server <- function(input, output, session) {
         centers <- aggregate(df[c("x", "y")], df[c("color", if (split) "spl")], median)
         p <- p + geom_text(data = centers, aes(label = color), color = "black", size = 5, show.legend = FALSE)
       }
-      if (length(d$group_cols) > 1) p <- p + ggtitle(d$group_cols[[i]])
-      p <- p + scale_color_manual(values = colorblind_palette(nlevels(df$color)), drop = FALSE) + guides(color = guide_legend(override.aes = list(size = 3)))
+      if (length(d$group_cols) > 1) {
+        p <- p + ggtitle(d$group_cols[[i]])
+      }
+      p <- p +
+        scale_color_manual(values = colorblind_palette(nlevels(df$color)), drop = FALSE) +
+        guides(color = guide_legend(override.aes = list(size = 3)))
       if (split) p + facet_wrap(~spl, ncol = min(nlevels(df$spl), 4)) else p
     }
   }
@@ -589,17 +774,21 @@ server <- function(input, output, session) {
   }
 
   # One output per group by chart, plot_UMAP_1 ... plot_UMAP_<MAX_GROUP_PLOTS>; the page only holds as many as are picked
-  for (i in seq_len(MAX_GROUP_PLOTS)) local({
-    i <- i
-    for (spec in list(c("UMAP", "umap_1", "umap_2"), c("PCA", "pca_1", "pca_2"))) local({
-      spec <- spec
-      id <- paste0("plot_", spec[[1]], "_", i)
-      output[[id]] <- renderPlot(height = function() scatter_height(id), {
-        req(i <= n_group_plots())
-        scatter_plot(spec[[2]], spec[[3]], i)
-      })
+  for (i in seq_len(MAX_GROUP_PLOTS)) {
+    local({
+      i <- i
+      for (spec in list(c("UMAP", "umap_1", "umap_2"), c("PCA", "pca_1", "pca_2"))) {
+        local({
+          spec <- spec
+          id <- paste0("plot_", spec[[1]], "_", i)
+          output[[id]] <- renderPlot(height = function() scatter_height(id), {
+            req(i <= n_group_plots())
+            scatter_plot(spec[[2]], spec[[3]], i)
+          })
+        })
+      }
     })
-  })
+  }
 
   # Like Seurat's VlnPlot: one violin per cluster, a panel per gene
   output$plot_ViolinPlot <- renderPlot(height = function() as.integer(max(350, 230 * n_genes() + 30)), {
@@ -619,19 +808,46 @@ server <- function(input, output, session) {
         geom_violin(scale = "width", adjust = 1, trim = TRUE, linewidth = 0.3) +
         scale_fill_manual(values = colorblind_palette(nlevels(df$cluster)), drop = FALSE)
     }
-    if (sel$violin_box) p <- p + geom_boxplot(width = 0.1, fill = "white", linewidth = 0.3, outlier.shape = NA, position = dodge, show.legend = FALSE)
-    if (!sel$violin_box && !sel$violin_median) {
-      p <- p + if (split) {
-        geom_point(position = position_jitterdodge(jitter.width = 0.4, dodge.width = 0.9, seed = 1), size = 0.3, alpha = 0.4, color = "black", show.legend = FALSE)
-      } else {
-        geom_jitter(width = 0.2, height = 0, size = 0.3, alpha = 0.4, color = "black", show.legend = FALSE)
-      }
+    if (sel$violin_box) {
+      p <- p + geom_boxplot(width = 0.1, fill = "white", linewidth = 0.3, outlier.shape = NA, position = dodge, show.legend = FALSE)
     }
-    if (sel$violin_median) p <- p + stat_summary(fun = median, geom = "point", shape = 23, size = 2.5, fill = "white", color = "black", position = dodge, show.legend = FALSE)
+    if (!sel$violin_box && !sel$violin_median) {
+      p <- p +
+        if (split) {
+          geom_point(
+            position = position_jitterdodge(jitter.width = 0.4, dodge.width = 0.9, seed = 1),
+            size = 0.3,
+            alpha = 0.4,
+            color = "black",
+            show.legend = FALSE
+          )
+        } else {
+          geom_jitter(width = 0.2, height = 0, size = 0.3, alpha = 0.4, color = "black", show.legend = FALSE)
+        }
+    }
+    if (sel$violin_median) {
+      p <- p +
+        stat_summary(
+          fun = median,
+          geom = "point",
+          shape = 23,
+          size = 2.5,
+          fill = "white",
+          color = "black",
+          position = dodge,
+          show.legend = FALSE
+        )
+    }
     p +
       facet_wrap(~gene, ncol = 1, scales = "free_y", strip.position = "left") +
-      labs(x = NULL, y = "Expression") + theme_classic(base_size = 14) +
-      theme(legend.position = if (split) "right" else "none", strip.background = element_blank(), strip.placement = "outside", strip.text.y.left = element_text(angle = 0))
+      labs(x = NULL, y = "Expression") +
+      theme_classic(base_size = 14) +
+      theme(
+        legend.position = if (split) "right" else "none",
+        strip.background = element_blank(),
+        strip.placement = "outside",
+        strip.text.y.left = element_text(angle = 0)
+      )
   })
 
   # Mean expression and share of cells expressing, per cluster and gene (the numbers behind the dot plot and the heatmap)
@@ -652,12 +868,15 @@ server <- function(input, output, session) {
       scale_size(range = c(0, 8), limits = c(0, 100)) +
       scale_color_viridis_c(option = "plasma", direction = -1, begin = 0.1, end = 0.9) +
       labs(x = NULL, y = NULL, size = "% expressed", color = "Avg. expression\n(scaled)") +
-      theme_classic(base_size = 14) + theme(axis.text.x = element_text(angle = 45, hjust = 1), panel.grid.major = element_line(color = "grey92"))
+      theme_classic(base_size = 14) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1), panel.grid.major = element_line(color = "grey92"))
   })
 
   # The column whose values name the outlines of the tissue map: tissue_type, else the cell labels (with a note under the plot)
   tissue_col <- reactive(if (TISSUE_COL %in% columns()) TISSUE_COL else label_col())
-  tissue_note <- reactive(if (TISSUE_COL %in% columns()) NULL else sprintf("No %s column in this dataset; outlines are matched to %s.", TISSUE_COL, label_col()))
+  tissue_note <- reactive(
+    if (TISSUE_COL %in% columns()) NULL else sprintf("No %s column in this dataset; outlines are matched to %s.", TISSUE_COL, label_col())
+  )
 
   # What the tissue plot draws, as a ggPlantmap table: with genes picked, one copy of the map per gene with the average expression of each
   # outline's cell type (ggPlantmap.merge adds the values; avg_expression is log1p of the dot plot's average, pct_expressed its % of
@@ -672,11 +891,14 @@ server <- function(input, output, session) {
     map <- TISSUE_PLOT
     if (length(d$genes) > 0) {
       sm <- cluster_summary(long_expression(d))
-      quant <- do.call(rbind, lapply(d$genes, function(g) {
-        s <- sm[sm$gene == g, ]
-        values <- data.frame(ROI.name = as.character(s$cluster), avg_expression = log1p(s$avg), pct_expressed = s$pct)
-        cbind(ggPlantmap.merge(map, values, id.x = "ROI.name"), gene = g)
-      }))
+      quant <- do.call(
+        rbind,
+        lapply(d$genes, function(g) {
+          s <- sm[sm$gene == g, ]
+          values <- data.frame(ROI.name = as.character(s$cluster), avg_expression = log1p(s$avg), pct_expressed = s$pct)
+          cbind(ggPlantmap.merge(map, values, id.x = "ROI.name"), gene = g)
+        })
+      )
       quant$gene <- factor(quant$gene, levels = d$genes)
       list(table = quant, genes = TRUE, d = d)
     } else {
@@ -690,62 +912,91 @@ server <- function(input, output, session) {
   # The map keeps its proportions and sits in the middle of the chart, so any height beyond the panels' shows as white space above and
   # below: the height is that of the panels (the chart width less the legend, shared by the columns, times the map's height/width),
   # their titles and the caption, estimated a little short, which only narrows the panels
-  output$plot_TissuePlot <- renderPlot(height = function() {
-    panels <- max(1, length(selection()$genes))
-    cols <- ceiling(sqrt(panels))
-    aspect <- if (is.null(TISSUE_PLOT)) 1 else diff(range(TISSUE_PLOT$y)) / max(diff(range(TISSUE_PLOT$x)), 1e-9)
-    legend <- if (length(selection()$genes) > 0) 110 else 170
-    panel_width <- max(100, (plot_width("plot_TissuePlot") - legend) / cols)
-    strip <- if (length(selection()$genes) > 0) 25 else 0
-    as.integer(max(150, ceiling(panels / cols) * (panel_width * aspect + strip) + 20))
-  }, {
-    td <- tissue_data()
-    d <- td$d
-    if (td$genes) {
-      ggPlantmap.heatmap(td$table, value.quant = avg_expression) +
-        scale_fill_viridis_c(option = "plasma", direction = -1, begin = 0.1, end = 0.9, na.value = "grey85") +
-        labs(fill = "Avg. expression", caption = tissue_note()) + facet_wrap(~gene, ncol = ceiling(sqrt(length(d$genes)))) + theme(text = element_text(size = 14))
-    } else {
-      p <- ggPlantmap.plot(td$table, layer = cell_type) +
-        scale_fill_manual(values = setNames(colorblind_palette(length(d$clusters)), d$clusters), na.value = "grey85", drop = TRUE, name = NULL) +
-        labs(caption = tissue_note()) + theme(text = element_text(size = 14))
-      if (isTRUE(d$label)) {
-        # A label at the middle of the corners of each outline that has a cell type
-        centers <- aggregate(cbind(x, y) ~ ROI.id + ROI.name, td$table[td$table$ROI.name %in% d$clusters, ], function(v) mean(range(v)))
-        p <- p + geom_text(aes(x, y, label = ROI.name), centers, inherit.aes = FALSE, size = 4, check_overlap = TRUE)
+  output$plot_TissuePlot <- renderPlot(
+    height = function() {
+      panels <- max(1, length(selection()$genes))
+      cols <- ceiling(sqrt(panels))
+      aspect <- if (is.null(TISSUE_PLOT)) 1 else diff(range(TISSUE_PLOT$y)) / max(diff(range(TISSUE_PLOT$x)), 1e-9)
+      legend <- if (length(selection()$genes) > 0) 110 else 170
+      panel_width <- max(100, (plot_width("plot_TissuePlot") - legend) / cols)
+      strip <- if (length(selection()$genes) > 0) 25 else 0
+      as.integer(max(150, ceiling(panels / cols) * (panel_width * aspect + strip) + 20))
+    },
+    {
+      td <- tissue_data()
+      d <- td$d
+      if (td$genes) {
+        ggPlantmap.heatmap(td$table, value.quant = avg_expression) +
+          scale_fill_viridis_c(option = "plasma", direction = -1, begin = 0.1, end = 0.9, na.value = "grey85") +
+          labs(fill = "Avg. expression", caption = tissue_note()) +
+          facet_wrap(~gene, ncol = ceiling(sqrt(length(d$genes)))) +
+          theme(text = element_text(size = 14))
+      } else {
+        p <- ggPlantmap.plot(td$table, layer = cell_type) +
+          scale_fill_manual(
+            values = setNames(colorblind_palette(length(d$clusters)), d$clusters),
+            na.value = "grey85",
+            drop = TRUE,
+            name = NULL
+          ) +
+          labs(caption = tissue_note()) +
+          theme(text = element_text(size = 14))
+        if (isTRUE(d$label)) {
+          # A label at the middle of the corners of each outline that has a cell type
+          centers <- aggregate(cbind(x, y) ~ ROI.id + ROI.name, td$table[td$table$ROI.name %in% d$clusters, ], function(v) mean(range(v)))
+          p <- p + geom_text(aes(x, y, label = ROI.name), centers, inherit.aes = FALSE, size = 4, check_overlap = TRUE)
+        }
+        p
       }
-      p
     }
-  })
+  )
 
   # The box that follows the mouse over the tissue plot: the outline's name and, with genes, the gene (the panel hovered) with its average
   # expression and % of cells expressing. It sits left of the pointer in the right part of the chart, so it stays inside it.
   output$tissue_tip <- renderUI({
     h <- input$tissue_hover
-    if (is.null(h)) return(NULL)
+    if (is.null(h)) {
+      return(NULL)
+    }
     td <- tissue_data()
     tbl <- td$table
     if (td$genes) {
-      if (is.null(h$panelvar1)) return(NULL)
+      if (is.null(h$panelvar1)) {
+        return(NULL)
+      }
       tbl <- tbl[as.character(tbl$gene) == as.character(h$panelvar1), , drop = FALSE]
     }
     hit <- outline_at(tbl, h$x, h$y)
-    if (is.null(hit)) return(NULL)
+    if (is.null(hit)) {
+      return(NULL)
+    }
     body <- if (td$genes) {
       if (is.na(hit$avg_expression)) {
         list(tags$b(hit$ROI.name), tags$br(), "no matching cell type")
       } else {
-        list(tags$b(hit$ROI.name), tags$br(), paste0(hit$gene, ": ", signif(hit$avg_expression, 3), " avg. expression"), tags$br(), paste0(round(hit$pct_expressed, 1), "% of cells expressing"))
+        list(
+          tags$b(hit$ROI.name),
+          tags$br(),
+          paste0(hit$gene, ": ", signif(hit$avg_expression, 3), " avg. expression"),
+          tags$br(),
+          paste0(round(hit$pct_expressed, 1), "% of cells expressing")
+        )
       }
     } else {
       list(tags$b(hit$ROI.name), if (is.na(hit$cell_type)) list(tags$br(), "no matching cell type"))
     }
     x <- h$coords_css$x
-    side <- if (x > plot_width("plot_TissuePlot") * 0.6) sprintf("right: %dpx;", as.integer(plot_width("plot_TissuePlot") - x + 12)) else sprintf("left: %dpx;", as.integer(x + 12))
+    side <- if (x > plot_width("plot_TissuePlot") * 0.6) {
+      sprintf("right: %dpx;", as.integer(plot_width("plot_TissuePlot") - x + 12))
+    } else {
+      sprintf("left: %dpx;", as.integer(x + 12))
+    }
     tags$div(
       style = paste0(
         "position: absolute; z-index: 100; pointer-events: none; padding: 4px 8px; font-size: 12px; background: rgba(255, 255, 255, 0.95); ",
-        "border: 1px solid #ccc; border-radius: 4px; ", side, sprintf(" top: %dpx;", as.integer(h$coords_css$y + 12))
+        "border: 1px solid #ccc; border-radius: 4px; ",
+        side,
+        sprintf(" top: %dpx;", as.integer(h$coords_css$y + 12))
       ),
       body
     )
@@ -762,7 +1013,8 @@ server <- function(input, output, session) {
     cells <- d$cells
     idx <- d$keep_idx
     caption <- NULL
-    if (nrow(expr) > MAX_HEATMAP_CELLS) { # one pixel per cell is the most the plot can show; keep a fixed random sample
+    if (nrow(expr) > MAX_HEATMAP_CELLS) {
+      # one pixel per cell is the most the plot can show; keep a fixed random sample
       set.seed(1)
       keep <- sort(sample(nrow(expr), MAX_HEATMAP_CELLS))
       caption <- sprintf("Showing a random %s of %s cells", format(MAX_HEATMAP_CELLS, big.mark = ","), format(nrow(expr), big.mark = ","))
@@ -772,10 +1024,15 @@ server <- function(input, output, session) {
     }
     z <- if (has_scaled) scaled_matrix(d$genes, d$n_total)[idx, , drop = FALSE] else matrix(NA_real_, nrow(expr), ncol(expr))
     missing <- which(colSums(!is.na(z)) == 0)
-    for (j in missing) z[, j] <- as.vector(scale(expr[, j]))
+    for (j in missing) {
+      z[, j] <- as.vector(scale(expr[, j]))
+    }
     z[is.nan(z)] <- 0 # a gene that does not vary has nothing to scale
     if (length(missing) > 0 && has_scaled) {
-      caption <- paste(c(caption, paste("Not in scale.data, so scaled across the drawn cells:", paste(d$genes[missing], collapse = ", "))), collapse = "\n")
+      caption <- paste(
+        c(caption, paste("Not in scale.data, so scaled across the drawn cells:", paste(d$genes[missing], collapse = ", "))),
+        collapse = "\n"
+      )
     }
     # Cells are grouped by this heatmap's Group by column (the cell labels unless changed), in the object's level order
     grp <- cells[[paste0("grp", i)]]
@@ -808,7 +1065,14 @@ server <- function(input, output, session) {
     right_margin <- max(40, ceiling(0.71 * 7.2 * nchar(labels[[length(labels)]]) + 10))
     ggplot(df, aes(x, y, fill = value)) +
       geom_raster() +
-      annotate("rect", xmin = bar_start, xmax = bar_end, ymin = bar_bottom, ymax = bar_top, fill = colorblind_palette(nlevels(group))[runs$values]) +
+      annotate(
+        "rect",
+        xmin = bar_start,
+        xmax = bar_end,
+        ymin = bar_bottom,
+        ymax = bar_top,
+        fill = colorblind_palette(nlevels(group))[runs$values]
+      ) +
       annotate("text", x = (bar_start + bar_end) / 2, y = bar_top + 0.02 * g, label = labels, angle = 45, hjust = 0, vjust = 0, size = 5) +
       # DoHeatmap spreads its three colors over the range of the values drawn, so the lowest value is always magenta and the highest yellow
       scale_fill_gradientn(colors = c("#FF00FF", "#000000", "#FFFF00"), na.value = "white", name = "Expression") +
@@ -818,7 +1082,9 @@ server <- function(input, output, session) {
       labs(x = NULL, y = NULL, caption = caption, title = if (length(d$group_cols) > 1) d$group_cols[[i]]) +
       theme_minimal(base_size = 14) +
       theme(
-        panel.grid = element_blank(), axis.text.x = element_blank(), axis.ticks = element_blank(),
+        panel.grid = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks = element_blank(),
         # With a title, it sits above the room kept for the labels; without one that room is the top margin
         plot.margin = margin(t = if (length(d$group_cols) > 1) 5 else top_margin, r = right_margin, b = 5, l = 5),
         plot.title = element_text(margin = margin(b = top_margin))
@@ -826,13 +1092,15 @@ server <- function(input, output, session) {
   }
 
   # One output per group by column, plot_Heatmap_1 ... plot_Heatmap_<MAX_GROUP_PLOTS>; the page only holds as many as are picked
-  for (i in seq_len(MAX_GROUP_PLOTS)) local({
-    i <- i
-    output[[paste0("plot_Heatmap_", i)]] <- renderPlot(height = function() as.integer(max(350, 150 + 30 * n_genes())), {
-      req(i <= n_heatmaps())
-      heatmap_plot(i)
+  for (i in seq_len(MAX_GROUP_PLOTS)) {
+    local({
+      i <- i
+      output[[paste0("plot_Heatmap_", i)]] <- renderPlot(height = function() as.integer(max(350, 150 + 30 * n_genes())), {
+        req(i <= n_heatmaps())
+        heatmap_plot(i)
+      })
     })
-  })
+  }
 }
 
 shinyApp(ui, server)

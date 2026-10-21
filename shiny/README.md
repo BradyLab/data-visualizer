@@ -83,6 +83,17 @@ upload. The ggPlantmap package is installed in the Shiny image (from GitHub, pin
 
 The backend checks the CSV when the upload finishes (`backend-express/src/services/tissue.ts`) and refuses it with a 400 and the reason, keeping the current map, if the header lacks `ROI.name`, `ROI.id`, `x` or `y`, or no row has numeric `x` and `y` (only the first 64 KB are read). It cannot check that `ROI.name` matches the dataset's cell types: a map that matches none of them draws every outline grey.
 
+## Formatting
+
+The R code (`app/`, `preprocess/`, `tests/`) is formatted with [Air](https://posit-dev.github.io/air/), configured in `air.toml` (150 columns, 2 spaces). From `shiny/`:
+
+```sh
+air format .          # rewrite the files
+air format --check .  # what CI runs (the "R format" job): fails if any file would change
+```
+
+Install Air from its [releases](https://github.com/posit-dev/air/releases) or [editor extension](https://posit-dev.github.io/air/editor-vscode.html); in VS Code or Positron, set it as the R formatter and turn on format on save.
+
 ## Tests
 
 `tests/` holds R tests that run inside the two images (no extra R packages: `tests/harness.R` is a small base-R harness). From the repo root:

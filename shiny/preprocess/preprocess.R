@@ -21,7 +21,9 @@ suppressPackageStartupMessages({
 })
 
 args <- commandArgs(trailingOnly = TRUE)
-if (length(args) < 2) stop("usage: preprocess.R <input.rds> <output dir> [assay]")
+if (length(args) < 2) {
+  stop("usage: preprocess.R <input.rds> <output dir> [assay]")
+}
 input <- args[[1]]
 out_dir <- sub("/+$", "", args[[2]])
 tmp_dir <- paste0(out_dir, ".tmp")
@@ -37,14 +39,18 @@ message("Assay: ", assay)
 # ---- cells: coordinates + all metadata -----------------------------------------------------------------------------
 cells <- data.frame(barcode = colnames(obj), stringsAsFactors = FALSE)
 embedding <- function(reduction, prefix, max_dims) {
-  if (!reduction %in% Reductions(obj)) return(NULL)
+  if (!reduction %in% Reductions(obj)) {
+    return(NULL)
+  }
   m <- Embeddings(obj, reduction)
   m <- m[, seq_len(min(ncol(m), max_dims)), drop = FALSE]
   colnames(m) <- paste0(prefix, "_", seq_len(ncol(m)))
   as.data.frame(m)
 }
 # A reduction the object lacks gives NULL, which cbind() on a data frame cannot take, so only the ones that exist are added
-for (coords in list(embedding("umap", "umap", 2), embedding("pca", "pca", 10))) if (!is.null(coords)) cells <- cbind(cells, coords)
+for (coords in list(embedding("umap", "umap", 2), embedding("pca", "pca", 10))) {
+  if (!is.null(coords)) cells <- cbind(cells, coords)
+}
 meta <- obj[[]]
 meta <- meta[, setdiff(colnames(meta), colnames(cells)), drop = FALSE] # keep our names if a metadata column clashes
 # Factors become plain strings (Parquet dictionaries are fine, but this keeps DuckDB and R in agreement); the level order, which is the
@@ -53,13 +59,16 @@ meta <- meta[, setdiff(colnames(meta), colnames(cells)), drop = FALSE] # keep ou
 ident <- Idents(obj)
 ident_cols <- colnames(meta)[vapply(meta, function(x) identical(as.character(x), as.character(ident)), logical(1))]
 level_cols <- union(colnames(meta)[vapply(meta, is.factor, logical(1))], ident_cols)
-column_levels <- do.call(rbind, c(
-  list(data.frame(column = character(), level_idx = integer(), level = character())),
-  lapply(level_cols, function(col) {
-    lv <- if (col %in% ident_cols) levels(ident) else levels(meta[[col]])
-    data.frame(column = col, level_idx = seq_along(lv) - 1L, level = lv)
-  })
-))
+column_levels <- do.call(
+  rbind,
+  c(
+    list(data.frame(column = character(), level_idx = integer(), level = character())),
+    lapply(level_cols, function(col) {
+      lv <- if (col %in% ident_cols) levels(ident) else levels(meta[[col]])
+      data.frame(column = col, level_idx = seq_along(lv) - 1L, level = lv)
+    })
+  )
+)
 meta[] <- lapply(meta, function(x) if (is.factor(x)) as.character(x) else x)
 cells <- cbind(cells, meta)
 write_parquet(cells, file.path(tmp_dir, "cells.parquet"), compression = "zstd")
@@ -67,8 +76,12 @@ write_parquet(column_levels, file.path(tmp_dir, "column_levels.parquet"), compre
 
 # ---- scale.data: dense genes x cells, usually only the variable features ------------------------------------------------
 # Seurat v5 calls the matrix a "layer", v4 a "slot"; a missing one is an error or an empty matrix depending on the version
-scaled <- tryCatch(GetAssayData(obj, assay = assay, layer = "scale.data"), error = function(e) tryCatch(GetAssayData(obj, assay = assay, slot = "scale.data"), error = function(e2) NULL))
-if (!is.null(scaled) && (nrow(scaled) == 0 || ncol(scaled) == 0)) scaled <- NULL
+scaled <- tryCatch(GetAssayData(obj, assay = assay, layer = "scale.data"), error = function(e) {
+  tryCatch(GetAssayData(obj, assay = assay, slot = "scale.data"), error = function(e2) NULL)
+})
+if (!is.null(scaled) && (nrow(scaled) == 0 || ncol(scaled) == 0)) {
+  scaled <- NULL
+}
 if (!is.null(scaled)) {
   scaled <- as.matrix(scaled)
   gene_pos <- match(rownames(scaled), rownames(obj)) # 1-based, NA for a row that is not a gene of the object (kept out)
@@ -117,17 +130,21 @@ write_parquet(
 
 if (!is.null(scaled)) {
   write_scale_data(scaled, gene_pos, cell_pos, file.path(tmp_dir, "scale_data.parquet"))
-  rm(scaled); invisible(gc())
+  rm(scaled)
+  invisible(gc())
 }
 
 # ---- expression: non-zero entries only, sorted by gene so DuckDB can skip row groups when fetching one gene --------------
 # Seurat v5 calls the matrix a "layer", v4 a "slot"
 mat <- tryCatch(GetAssayData(obj, assay = assay, layer = "data"), error = function(e) GetAssayData(obj, assay = assay, slot = "data"))
-rm(obj); invisible(gc())
+rm(obj)
+invisible(gc())
 trip <- summary(as(mat, "CsparseMatrix")) # i = gene row, j = cell column, x = value (1-based)
-rm(mat); invisible(gc())
+rm(mat)
+invisible(gc())
 expression <- data.frame(gene_idx = trip$i - 1L, cell_idx = trip$j - 1L, value = trip$x)
-rm(trip); invisible(gc())
+rm(trip)
+invisible(gc())
 expression <- expression[order(expression$gene_idx, expression$cell_idx), ]
 write_parquet(expression, file.path(tmp_dir, "expression.parquet"), compression = "zstd", chunk_size = 1e6)
 
@@ -137,9 +154,13 @@ write_parquet(expression, file.path(tmp_dir, "expression.parquet"), compression 
 old_dir <- paste0(out_dir, ".old")
 unlink(old_dir, recursive = TRUE)
 had_old <- file.exists(out_dir)
-if (had_old && !file.rename(out_dir, old_dir)) stop("could not move ", out_dir, " to ", old_dir)
+if (had_old && !file.rename(out_dir, old_dir)) {
+  stop("could not move ", out_dir, " to ", old_dir)
+}
 if (!file.rename(tmp_dir, out_dir)) {
-  if (had_old) file.rename(old_dir, out_dir)
+  if (had_old) {
+    file.rename(old_dir, out_dir)
+  }
   stop("could not move ", tmp_dir, " to ", out_dir)
 }
 unlink(old_dir, recursive = TRUE)

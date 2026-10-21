@@ -5,7 +5,9 @@ args <- commandArgs(trailingOnly = FALSE)
 here <- dirname(normalizePath(sub("^--file=", "", args[grep("^--file=", args)])))
 source(file.path(here, "harness.R"))
 script <- commandArgs(trailingOnly = TRUE)[1]
-if (is.na(script)) script <- if (file.exists("/preprocess.R")) "/preprocess.R" else file.path(here, "..", "preprocess", "preprocess.R")
+if (is.na(script)) {
+  script <- if (file.exists("/preprocess.R")) "/preprocess.R" else file.path(here, "..", "preprocess", "preprocess.R")
+}
 
 suppressPackageStartupMessages({
   library(Seurat)
@@ -25,7 +27,10 @@ N_GENES <- 200
 # Factor levels are deliberately not in sorted order, and `ident_text` stores the active identity as plain text
 make_object <- function(cells = N_CELLS, genes = N_GENES, seed = 1) {
   set.seed(seed)
-  counts <- Matrix(matrix(rpois(genes * cells, lambda = 0.7), nrow = genes, dimnames = list(paste0("GENE", seq_len(genes)), paste0("CELL", seq_len(cells)))), sparse = TRUE)
+  counts <- Matrix(
+    matrix(rpois(genes * cells, lambda = 0.7), nrow = genes, dimnames = list(paste0("GENE", seq_len(genes)), paste0("CELL", seq_len(cells)))),
+    sparse = TRUE
+  )
   obj <- suppressWarnings(CreateSeuratObject(counts, min.cells = 0, min.features = 0))
   obj$seurat_clusters <- factor(sample(c("10", "2", "1"), cells, replace = TRUE), levels = c("10", "2", "1"))
   obj$seurat_annotations <- factor(c("B", "T", "NK")[as.integer(obj$seurat_clusters)], levels = c("T", "NK", "B"))
@@ -138,7 +143,10 @@ test("scale_data.parquet is the dense scale.data of the variable genes, as 32-bi
   pick <- sample(nrow(scaled), 25)
   expected <- mapply(function(g, c) matrix[rownames(obj)[g + 1], colnames(obj)[c + 1]], scaled$gene_idx[pick], scaled$cell_idx[pick])
   expect(isTRUE(all.equal(unname(expected), scaled$value[pick], tolerance = 1e-5)), "values differ from scale.data")
-  expect_equal(read_parquet(file.path(job$out, "scale_data.parquet"), as_data_frame = FALSE)$schema$GetFieldByName("value")$type$ToString(), "float")
+  expect_equal(
+    read_parquet(file.path(job$out, "scale_data.parquet"), as_data_frame = FALSE)$schema$GetFieldByName("value")$type$ToString(),
+    "float"
+  )
 })
 
 # ---- other shapes of object ------------------------------------------------------------------------------------------------------------
