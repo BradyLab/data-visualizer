@@ -83,6 +83,22 @@ upload. The ggPlantmap package is installed in the Shiny image (from GitHub, pin
 
 The backend checks the CSV when the upload finishes (`backend-express/src/services/tissue.ts`) and refuses it with a 400 and the reason, keeping the current map, if the header lacks `ROI.name`, `ROI.id`, `x` or `y`, or no row has numeric `x` and `y` (only the first 64 KB are read). It cannot check that `ROI.name` matches the dataset's cell types: a map that matches none of them draws every outline grey.
 
+## Tests
+
+`tests/` holds R tests that run inside the two images (no extra R packages: `tests/harness.R` is a small base-R harness). From the repo root:
+
+```sh
+docker build -t preprocess-ci shiny/preprocess
+docker run --rm -v "$PWD/shiny:/work:ro" --entrypoint Rscript preprocess-ci /work/tests/test-preprocess.R
+docker build -t shiny-ci shiny
+docker run --rm -v "$PWD/shiny:/work:ro" --entrypoint Rscript shiny-ci /work/tests/test-app.R
+```
+
+- `test-preprocess.R` builds small Seurat objects (v5 and v3 assays, with and without `scale.data` or a UMAP/PCA, a metadata column that clashes with a coordinate name), runs `preprocess.R` on them and reads the Parquet back: columns, 0-based indexes, factor level order, sorting, non-zero-only expression, the dense float32 `scale_data`, publishing over an existing folder, and a failed run leaving published data untouched. Takes about a minute.
+- `test-app.R` sources `app/app.R` (which defines its helpers and builds the app without running it) and tests the signed viewer context (including a context made by the backend's own signer, so the two formats cannot drift apart), the dataset-folder and tissue-map lookups, the tissue map reader and outline hit testing, the palette and the level ordering.
+
+Not covered: the Shiny `server()` (the plots and pickers) and `preprocess/worker.sh` (the backend's tests run it against a fake script). CI runs both test files (`.github/workflows/ci.yml`).
+
 ## Try it
 
 The Shiny port is not published, so `localhost:3838` does not work with a plain `docker compose up`. Go through the app, as users do:

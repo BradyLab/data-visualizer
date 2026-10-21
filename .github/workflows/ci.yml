@@ -69,6 +69,9 @@ jobs:
           cache-to: type=gha,scope=shiny,mode=max
       - name: Check that the app parses
         run: docker run --rm --entrypoint Rscript shiny-ci -e 'invisible(parse("/srv/shiny-server/app/app.R"))'
+      # shiny/tests/test-app.R sources app.R and checks its helpers (signed context, tissue map reader, ordering); see shiny/README.md
+      - name: Run the R tests of the app
+        run: docker run --rm -v "$PWD/shiny:/work:ro" --entrypoint Rscript shiny-ci /work/tests/test-app.R
       # Shiny Server only starts the app on the first request, so a request is what surfaces a failing library() or top-level error
       - name: Check that the app starts
         run: |
@@ -91,9 +94,13 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: shiny/preprocess
+          load: true
           tags: preprocess-ci
           cache-from: type=gha,scope=preprocess
           cache-to: type=gha,scope=preprocess,mode=max
+      # Converts small Seurat objects built on the fly and reads the Parquet back (shiny/tests/test-preprocess.R)
+      - name: Run the R tests of the preprocess script
+        run: docker run --rm -v "$PWD/shiny:/work:ro" --entrypoint Rscript preprocess-ci /work/tests/test-preprocess.R
 
   e2e:
     name: E2E

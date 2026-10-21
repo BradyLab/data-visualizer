@@ -43,7 +43,8 @@ embedding <- function(reduction, prefix, max_dims) {
   colnames(m) <- paste0(prefix, "_", seq_len(ncol(m)))
   as.data.frame(m)
 }
-cells <- cbind(cells, embedding("umap", "umap", 2), embedding("pca", "pca", 10))
+# A reduction the object lacks gives NULL, which cbind() on a data frame cannot take, so only the ones that exist are added
+for (coords in list(embedding("umap", "umap", 2), embedding("pca", "pca", 10))) if (!is.null(coords)) cells <- cbind(cells, coords)
 meta <- obj[[]]
 meta <- meta[, setdiff(colnames(meta), colnames(cells)), drop = FALSE] # keep our names if a metadata column clashes
 # Factors become plain strings (Parquet dictionaries are fine, but this keeps DuckDB and R in agreement); the level order, which is the
