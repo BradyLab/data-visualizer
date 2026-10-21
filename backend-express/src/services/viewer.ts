@@ -73,12 +73,10 @@ const verify = (token: string, typ: string) => {
             typ?: string;
             dataset_id?: unknown;
             user_id?: unknown;
-            jti?: unknown;
-            exp?: unknown;
         };
         if (p.typ !== typ || typeof p.dataset_id !== "string") return null;
         if (p.user_id !== null && typeof p.user_id !== "string") return null;
-        return { datasetId: p.dataset_id, userId: p.user_id, jti: String(p.jti), exp: Number(p.exp) };
+        return { datasetId: p.dataset_id, userId: p.user_id };
     } catch {
         return null;
     }
@@ -92,10 +90,11 @@ const usedTickets = new Map<string, number>();
 export const verifyViewerTicket = (token: string) => {
     const claims = verify(token, TICKET);
     if (!claims) return null;
+    const { jti, exp } = jwt.decode(token) as { jti: string; exp: number }; // already verified above
     const now = Math.floor(Date.now() / 1000);
     for (const [jti, exp] of usedTickets) if (exp <= now) usedTickets.delete(jti);
-    if (usedTickets.has(claims.jti)) return null;
-    usedTickets.set(claims.jti, claims.exp);
+    if (usedTickets.has(jti)) return null;
+    usedTickets.set(jti, exp);
     return claims;
 };
 

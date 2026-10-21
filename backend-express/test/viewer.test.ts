@@ -28,6 +28,16 @@ test("a ticket is not a session, and a session is not a ticket", () => {
     assert.equal(verifyViewerTicket(signViewerSession("d1", "u1")), null);
 });
 
+test("a ticket can be exchanged only once", () => {
+    const ticket = signViewerTicket("d1", "u1");
+    assert.deepEqual(verifyViewerTicket(ticket), { datasetId: "d1", userId: "u1" });
+    assert.equal(verifyViewerTicket(ticket), null);
+    // a session token can be checked repeatedly
+    const session = signViewerSession("d1", "u1");
+    assert.notEqual(verifyViewerSession(session), null);
+    assert.notEqual(verifyViewerSession(session), null);
+});
+
 test("guest tokens keep user_id null", () => {
     assert.deepEqual(verifyViewerSession(signViewerSession("d1", null)), { datasetId: "d1", userId: null });
 });
