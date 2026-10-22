@@ -16,7 +16,7 @@ export interface TokenPayload {
 export const passwordVersion = (storedPassword: string) => createHash("sha256").update(storedPassword).digest("hex").slice(0, 16);
 
 // Checks a password against a stored "salt:hash" (hex) value produced by hashPassword (utils/password.ts)
-const verifyPassword = async (password: string, stored: string) => {
+export const verifyPassword = async (password: string, stored: string) => {
     // Stored format is "salt:hash"; re-derive with the same salt and compare in constant time to avoid timing leaks
     const [salt, hash] = stored.split(":");
     if (!salt || !hash) return false;

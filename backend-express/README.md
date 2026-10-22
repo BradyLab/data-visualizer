@@ -44,7 +44,9 @@ npm run dev               # tsx watch, http://localhost:3001
 
 The server refuses to start, listing what is missing, if `API_PORT`, any `DB_*` setting or `JWT_SECRET` is unset (or a port is not a number).
 
-`.env.example` has working defaults for local development; change `JWT_SECRET` and `DEFAULT_PASSWORD` anywhere else.
+`.env.example` has working defaults for local development; change `JWT_SECRET`, `SHINY_SECRET` and `DEFAULT_PASSWORD` anywhere else.
+
+At startup the server also checks the secrets (`services/startupChecks.ts`). `JWT_SECRET` and `SHINY_SECRET` (when set) must not be a placeholder such as `change-me`, must be at least 32 characters (try `openssl rand -hex 32`), and must differ from each other. With `NODE_ENV=production` the server refuses to start otherwise; in any other mode it only warns, so the example values keep working locally. After startup it also warns about a weak `DEFAULT_PASSWORD` and lists accounts that still use it: invited ones (who must change it at their first login) as a warning, and any account that is not waiting to change it as an error.
 
 ## Invite emails
 

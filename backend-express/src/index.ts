@@ -13,6 +13,7 @@ import { cleanUpExpiredUploads, TUS_PATH, tusServer } from "@src/services/tus.ts
 import { ensureDirs } from "@src/services/storage.ts";
 import { resume as resumeProcessing } from "@src/services/processing.ts";
 import { viewerEnabled } from "@src/services/viewer.ts";
+import { secretsBlockStartup, warnAboutDefaultPassword } from "@src/services/startupChecks.ts";
 import { attachSocket } from "@src/services/socket.ts";
 import { apis } from "@commons/general.ts";
 
@@ -101,6 +102,8 @@ export const start = async () => {
         if (notNumbers.length) console.error(`[SERVER]: Not a valid port number: ${notNumbers.join(", ")}; refusing to start.`);
         process.exit(1);
     }
+    // Weak or placeholder secrets: a warning in development, a refusal in production (NODE_ENV=production)
+    if (secretsBlockStartup()) process.exit(1);
 
     const app = get();
 
@@ -135,6 +138,8 @@ export const start = async () => {
     // WebSocket connections to Shiny skip Express middleware, so they are authorized here
     server.on("upgrade", handleShinyUpgrade);
     if (!viewerEnabled()) console.warn("[SERVER]: SHINY_URL or SHINY_SECRET is not set; the Shiny viewer is disabled.");
+    // Reported once the server is up, so the hashing it takes never delays startup
+    void warnAboutDefaultPassword();
     // Datasets a restart left half-processed are processed again
     resumeProcessing().catch((err) => console.error("[PROCESSING] Failed to resume jobs:", err));
     // Unfinished uploads expire; sweep them hourly (and once at startup)
