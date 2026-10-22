@@ -1,0 +1,42 @@
+# Weekly dependency update PRs. Minor and patch updates of one ecosystem arrive together in a single PR; major ones stay separate so they
+# can be reviewed alone. The R packages are not listed here: they come from the dated package snapshot of the rocker base image
+# (see the Dockerfiles in shiny/), so they only change when the base image tag does
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /backend-express
+    schedule:
+      interval: weekly
+    groups:
+      backend-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    groups:
+      frontend-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        update-types: [minor, patch]
+
+  # The compose files (postgres, node) and the two R images (rocker/shiny and rocker/r-ver, whose tag is the R version)
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /shiny
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /shiny/preprocess
+    schedule:
+      interval: weekly
