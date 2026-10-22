@@ -214,9 +214,12 @@ test.describe('settings', () => {
       await page.goto('/settings')
       const row = page.locator('.v-row', { hasText: dataset.name })
       await expect(row).toBeVisible()
-      await row.getByRole('checkbox').setChecked(true)
+      // Clicks, not setChecked: the switch follows the store, so it springs back until the save returns, which setChecked would report as a failed click
+      await row.getByRole('checkbox').click()
+      await expect(row.getByRole('checkbox')).toBeChecked()
       await expect.poll(async () => (await getDataset(request, lab, dataset.id)).visibility).toBe(DatasetVisibility.PUBLIC)
-      await row.getByRole('checkbox').setChecked(false)
+      await row.getByRole('checkbox').click()
+      await expect(row.getByRole('checkbox')).not.toBeChecked()
       await expect.poll(async () => (await getDataset(request, lab, dataset.id)).visibility).toBe(DatasetVisibility.PRIVATE)
     })
 

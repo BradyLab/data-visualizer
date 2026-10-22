@@ -66,6 +66,8 @@ const removed = ref(false);
 // Busy flags: loading while the dataset is fetched (edit mode), saving while the save request is in flight
 const loading = ref(false);
 const saving = ref(false);
+const deleting = ref(false);
+const confirmDeleteOpen = ref(false);
 const error = ref<string | null>(null);
 
 // Owner choices. Admins pick from the active admins and lab members, plus the dataset's current owner if they fall
@@ -160,7 +162,7 @@ onMounted(async () => {
 watch(
     () => datasetStore.currentDataset,
     (current, previous) => {
-        if (!isEdit.value || !dataset.value.id || saving.value) return;
+        if (!isEdit.value || !dataset.value.id || saving.value || deleting.value) return;
         if (!current) {
             if (previous?.id === dataset.value.id) removed.value = true;
             return;
@@ -243,6 +245,21 @@ async function save() {
                   : "Unable to save the dataset. Please try again.";
     } finally {
         saving.value = false;
+    }
+}
+
+// Deletes the dataset (edit mode only), then goes home
+async function confirmDelete() {
+    deleting.value = true;
+    try {
+        await datasetStore.removeDataset(dataset.value.id);
+        confirmDeleteOpen.value = false;
+        await router.push("/home");
+    } catch {
+        confirmDeleteOpen.value = false;
+        error.value = "Unable to delete the dataset. Please try again.";
+    } finally {
+        deleting.value = false;
     }
 }
 </script>
@@ -410,8 +427,17 @@ async function save() {
             </v-col>
         </v-row>
 
-        <!-- Submit button -->
-        <v-row class="justify-end mx-4">
+        <!-- Delete (edit mode only, left) and submit (right) buttons -->
+        <v-row class="mx-4">
+            <v-col v-if="isEdit" cols="auto">
+                <v-btn
+                    color="error"
+                    variant="tonal"
+                    :disabled="!dataset.id || removed || saving || deleting"
+                    @click="confirmDeleteOpen = true"
+                    >Delete Dataset</v-btn
+                >
+            </v-col>
             <v-spacer />
             <v-col class="justify-end" cols="auto">
                 <v-btn :disabled="!canSave" :loading="saving" @click="save">{{
@@ -419,6 +445,19 @@ async function save() {
                 }}</v-btn>
             </v-col>
         </v-row>
+
+        <!-- Cannot be dismissed while the delete is in flight -->
+        <v-dialog v-model="confirmDeleteOpen" max-width="480" :persistent="deleting">
+            <v-card class="pa-4">
+                <v-card-title>Delete Dataset</v-card-title>
+                <v-card-text>Delete {{ dataset.name }}? This cannot be undone.</v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn :disabled="deleting" color="white" @click="confirmDeleteOpen = false">Cancel</v-btn>
+                    <v-btn :loading="deleting" color="error" variant="tonal" @click="confirmDelete">Delete</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </v-container>
 </template>
 

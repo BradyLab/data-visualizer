@@ -2,7 +2,7 @@
 // The models are stubbed, so no database is needed; the websocket and activity log are inert here (no server is attached)
 import { test, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp } from "node:fs/promises";
+import { access, mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { DatasetStatus, DatasetVisibility } from "@commons/dataset.ts";
@@ -23,6 +23,7 @@ const { Users } = await import("@src/models/user.ts");
 const { Activities } = await import("@src/models/activity.ts");
 const { signDownloadToken, verifyDownloadToken } = await import("@src/services/auth.ts");
 
+const exists = (p: string) => access(p).then(() => true, () => false);
 const user = (id: string, role: UserRoles, status = UserStatus.ACTIVE) => ({ id, role, status });
 const admin = user("admin", UserRoles.ADMIN);
 const owner = user("owner", UserRoles.LAB_MEMBER);
@@ -112,6 +113,50 @@ test("remove needs OWNER access", async () => {
     permissions.push({ user_id: "lab", dataset_id: "pub", perm: PermissionOptions.EDIT });
     assert.equal((await call(dataset.remove, lab, { params: { id: "pub" } })).statusCode, 403);
     assert.equal((await call(dataset.remove, external, { params: { id: "priv" } })).statusCode, 404);
+});
+
+test("remove deletes the dataset row (permissions and files go with it by cascade), the stored files and answers 204", async () => {
+    const destroyed: string[] = [];
+    mock.method(Datasets, "findByPk", async (id: string) =>
+        datasets[id] ? { ...row(datasets[id]), destroy: async () => void destroyed.push(id) } : null
+    );
+    // A stored cover and tissue map on disk, and plot data in the Parquet folder
+    const { storedPath, parquetPath, ensureDirs } = await import("@src/services/storage.ts");
+    await ensureDirs();
+    const stored = [cover, { ...cover, id: "f3", type: FileTypes.TISSUE_PLOT, ogName: "t.csv" }].map((f) => ({ ...f, dataset_id: "priv" }));
+    files.push(...stored);
+    for (const f of stored) await writeFile(storedPath(f as never), "x");
+    await mkdir(parquetPath("priv"), { recursive: true });
+    await writeFile(path.join(parquetPath("priv"), "cells.parquet"), "x");
+
+    const res = await call(dataset.remove, owner, { params: { id: "priv" } });
+    assert.equal(res.statusCode, 204);
+    assert.deepEqual(destroyed, ["priv"]);
+    for (const f of stored) assert.equal(await exists(storedPath(f as never)), false);
+    assert.equal(await exists(parquetPath("priv")), false);
+    // Admins may delete any dataset
+    assert.equal((await call(dataset.remove, admin, { params: { id: "pub" } })).statusCode, 204);
+    assert.deepEqual(destroyed, ["priv", "pub"]);
+});
+
+test("remove leaves everything alone for a missing dataset, and for a caller who is not an owner", async () => {
+    const destroyed: string[] = [];
+    mock.method(Datasets, "findByPk", async (id: string) =>
+        datasets[id] ? { ...row(datasets[id]), destroy: async () => void destroyed.push(id) } : null
+    );
+    assert.equal((await call(dataset.remove, owner, { params: { id: "missing" } })).statusCode, 404);
+    // A guest can see a public dataset but is no owner of it
+    assert.equal((await call(dataset.remove, null, { params: { id: "pub" } })).statusCode, 403);
+    assert.equal((await call(dataset.remove, lab, { params: { id: "pub" } })).statusCode, 403);
+    assert.deepEqual(destroyed, []);
+});
+
+test("remove still answers 204 when the stored files cannot be cleaned up", async () => {
+    mock.method(Datasets, "findByPk", async (id: string) => (datasets[id] ? { ...row(datasets[id]), destroy: async () => {} } : null));
+    mock.method(console, "error", () => {});
+    // A record whose type has no storage folder makes the cleanup throw
+    files.push({ ...cover, dataset_id: "priv", type: "bogus" });
+    assert.equal((await call(dataset.remove, owner, { params: { id: "priv" } })).statusCode, 204);
 });
 
 test("create makes the caller the owner, and only an admin may name another owner, who must be an admin or lab member", async () => {

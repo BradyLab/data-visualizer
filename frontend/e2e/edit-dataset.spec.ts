@@ -1,5 +1,6 @@
 // The dataset form in edit mode and its url rules, including what happens when someone else changes the dataset meanwhile
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
+import { FileTypes } from '@commons/file'
 import { DatasetPlots, DatasetVisibility, slugify } from '@commons/dataset'
 import { PermissionOptions } from '@commons/permissions'
 import { UserRoles } from '@commons/user'
@@ -9,18 +10,30 @@ import {
   deleteDataset,
   getDataset,
   getDatasetByUrl,
+  getPermission,
+  fileRecordResponse,
   grant,
+  listFiles,
+  uploadFileOk,
   gotoLive,
   login,
   revoke,
+  tryDeleteDataset,
   uid,
   updateDataset,
 } from './api'
 import { pickPlot, pickUmapOnly } from './dataset-form'
+import { countRowsOfDataset } from './db'
 import { loginLive } from './login'
 import { authFile, LOGGED_OUT } from './users'
 
 test.use({ storageState: authFile('lab') })
+
+// A 1x1 PNG, so the cover is a valid image
+const PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64'
+)
 
 const NAME = 'DATASET NAME'
 const DESCRIPTION = 'Type a description of the dataset here'
@@ -154,6 +167,89 @@ test.describe('while the form is open', () => {
     await deleteDataset(request, lab, dataset.id)
     await expect(page.getByText("This dataset was deleted or is no longer available to you, so it can't be saved.")).toBeVisible()
     await expect(page.getByRole('button', { name: 'Save Changes' })).toBeDisabled()
+  })
+})
+
+test.describe('deleting a dataset', () => {
+  const deleteButton = (page: Page) => page.getByRole('button', { name: 'Delete Dataset' })
+
+  test('there is no delete button on the new dataset form', async ({ page }) => {
+    await page.goto('/dataset/new')
+    await expect(page.getByPlaceholder(NAME)).toBeVisible()
+    await expect(deleteButton(page)).toHaveCount(0)
+  })
+
+  test('the delete button sits on the left of the save button, in the same row', async ({ page, request }) => {
+    const dataset = await createDataset(request, await login(request, 'lab'))
+    await page.goto(`/dataset/${dataset.url}/edit`)
+    await expect(page.getByPlaceholder(NAME)).toHaveValue(dataset.name)
+    const del = await deleteButton(page).boundingBox()
+    const save = await page.getByRole('button', { name: 'Save Changes' }).boundingBox()
+    expect(del!.x).toBeLessThan(save!.x)
+    expect(Math.abs(del!.y - save!.y)).toBeLessThan(8)
+  })
+
+  test('cancelling the confirmation keeps the dataset', async ({ page, request }) => {
+    const lab = await login(request, 'lab')
+    const dataset = await createDataset(request, lab)
+    await page.goto(`/dataset/${dataset.url}/edit`)
+    await expect(page.getByPlaceholder(NAME)).toHaveValue(dataset.name)
+    await deleteButton(page).click()
+    await expect(page.getByText(`Delete ${dataset.name}? This cannot be undone.`)).toBeVisible()
+    await page.getByRole('button', { name: 'Cancel' }).click()
+    await expect(page.getByText('This cannot be undone.')).toHaveCount(0)
+    await expect(page).toHaveURL(new RegExp(`/dataset/${dataset.url}/edit$`))
+    expect((await getDatasetByUrl(request, lab, dataset.url)).status()).toBe(200)
+  })
+
+  test('confirming deletes the dataset and goes home; its permissions and files are deleted with it', async ({ page, request }) => {
+    const admin = await login(request, 'admin')
+    const lab = await login(request, 'lab')
+    const viewer = await activeUser(request, admin, UserRoles.LAB_MEMBER)
+    const dataset = await createDataset(request, lab)
+    await grant(request, lab, dataset.id, viewer.user.id, PermissionOptions.EDIT)
+    await uploadFileOk(request, lab, dataset.id, FileTypes.COVER, 'cover.png', PNG)
+    await uploadFileOk(request, lab, dataset.id, FileTypes.TISSUE_PLOT, 'map.csv', Buffer.from('ROI.name,ROI.id,x,y\na,1,0,0\n'))
+    const [cover] = await listFiles(request, lab, dataset.id)
+    expect(countRowsOfDataset('Permissions', dataset.id)).toBe(1)
+    expect(countRowsOfDataset('Files', dataset.id)).toBeGreaterThan(0)
+
+    await page.goto(`/dataset/${dataset.url}/edit`)
+    await expect(page.getByPlaceholder(NAME)).toHaveValue(dataset.name)
+    await deleteButton(page).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
+
+    await expect(page).toHaveURL(/\/home$/)
+    expect((await getDatasetByUrl(request, lab, dataset.url)).status()).toBe(404)
+    // The rows that belonged to the dataset are gone, not just hidden
+    expect(countRowsOfDataset('Permissions', dataset.id)).toBe(0)
+    expect(countRowsOfDataset('Files', dataset.id)).toBe(0)
+    expect((await fileRecordResponse(request, admin, cover!.id)).status()).toBe(404)
+    // The viewer's account is untouched by the cascade
+    expect((await getPermission(request, admin, viewer.user.id, dataset.id)).perm).toBeNull()
+  })
+
+  test('a failed delete keeps the form open with an error', async ({ page, request }) => {
+    const dataset = await createDataset(request, await login(request, 'lab'))
+    await page.route(`**/datasets/${dataset.id}`, (route) =>
+      route.request().method() === 'DELETE' ? route.fulfill({ status: 500, body: '{}' }) : route.continue()
+    )
+    await page.goto(`/dataset/${dataset.url}/edit`)
+    await expect(page.getByPlaceholder(NAME)).toHaveValue(dataset.name)
+    await deleteButton(page).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
+    await expect(page.getByText('Unable to delete the dataset. Please try again.')).toBeVisible()
+    await expect(page).toHaveURL(new RegExp(`/dataset/${dataset.url}/edit$`))
+  })
+
+  test('an editor who is not an owner cannot delete: the server refuses', async ({ request }) => {
+    const admin = await login(request, 'admin')
+    const owner = await login(request, 'lab')
+    const editor = await activeUser(request, admin, UserRoles.LAB_MEMBER)
+    const dataset = await createDataset(request, owner)
+    await grant(request, owner, dataset.id, editor.user.id, PermissionOptions.EDIT)
+    expect((await tryDeleteDataset(request, editor, dataset.id)).status()).toBe(403)
+    expect(countRowsOfDataset('Permissions', dataset.id)).toBe(1)
   })
 })
 

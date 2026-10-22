@@ -1,6 +1,6 @@
 // Component tests for the create/edit dataset page: the form rules, create vs edit mode, the order of the file uploads, the error messages,
 // and the warnings when the dataset changes elsewhere while the form is open (stores, router and the file dropzones are mocked)
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h, nextTick, reactive } from "vue";
 import { mount, flushPromises, type VueWrapper } from "@vue/test-utils";
 import { createVuetify } from "vuetify";
@@ -39,6 +39,9 @@ vi.stubGlobal(
         disconnect() {}
     }
 );
+
+// Vuetify positions dialogs with visualViewport, which jsdom lacks
+vi.stubGlobal("visualViewport", { width: 1024, height: 768, offsetLeft: 0, offsetTop: 0, addEventListener() {}, removeEventListener() {} });
 
 // The dropzone is a labs component that is awkward in jsdom: a stand-in that shows its title and lets a test pick a file with setValue
 const FileUpload = defineComponent({
@@ -79,6 +82,9 @@ const nameInput = (w: VueWrapper) => w.find('input[placeholder="DATASET NAME"]')
 const urlInput = (w: VueWrapper) => w.find('input[placeholder="dataset-url"]');
 const saveButton = (w: VueWrapper) => w.findAll("button").find((b) => /Create New Dataset|Save Changes/.test(b.text()))!;
 const text = (w: VueWrapper) => w.text();
+const deleteButton = (w: VueWrapper) => w.findAll("button").find((b) => b.text() === "Delete Dataset");
+// The confirm dialog is teleported to the body, so its buttons are looked up there
+const dialogButton = (label: string) => [...document.body.querySelectorAll("button")].find((b) => b.textContent?.trim() === label);
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -92,6 +98,7 @@ beforeEach(() => {
         getByUrl: vi.fn(async () => null),
         addDataset: vi.fn(async (fields: Partial<IDataset>) => makeDataset({ ...fields, id: "new-id" })),
         editDataset: vi.fn(async (id: string, fields: Partial<IDataset>) => makeDataset({ ...fields, id })),
+        removeDataset: vi.fn(async () => {}),
     });
     mocks.file = reactive({ uploading: null, uploadFile: vi.fn(async () => {}) });
     mocks.permission = reactive({ fetchMine: vi.fn(async () => {}), canEdit: vi.fn(() => true) });
@@ -410,5 +417,95 @@ describe("EditDatasetView: editing", () => {
         (mocks.dataset as { currentDataset: IDataset | null }).currentDataset = makeDataset();
         await flushPromises();
         expect(mocks.replace).toHaveBeenCalledWith("/dataset/root-atlas");
+    });
+});
+
+describe("EditDatasetView: deleting", () => {
+    const open = async () => {
+        mocks.route.params = { datasetURL: "root-atlas" };
+        fn("dataset", "getByUrl").mockResolvedValue(makeDataset());
+        const wrapper = mountView();
+        await flushPromises();
+        return wrapper;
+    };
+
+    afterEach(() => {
+        document.body.innerHTML = "";
+    });
+
+    it("has no delete button while creating", async () => {
+        const wrapper = mountView();
+        await flushPromises();
+        expect(deleteButton(wrapper)).toBeUndefined();
+    });
+
+    it("puts the delete button on the left of the save button, in the same row", async () => {
+        const wrapper = await open();
+        const del = deleteButton(wrapper)!;
+        const save = saveButton(wrapper);
+        expect(del).toBeDefined();
+        expect(del.element.closest(".v-row")).toBe(save.element.closest(".v-row"));
+        const buttons = [...del.element.closest(".v-row")!.querySelectorAll("button")];
+        expect(buttons.indexOf(del.element as HTMLButtonElement)).toBeLessThan(buttons.indexOf(save.element as HTMLButtonElement));
+    });
+
+    it("is disabled until the dataset has loaded", async () => {
+        mocks.route.params = { datasetURL: "root-atlas" };
+        let finish: (d: IDataset) => void = () => {};
+        fn("dataset", "getByUrl").mockReturnValue(new Promise<IDataset>((resolve) => (finish = resolve)));
+        const wrapper = mountView();
+        await flushPromises();
+        expect(deleteButton(wrapper)!.attributes("disabled")).toBeDefined();
+        finish(makeDataset());
+        await flushPromises();
+        expect(deleteButton(wrapper)!.attributes("disabled")).toBeUndefined();
+    });
+
+    it("asks for confirmation and deletes nothing until it is given", async () => {
+        const wrapper = await open();
+        await deleteButton(wrapper)!.trigger("click");
+        await flushPromises();
+        expect(document.body.textContent).toContain("Delete Root atlas? This cannot be undone.");
+        expect(fn("dataset", "removeDataset")).not.toHaveBeenCalled();
+        dialogButton("Cancel")!.click();
+        await flushPromises();
+        expect(fn("dataset", "removeDataset")).not.toHaveBeenCalled();
+        expect(mocks.push).not.toHaveBeenCalled();
+    });
+
+    it("deletes the dataset once confirmed and goes home, without the 'was deleted' warning", async () => {
+        (mocks.dataset as { currentDataset: IDataset | null }).currentDataset = makeDataset();
+        // The store drops the open dataset as part of the delete
+        fn("dataset", "removeDataset").mockImplementation(async () => {
+            (mocks.dataset as { currentDataset: IDataset | null }).currentDataset = null;
+        });
+        const wrapper = await open();
+        await deleteButton(wrapper)!.trigger("click");
+        await flushPromises();
+        dialogButton("Delete")!.click();
+        await flushPromises();
+        expect(fn("dataset", "removeDataset")).toHaveBeenCalledWith("d1");
+        expect(mocks.push).toHaveBeenCalledWith("/home");
+        expect(text(wrapper)).not.toContain("was deleted or is no longer available");
+    });
+
+    it("stays on the form with an error when the delete fails", async () => {
+        fn("dataset", "removeDataset").mockRejectedValue(new Error("boom"));
+        const wrapper = await open();
+        await deleteButton(wrapper)!.trigger("click");
+        await flushPromises();
+        dialogButton("Delete")!.click();
+        await flushPromises();
+        expect(text(wrapper)).toContain("Unable to delete the dataset. Please try again.");
+        expect(mocks.push).not.toHaveBeenCalled();
+        expect(deleteButton(wrapper)!.attributes("disabled")).toBeUndefined();
+    });
+
+    it("is disabled once the dataset was deleted by someone else while the form is open", async () => {
+        (mocks.dataset as { currentDataset: IDataset | null }).currentDataset = makeDataset();
+        const wrapper = await open();
+        (mocks.dataset as { currentDataset: IDataset | null }).currentDataset = null;
+        await flushPromises();
+        expect(deleteButton(wrapper)!.attributes("disabled")).toBeDefined();
     });
 });

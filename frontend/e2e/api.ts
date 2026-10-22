@@ -76,6 +76,10 @@ export const deleteDataset = async (request: APIRequestContext, session: Session
   expect(response.ok(), 'delete dataset').toBeTruthy()
 }
 
+/** The raw response of a dataset delete, for specs that check who is refused */
+export const tryDeleteDataset = (request: APIRequestContext, session: Session, id: string) =>
+  request.delete(`${API}/datasets/${id}`, { headers: bearer(session) })
+
 export const grant = async (
   request: APIRequestContext,
   owner: Session,

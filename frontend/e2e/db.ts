@@ -15,3 +15,16 @@ export const resetRateLimits = () => {
     { stdio: 'ignore' }
   )
 }
+
+/** Number of rows a table holds for a dataset (e.g. to prove its permissions and files were deleted with it) */
+export const countRowsOfDataset = (table: 'Permissions' | 'Files', datasetId: string) =>
+  Number(
+    execFileSync(
+      'docker',
+      [
+        'compose', '-f', COMPOSE_FILE, 'exec', '-T', 'postgres', 'psql', '-U', 'postgres', '-d', 'data_visualizer_e2e',
+        '-tA', '-c', `SELECT count(*) FROM "${table}" WHERE dataset_id = '${datasetId.replace(/[^\w-]/g, '')}'`,
+      ],
+      { encoding: 'utf8' }
+    ).trim()
+  )
