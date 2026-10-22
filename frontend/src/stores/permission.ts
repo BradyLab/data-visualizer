@@ -3,7 +3,7 @@ import { computed, ref, watch } from "vue";
 import { defineStore } from "pinia";
 import { PermissionOptions, type IPermission } from "@commons/permissions";
 import type { IDataset } from "@commons/dataset";
-import { UserRoles } from "@commons/user";
+import { UserRoles, UserStatus } from "@commons/user";
 import { permissionApi } from "@src/api/permission";
 import { type CreatePermissionPayload } from "@src/interfaces/permission";
 import { useAuthStore } from "@src/stores/auth";
@@ -72,9 +72,11 @@ export const usePermissionStore = defineStore("permission", () => {
 
     /**
      * True if the viewer may download the dataset's RDS file: anyone who can edit it, any lab member, or anyone with a
-     * DOWNLOAD permission row. PUBLIC datasets only give view access, so guests never can.
+     * DOWNLOAD permission row. PUBLIC datasets only give view access, so guests never can, and neither can an INVITED user
+     * (the backend treats them as a guest until they change the default password).
      */
     function canDownload(dataset: IDataset) {
+        if (auth.user.status !== UserStatus.ACTIVE) return false;
         return (
             canEdit(dataset) ||
             (auth.isLoggedIn && (auth.user.role === UserRoles.LAB_MEMBER || downloadableDatasetIds.value.includes(dataset.id)))

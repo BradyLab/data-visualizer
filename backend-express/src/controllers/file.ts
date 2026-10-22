@@ -3,7 +3,7 @@ import { Request, Response } from "express";
 import * as service from "@src/services/file.ts";
 import { IFile } from "@src/models/file.ts";
 import { diff, logActivity, toPlain } from "@src/services/activity.ts";
-import { authorizeDataset, caller } from "@src/services/access.ts";
+import { authorizeDataset, caller, hasAccess, type Access } from "@src/services/access.ts";
 import { pick } from "@src/utils/pick.ts";
 import { PermissionOptions } from "@commons/permissions.ts";
 import { UserRoles, UserStatus } from "@commons/user.ts";
@@ -18,41 +18,62 @@ import { signDownloadToken, verifyDownloadToken } from "@src/services/auth.ts";
 // Once uploaded, only the update notes can change (the stored file and its version are fixed; upload a new version instead)
 const FILE_UPDATE_FIELDS = ["updates"] as const;
 
-// Files follow the access rules of their dataset: VIEW to read, EDIT to upload (see services/tus.ts), change or delete.
-// Loads a file and checks the caller's access to its dataset; on failure it sends 404/403 and returns null
-const authorizeFile = async (res: Response, id: string, min: PermissionOptions) => {
+// What a viewer needs on the dataset to read a file, its bytes or its record: covers are shown to anyone who can see the dataset,
+// data files (RDS, tissue map) need DOWNLOAD, so someone who may only view the plots does not learn what was uploaded
+const readAccess = (type: FileTypes) => (type === FileTypes.COVER ? PermissionOptions.VIEW : PermissionOptions.DOWNLOAD);
+
+// Files follow the access rules of their dataset: VIEW (covers) or DOWNLOAD (data files) to read, EDIT to upload (see services/tus.ts), change or delete.
+// Loads a file and checks the caller's access to its dataset (`min` can depend on the file); on failure it sends 404/403 and returns null
+const authorizeFile = async (res: Response, id: string, min: PermissionOptions | ((file: IFile) => PermissionOptions)) => {
     const file = await service.getById(id);
     if (!file) {
         console.log("[FILE CONTROLLER] File not found");
         res.status(404).json({ error: "File not found" });
         return null;
     }
-    return (await authorizeDataset(res, file.dataset_id, min, "File not found")) ? file : null;
+    return (await authorizeDataset(res, file.dataset_id, typeof min === "function" ? min(file) : min, "File not found"))
+        ? file
+        : null;
 };
 
-// GET /files?dataset_id=... lists the files of one dataset the caller may view; without dataset_id only admins may list every file
+// The files of a dataset that someone with this access may know about: all of them from DOWNLOAD up, otherwise only the cover
+const readableFiles = async (datasetId: string, access: Access) =>
+    (await service.getAll(datasetId)).filter((file) => hasAccess(access, readAccess(file.type)));
+
+// GET /files?dataset_id=... lists the files of one dataset the caller may view (only the cover unless they may download);
+// without dataset_id only admins may list every file
 export const list = async (req: Request, res: Response) => {
     console.log("[FILE CONTROLLER] Attempting to list files...");
     const datasetId = typeof req.query.dataset_id === "string" ? req.query.dataset_id : undefined;
     if (datasetId) {
-        if (!(await authorizeDataset(res, datasetId, PermissionOptions.VIEW))) return;
-    } else if (caller(res)?.role !== UserRoles.ADMIN) {
+        const authorized = await authorizeDataset(res, datasetId, PermissionOptions.VIEW);
+        if (!authorized) return;
+        return res.status(200).json(await readableFiles(datasetId, authorized.access));
+    }
+    if (caller(res)?.role !== UserRoles.ADMIN) {
         return res.status(caller(res) ? 403 : 401).json({ error: caller(res) ? "Forbidden" : "Unauthorized" });
     }
-    res.status(200).json(await service.getAll(datasetId));
+    res.status(200).json(await service.getAll());
 };
 
-/** GET /byDataset/:datasetId : lists the files of one dataset (200); 404 if it does not exist or the caller cannot view it */
+/**
+ * GET /byDataset/:datasetId : lists the files of one dataset (200), only the cover unless the caller may download;
+ * 404 if it does not exist or the caller cannot view it
+ */
 export const listByDataset = async (req: Request, res: Response) => {
     console.log("[FILE CONTROLLER] Attempting to list files by dataset...");
-    if (!(await authorizeDataset(res, req.params.datasetId as string, PermissionOptions.VIEW))) return;
-    res.status(200).json(await service.getAll(req.params.datasetId as string));
+    const authorized = await authorizeDataset(res, req.params.datasetId as string, PermissionOptions.VIEW);
+    if (!authorized) return;
+    res.status(200).json(await readableFiles(req.params.datasetId as string, authorized.access));
 };
 
-/** GET /:id : returns one file (200), or 404 if it does not exist or its dataset is not visible to the caller */
+/**
+ * GET /:id : returns one file (200). 404 if it does not exist or its dataset is not visible to the caller,
+ * 403 for a data file when the caller may view the dataset but not download from it
+ */
 export const get = async (req: Request, res: Response) => {
     console.log("[FILE CONTROLLER] Attempting to get file...");
-    const item = await authorizeFile(res, req.params.id as string, PermissionOptions.VIEW);
+    const item = await authorizeFile(res, req.params.id as string, (file) => readAccess(file.type));
     if (item) res.status(200).json(item);
 };
 
@@ -93,9 +114,6 @@ const parseType = (value: unknown) => {
     const type = String(value).toUpperCase();
     return (Object.values(FileTypes) as string[]).includes(type) ? (type as FileTypes) : null;
 };
-
-// What a viewer needs on the dataset to read a file: covers are shown to anyone who can see the dataset, data files need DOWNLOAD
-const readAccess = (type: FileTypes) => (type === FileTypes.COVER ? PermissionOptions.VIEW : PermissionOptions.DOWNLOAD);
 
 /**
  * GET /current/:datasetId/:type/content : sends the current file of that type (cover image inline, other files as a download), with Range support.

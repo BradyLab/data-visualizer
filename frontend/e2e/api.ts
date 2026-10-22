@@ -251,6 +251,14 @@ export const listFiles = async (request: APIRequestContext, session: Session, da
   return files.sort((a, b) => a.version - b.version)
 }
 
+/** The raw response of listing a dataset's files (what the caller may see of them depends on their access) */
+export const fileListResponse = (request: APIRequestContext, session: Session | null, datasetId: string) =>
+  request.get(`${API}/files/byDataset/${datasetId}`, { headers: session ? bearer(session) : {} })
+
+/** The raw response of reading one file's record */
+export const fileRecordResponse = (request: APIRequestContext, session: Session | null, fileId: string) =>
+  request.get(`${API}/files/${fileId}`, { headers: session ? bearer(session) : {} })
+
 /** The raw response of listing the datasets (null session = a logged-out guest) */
 export const listDatasets = (request: APIRequestContext, session: Session | null) =>
   request.get(`${API}/datasets`, { headers: session ? bearer(session) : {} })

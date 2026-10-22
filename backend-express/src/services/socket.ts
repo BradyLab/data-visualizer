@@ -20,8 +20,8 @@ import {
     SessionRevokedReason,
 } from "@commons/socket.ts";
 import type { IActivity } from "@commons/activity.ts";
-import type { IFile } from "@commons/file.ts";
-import type { IPermission } from "@commons/permissions.ts";
+import { FileTypes, type IFile } from "@commons/file.ts";
+import { PermissionOptions, type IPermission } from "@commons/permissions.ts";
 import type { IUser } from "@commons/user.ts";
 
 interface SocketData {
@@ -115,9 +115,13 @@ const safely = async (what: string, send: (io: AppServer) => void | Promise<void
     }
 };
 
-// The rooms that hear about a PRIVATE dataset: admins, lab members, its owner, and the users it is shared with
-const privateRooms = async (dataset: Pick<IDataset, "id" | "owner">) => {
-    const shared = await Permissions.findAll({ where: { dataset_id: dataset.id }, attributes: ["user_id"] });
+// The rooms that hear about a PRIVATE dataset: admins, lab members, its owner, and the users it is shared with.
+// With `levels` only the users holding one of those permission levels are included (admins, lab members and the owner always are)
+const privateRooms = async (dataset: Pick<IDataset, "id" | "owner">, levels?: PermissionOptions[]) => {
+    const shared = await Permissions.findAll({
+        where: { dataset_id: dataset.id, ...(levels && { perm: levels }) },
+        attributes: ["user_id"],
+    });
     return [
         socketRooms.ADMIN,
         socketRooms.LAB_MEMBERS,
@@ -223,19 +227,33 @@ export const emitActivity = (activity: IActivity) =>
         s.to(socketRooms.ADMIN).emit(SocketEvent.ACTIVITY_CREATED, { activity });
     });
 
+// Who hears about a file: everyone who may see the dataset for its cover (the cover is shown to all of them), but only those who may
+// download from it for a data file, since the REST API shows the record of a data file to no one else either (see controllers/file.ts)
+const toFileAudience = async <E extends SocketEvent.FILE_UPLOADED | SocketEvent.FILE_REMOVED>(
+    server: AppServer,
+    dataset: Pick<IDataset, "id" | "owner" | "visibility">,
+    type: FileTypes,
+    event: E,
+    ...args: Parameters<ServerToClientEvents[E]>
+) => {
+    if (type === FileTypes.COVER) return toDatasetAudience(server, dataset, event, ...args);
+    const rooms = await privateRooms(dataset, [PermissionOptions.DOWNLOAD, PermissionOptions.EDIT]);
+    (server.to(rooms).emit as (event: E, ...args: Parameters<ServerToClientEvents[E]>) => void)(event, ...args);
+};
+
 /** A file finished uploading and became the current version of its dataset */
 export const emitFileUploaded = (file: IFile) =>
     safely("file:uploaded", async (s) => {
         const dataset = await Datasets.findByPk(file.dataset_id);
-        if (dataset) await toDatasetAudience(s, dataset, SocketEvent.FILE_UPLOADED, { file });
+        if (dataset) await toFileAudience(s, dataset, file.type, SocketEvent.FILE_UPLOADED, { file });
     });
 
-/** A file of a dataset was deleted; everyone who may see the dataset is told so they can drop their copies */
+/** A file of a dataset was deleted; those who heard of it are told so they can drop their copies */
 export const emitFileRemoved = (file: Pick<IFile, "id" | "dataset_id" | "type">) =>
     safely("file:removed", async (s) => {
         const dataset = await Datasets.findByPk(file.dataset_id);
         if (dataset)
-            await toDatasetAudience(s, dataset, SocketEvent.FILE_REMOVED, {
+            await toFileAudience(s, dataset, file.type, SocketEvent.FILE_REMOVED, {
                 id: file.id,
                 dataset_id: file.dataset_id,
                 type: file.type,

@@ -98,6 +98,21 @@ describe("access rules", () => {
         expect(store.canManage(ds("d"))).toBe(false);
     });
 
+    it("offers no download to an INVITED user, whatever their role or grants (the backend treats them as a guest)", async () => {
+        const store = usePermissionStore();
+        vi.mocked(permissionApi.getByUser).mockResolvedValue([perm("i", "dl", PermissionOptions.DOWNLOAD)]);
+        for (const role of [UserRoles.ADMIN, UserRoles.LAB_MEMBER, UserRoles.EXTERNAL]) {
+            loginAs("i", role);
+            useAuthStore().user = { ...makeUser("i", role), status: UserStatus.INVITED };
+            await store.fetchMine("i");
+            expect(store.canDownload(ds("dl", "i"))).toBe(false);
+            expect(store.canDownload(ds("dl"))).toBe(false);
+            // once they have changed the password they are ACTIVE and get their normal access
+            useAuthStore().user = { ...makeUser("i", role), status: UserStatus.ACTIVE };
+            expect(store.canDownload(ds("dl", "i"))).toBe(true);
+        }
+    });
+
     it("gives external users what their permission rows say", async () => {
         const store = usePermissionStore();
         loginAs("e", UserRoles.EXTERNAL);

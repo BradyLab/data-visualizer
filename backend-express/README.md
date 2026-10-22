@@ -102,7 +102,7 @@ All routes are under `/api/<resource>`; resource names come from `commons/genera
 | `users` | CRUD (admin only), `GET /names` (admins and lab members), users can read and rename themselves |
 | `datasets` | `GET /` and `GET /:id` and `GET /byURL/:url` (guests see public ones), create (admin/lab member), update (EDIT), delete (OWNER), `POST /:id/viewer` (viewer ticket, needs VIEW; 409 unless the dataset is `READY`), `POST /:id/reprocess` (rebuild plot data, EDIT) |
 | `permissions` | Grant/change/revoke a user's access to a dataset (OWNER), `byUser`, `byDataset` |
-| `files` | List/get/update/delete, `GET /current/:datasetId/:type/content` to download, `POST .../download-token` for browser downloads |
+| `files` | List/get/update/delete, `GET /current/:datasetId/:type/content` to download, `POST .../download-token` for browser downloads. Covers are visible with VIEW access; the records and bytes of data files (`.rds`, tissue map) need DOWNLOAD, so listing as a VIEW-only user returns just the cover and the live `file:uploaded` / `file:removed` events for data files go only to users who may download |
 | `files/upload` | tus endpoint for resumable uploads (metadata: `dataset_id`, `type`, `filename`, optional `version`, `updates`) |
 | `activities` | Read-only activity log (admin, or a user's own) |
 

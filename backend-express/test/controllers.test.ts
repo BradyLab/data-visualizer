@@ -59,6 +59,9 @@ beforeEach(() => {
         return found ? row(found) : null;
     });
     mock.method(Files, "findByPk", async (id: string) => files.find((f) => f.id === id) ?? null);
+    mock.method(Files, "findAll", async (options?: { where?: { dataset_id?: string } }) =>
+        files.filter((f) => !options?.where?.dataset_id || f.dataset_id === options.where.dataset_id)
+    );
     mock.method(Files, "findOne", async ({ where }: { where: Record<string, unknown> }) =>
         files.find((f) => Object.entries(where).every(([k, v]) => f[k] === v)) ?? null
     );
@@ -247,6 +250,36 @@ test("listing files needs a dataset the caller can view, else an admin", async (
     assert.equal((await call(file.list, lab, {})).statusCode, 403);
     assert.equal((await call(file.list, external, { query: { dataset_id: "priv" } })).statusCode, 404);
     assert.equal((await call(file.listByDataset, external, { params: { datasetId: "priv" } })).statusCode, 404);
+});
+
+test("someone who may only view a dataset sees its cover record but nothing about the data files", async () => {
+    files.push(cover, rds, { ...rds, id: "f3", type: FileTypes.TISSUE_PLOT });
+    permissions.push({ user_id: "ext", dataset_id: "priv", perm: PermissionOptions.VIEW });
+    const ids = (res: { body: unknown }) => (res.body as { id: string }[]).map((f) => f.id);
+    for (const [name, res] of [
+        ["list", await call(file.list, external, { query: { dataset_id: "priv" } })],
+        ["listByDataset", await call(file.listByDataset, external, { params: { datasetId: "priv" } })],
+    ] as const) {
+        assert.equal(res.statusCode, 200, name);
+        assert.deepEqual(ids(res), ["f1"], name);
+    }
+    assert.equal((await call(file.get, external, { params: { id: "f1" } })).statusCode, 200);
+    assert.equal((await call(file.get, external, { params: { id: "f2" } })).statusCode, 403);
+    assert.equal((await call(file.get, external, { params: { id: "f3" } })).statusCode, 403);
+});
+
+test("a guest on a public dataset is held to the same rule, and downloaders see every file", async () => {
+    files.push({ ...cover, dataset_id: "pub" }, { ...rds, dataset_id: "pub" });
+    const ids = (res: { body: unknown }) => (res.body as { id: string }[]).map((f) => f.id);
+    assert.deepEqual(ids(await call(file.listByDataset, null, { params: { datasetId: "pub" } })), ["f1"]);
+    assert.equal((await call(file.get, null, { params: { id: "f2" } })).statusCode, 403);
+    // lab members, and externals granted DOWNLOAD, see all of them
+    assert.deepEqual(ids(await call(file.listByDataset, lab, { params: { datasetId: "pub" } })), ["f1", "f2"]);
+    permissions.push({ user_id: "ext", dataset_id: "pub", perm: PermissionOptions.DOWNLOAD });
+    assert.deepEqual(ids(await call(file.list, external, { query: { dataset_id: "pub" } })), ["f1", "f2"]);
+    assert.equal((await call(file.get, external, { params: { id: "f2" } })).statusCode, 200);
+    // an admin listing every file is unaffected
+    assert.equal(((await call(file.list, admin, {})).body as unknown[]).length, 2);
 });
 
 test("download tokens need DOWNLOAD access, a known type and an existing file", async () => {

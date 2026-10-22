@@ -3,7 +3,20 @@ import { readFileSync } from 'node:fs'
 import { test, expect } from '@playwright/test'
 import { FileTypes } from '@commons/file'
 import { PermissionOptions } from '@commons/permissions'
-import { changeGrant, createDataset, download, grant, gotoLive, login, readFile, uploadFile, uploadFileOk } from './api'
+import {
+  changeGrant,
+  createDataset,
+  download,
+  fileListResponse,
+  fileRecordResponse,
+  grant,
+  gotoLive,
+  listFiles,
+  login,
+  readFile,
+  uploadFile,
+  uploadFileOk,
+} from './api'
 import { authFile } from './users'
 
 // A 1x1 PNG, so the browser can decode the cover
@@ -116,6 +129,29 @@ test.describe('access rules', () => {
     const result = await download(request, external, dataset.id, FileTypes.RDS)
     expect(result.status).toBe(200)
     expect(result.body).toEqual(content)
+  })
+
+  test('file records follow the same rule: VIEW sees the cover only, DOWNLOAD sees every file', async ({ request }) => {
+    const lab = await login(request, 'lab')
+    const external = await login(request, 'external')
+    const dataset = await createDataset(request, lab)
+    await uploadFileOk(request, lab, dataset.id, FileTypes.COVER, 'cover.png', PNG)
+    await uploadFileOk(request, lab, dataset.id, FileTypes.RDS, 'secret-name.rds', Buffer.from('data'))
+    const all = await listFiles(request, lab, dataset.id)
+    const rds = all.find((f) => f.type === FileTypes.RDS)!
+    const cover = all.find((f) => f.type === FileTypes.COVER)!
+
+    await grant(request, lab, dataset.id, external.user.id, PermissionOptions.VIEW)
+    const viewList = await fileListResponse(request, external, dataset.id)
+    expect(viewList.status()).toBe(200)
+    expect((await viewList.json()).map((f: { id: string }) => f.id)).toEqual([cover.id])
+    expect((await fileRecordResponse(request, external, cover.id)).status()).toBe(200)
+    expect((await fileRecordResponse(request, external, rds.id)).status()).toBe(403)
+
+    await changeGrant(request, lab, dataset.id, external.user.id, PermissionOptions.DOWNLOAD)
+    const downloadList = await fileListResponse(request, external, dataset.id)
+    expect((await downloadList.json()).map((f: { id: string }) => f.id).sort()).toEqual([cover.id, rds.id].sort())
+    expect((await fileRecordResponse(request, external, rds.id)).status()).toBe(200)
   })
 
   test('uploads are checked: wrong extension and a logged-out caller are rejected', async ({ request }) => {

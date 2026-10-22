@@ -8,6 +8,8 @@ import { io as connect, type Socket } from "socket.io-client";
 import { DatasetVisibility, type IDataset } from "@commons/dataset.ts";
 import { SOCKET_PATH, SocketEvent, SessionRevokedReason } from "@commons/socket.ts";
 import { UserRoles, UserStatus, type IUser } from "@commons/user.ts";
+import { PermissionOptions } from "@commons/permissions.ts";
+import { FileTypes, type IFile } from "@commons/file.ts";
 import type { IActivity } from "@commons/activity.ts";
 
 process.env.JWT_SECRET = "test-secret";
@@ -22,7 +24,7 @@ const {
     emitUserChanged,
     emitUserDeleted,
 } = await import("@src/services/socket.ts");
-const { emitPermissionChanged, emitPermissionsChanged, revokeSession, updateRooms } = await import("@src/services/socket.ts");
+const { emitFileRemoved, emitFileUploaded, emitPermissionChanged, emitPermissionsChanged, revokeSession, updateRooms } = await import("@src/services/socket.ts");
 const { signToken } = await import("@src/services/auth.ts");
 const { passwordVersion } = await import("@src/services/auth.ts");
 const { Users } = await import("@src/models/user.ts");
@@ -38,7 +40,8 @@ const tokenOf = (id: string) => signToken(id, users[id]!.password);
 
 let failures = 0; // the handshake failure counter of the address
 let counterBroken = false;
-let sharedWith: string[] = []; // user ids holding a permission on the dataset
+let datasetVisibility = DatasetVisibility.PRIVATE; // of the stubbed dataset d1
+let sharedWith: Record<string, PermissionOptions> = {}; // the permission level each user holds on the dataset
 
 let server: http.Server;
 let url: string;
@@ -58,7 +61,8 @@ afterEach(() => {
     for (const id of Object.keys(users)) delete users[id];
     failures = 0;
     counterBroken = false;
-    sharedWith = [];
+    sharedWith = {};
+    datasetVisibility = DatasetVisibility.PRIVATE;
     delete process.env.JWT_EXPIRES_IN;
 });
 
@@ -66,9 +70,13 @@ mock.method(Users, "findByPk", async (id: string) => {
     const user = users[id];
     return user ? { ...user, dataValues: { ...user } } : null;
 });
-mock.method(Permissions, "findAll", async () => sharedWith.map((user_id) => ({ user_id })));
+mock.method(Permissions, "findAll", async ({ where }: { where: { perm?: PermissionOptions[] } }) =>
+    Object.entries(sharedWith)
+        .filter(([, perm]) => !where.perm || where.perm.includes(perm))
+        .map(([user_id]) => ({ user_id }))
+);
 mock.method(Datasets, "findAll", async () => [{ id: "d1", owner: "owner" }]);
-mock.method(Datasets, "findByPk", async () => ({ id: "d1", owner: "owner", visibility: DatasetVisibility.PRIVATE }));
+mock.method(Datasets, "findByPk", async () => ({ id: "d1", owner: "owner", visibility: datasetVisibility }));
 mock.method(PostgresStore.prototype, "get", async () => {
     if (counterBroken) throw new Error("db down");
     return failures ? { totalHits: failures, resetTime: new Date() } : undefined;
@@ -103,7 +111,7 @@ const standardUsers = () => {
     addUser("owner", UserRoles.EXTERNAL);
     addUser("shared", UserRoles.EXTERNAL);
     addUser("other", UserRoles.EXTERNAL);
-    sharedWith = ["shared"];
+    sharedWith = { shared: PermissionOptions.VIEW };
 };
 const everyone = async () => ({
     admin: await connectAs("admin"),
@@ -248,6 +256,57 @@ test("a user's record goes to admins and the user, lab members get only the summ
     await settle();
     assert.equal(heard(all.lab.events, SocketEvent.USER_DELETED).length, 1);
     assert.equal(heard(all.other.events, SocketEvent.USER_DELETED).length, 0);
+});
+
+const withVisibility = (visibility: DatasetVisibility) => (datasetVisibility = visibility);
+const fileOf = (type: FileTypes) => ({ id: "f1", dataset_id: "d1", type }) as IFile;
+const fileCounts = (all: Awaited<ReturnType<typeof everyone>>, name: SocketEvent) =>
+    Object.fromEntries(Object.entries(all).map(([who, { events }]) => [who, heard(events, name).length]));
+
+test("a data file's upload and removal reach only those who may download, whether the dataset is private or public", async () => {
+    standardUsers();
+    sharedWith = { shared: PermissionOptions.DOWNLOAD, other: PermissionOptions.VIEW };
+    const all = await everyone();
+    for (const visibility of [DatasetVisibility.PRIVATE, DatasetVisibility.PUBLIC]) {
+        withVisibility(visibility);
+        for (const type of [FileTypes.RDS, FileTypes.TISSUE_PLOT]) {
+            for (const events of Object.values(all)) events.events.length = 0;
+            await emitFileUploaded(fileOf(type));
+            await emitFileRemoved(fileOf(type));
+            await settle();
+            const expected = { admin: 1, lab: 1, owner: 1, shared: 1, other: 0 };
+            assert.deepEqual(fileCounts(all, SocketEvent.FILE_UPLOADED), expected, `${visibility} ${type} uploaded`);
+            assert.deepEqual(fileCounts(all, SocketEvent.FILE_REMOVED), expected, `${visibility} ${type} removed`);
+        }
+    }
+});
+
+test("a user holding EDIT hears about data files too", async () => {
+    standardUsers();
+    sharedWith = { shared: PermissionOptions.EDIT };
+    const all = await everyone();
+    await emitFileUploaded(fileOf(FileTypes.RDS));
+    await settle();
+    assert.equal(heard(all.shared.events, SocketEvent.FILE_UPLOADED).length, 1);
+    assert.equal(heard(all.other.events, SocketEvent.FILE_UPLOADED).length, 0);
+});
+
+test("a cover's upload and removal still reach everyone who may see the dataset", async () => {
+    standardUsers();
+    const all = await everyone();
+    // PRIVATE: the viewers of the dataset (the stub shares it with `shared` at VIEW) but not strangers
+    await emitFileUploaded(fileOf(FileTypes.COVER));
+    await emitFileRemoved(fileOf(FileTypes.COVER));
+    await settle();
+    const expected = { admin: 1, lab: 1, owner: 1, shared: 1, other: 0 };
+    assert.deepEqual(fileCounts(all, SocketEvent.FILE_UPLOADED), expected);
+    assert.deepEqual(fileCounts(all, SocketEvent.FILE_REMOVED), expected);
+    // PUBLIC: everyone
+    withVisibility(DatasetVisibility.PUBLIC);
+    for (const { events } of Object.values(all)) events.length = 0;
+    await emitFileUploaded(fileOf(FileTypes.COVER));
+    await settle();
+    assert.deepEqual(fileCounts(all, SocketEvent.FILE_UPLOADED), { admin: 1, lab: 1, owner: 1, shared: 1, other: 1 });
 });
 
 test("the activity log is for admins only", async () => {
