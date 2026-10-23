@@ -474,6 +474,12 @@ async function confirmDelete() {
 :deep(.v-file-upload-title) {
     font-size: 0.8125rem;
 }
+/* Only the file itself (not the dropzone) matches the admin tables: translucent primary background with primary text */
+:deep(.v-file-upload-item) {
+    background-color: rgba(var(--v-theme-primary), 0.12);
+    color: rgb(var(--v-theme-primary));
+    --v-theme-on-surface: var(--v-theme-primary);
+}
 /* Vuetify 3 renders the prefix as .v-text-field__prefix (there is no .v-field__prefix) and keeps it at opacity 0 until the field has a value */
 :deep(.v-text-field__prefix) {
     opacity: 1;
