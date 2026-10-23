@@ -27,7 +27,8 @@ export default defineConfig({
 
   use: {
     baseURL: FRONTEND_URL,
-    trace: 'on-first-retry',
+    // Kept for every failed attempt, including the first one of a test that passes on retry (a flake leaves no trace otherwise)
+    trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     // Always headless (a headed WebKit window under WSLg ends up with a 0x0 viewport); pass --headed to watch a run
     headless: true,
