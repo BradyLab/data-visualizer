@@ -2,7 +2,7 @@
 # The image has no Seurat: plots read the per-dataset Parquet files made by preprocess/ with DuckDB
 # The rocker image tag fixes the R version and also the CRAN snapshot that install2.r reads (p3m.dev, dated at that R release), so the R
 # packages below only change when the tag does. Check with: docker run --rm --entrypoint Rscript <image> -e 'getOption("repos")'
-FROM rocker/shiny:4.4.2
+FROM rocker/shiny:4.6.1
 
 # ggPlantmap draws the tissue plot; it is not on CRAN, so it comes from GitHub, pinned to a commit. It needs the XML package, hence libxml2
 RUN apt-get update && apt-get install -y --no-install-recommends libxml2-dev && rm -rf /var/lib/apt/lists/*

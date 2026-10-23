@@ -193,8 +193,20 @@ test("a Seurat v3 assay (slots, not layers) is converted too", {
   j <- stage(v3)
   result <- run_preprocess(j$rds, j$out)
   expect(result$status == 0, result$output)
-  expect_equal(nrow(read(j$out, "expression")), length(GetAssayData(v3, slot = "data")@x))
+  expect_equal(nrow(read(j$out, "expression")), length(GetAssayData(v3, layer = "data")@x))
   expect(file.exists(file.path(j$out, "scale_data.parquet")))
+})
+
+test("a Seurat v5 object with split layers is joined before conversion", {
+  obj5 <- make_object()
+  whole <- stage(obj5)
+  expect(run_preprocess(whole$rds, whole$out)$status == 0)
+  obj5[["RNA"]] <- split(obj5[["RNA"]], f = obj5$condition)
+  expect(length(Layers(obj5[["RNA"]], search = "data")) > 1, "the fixture has split layers")
+  j <- stage(obj5)
+  result <- run_preprocess(j$rds, j$out)
+  expect(result$status == 0, result$output)
+  expect_equal(nrow(read(j$out, "expression")), nrow(read(whole$out, "expression")))
 })
 
 test("the optional third argument picks the assay", {
