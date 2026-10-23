@@ -35,6 +35,10 @@ obj <- readRDS(input)
 assay <- if (length(args) >= 3) args[[3]] else DefaultAssay(obj)
 DefaultAssay(obj) <- assay
 message("Assay: ", assay)
+# A merged v5 object keeps one layer per sample (data.1, data.2, ...), which layer = "data" cannot read; v3 and v4 assays have no layers
+if (inherits(obj[[assay]], "Assay5")) {
+  obj <- JoinLayers(obj, assay = assay)
+}
 
 # ---- cells: coordinates + all metadata -----------------------------------------------------------------------------
 cells <- data.frame(barcode = colnames(obj), stringsAsFactors = FALSE)
@@ -75,10 +79,8 @@ write_parquet(cells, file.path(tmp_dir, "cells.parquet"), compression = "zstd")
 write_parquet(column_levels, file.path(tmp_dir, "column_levels.parquet"), compression = "zstd")
 
 # ---- scale.data: dense genes x cells, usually only the variable features ------------------------------------------------
-# Seurat v5 calls the matrix a "layer", v4 a "slot"; a missing one is an error or an empty matrix depending on the version
-scaled <- tryCatch(GetAssayData(obj, assay = assay, layer = "scale.data"), error = function(e) {
-  tryCatch(GetAssayData(obj, assay = assay, slot = "scale.data"), error = function(e2) NULL)
-})
+# A missing layer is an error or an empty matrix depending on the version
+scaled <- tryCatch(GetAssayData(obj, assay = assay, layer = "scale.data"), error = function(e) NULL)
 if (!is.null(scaled) && (nrow(scaled) == 0 || ncol(scaled) == 0)) {
   scaled <- NULL
 }
@@ -135,8 +137,7 @@ if (!is.null(scaled)) {
 }
 
 # ---- expression: non-zero entries only, sorted by gene so DuckDB can skip row groups when fetching one gene --------------
-# Seurat v5 calls the matrix a "layer", v4 a "slot"
-mat <- tryCatch(GetAssayData(obj, assay = assay, layer = "data"), error = function(e) GetAssayData(obj, assay = assay, slot = "data"))
+mat <- GetAssayData(obj, assay = assay, layer = "data")
 rm(obj)
 invisible(gc())
 trip <- summary(as(mat, "CsparseMatrix")) # i = gene row, j = cell column, x = value (1-based)
