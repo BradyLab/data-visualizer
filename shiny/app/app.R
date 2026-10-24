@@ -557,6 +557,8 @@ server <- function(input, output, session) {
         paste0("plot_", p, "_", seq_len(n_group_plots()))
       } else if (p == "Heatmap") {
         paste0("plot_Heatmap_", seq_len(n_heatmaps()))
+      } else if (p == "TissuePlot" && length(selection()$genes) > 0) {
+        c("plot_TissueCells", "plot_TissuePlot")
       } else {
         paste0("plot_", p)
       }
@@ -564,12 +566,13 @@ server <- function(input, output, session) {
     div(
       style = "display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start;",
       lapply(ids, function(id) {
-        if (id == "plot_TissuePlot") {
-          # Hovering an outline shows its numbers (tissue_tip), placed relative to the chart
+        if (id %in% c("plot_TissuePlot", "plot_TissueCells")) {
+          # Hovering an outline shows its numbers (tissue_tip / tissue_cells_tip), placed relative to the chart
+          hover_id <- if (id == "plot_TissuePlot") "tissue_hover" else "tissue_cells_hover"
           div(
             style = sprintf("width: %dpx; max-width: 100%%; position: relative;", size),
-            plotOutput(id, width = "100%", height = "auto", hover = hoverOpts("tissue_hover", delay = 80, delayType = "debounce")),
-            uiOutput("tissue_tip")
+            plotOutput(id, width = "100%", height = "auto", hover = hoverOpts(hover_id, delay = 80, delayType = "debounce")),
+            uiOutput(if (id == "plot_TissuePlot") "tissue_tip" else "tissue_cells_tip")
           )
         } else {
           div(style = sprintf("width: %dpx; max-width: 100%%;", size), plotOutput(id, width = "100%", height = "auto"))
@@ -889,6 +892,8 @@ server <- function(input, output, session) {
     d$cells$cluster <- tissue
     d$clusters <- level_order(tissue_col(), tissue)
     map <- TISSUE_PLOT
+    cells <- map
+    cells$cell_type <- factor(ifelse(map$ROI.name %in% d$clusters, map$ROI.name, NA), levels = d$clusters)
     if (length(d$genes) > 0) {
       sm <- cluster_summary(long_expression(d))
       quant <- do.call(
@@ -900,10 +905,9 @@ server <- function(input, output, session) {
         })
       )
       quant$gene <- factor(quant$gene, levels = d$genes)
-      list(table = quant, genes = TRUE, d = d)
+      list(table = quant, genes = TRUE, d = d, cells = cells)
     } else {
-      map$cell_type <- factor(ifelse(map$ROI.name %in% d$clusters, map$ROI.name, NA), levels = d$clusters)
-      list(table = map, genes = FALSE, d = d)
+      list(table = cells, genes = FALSE, d = d, cells = cells)
     }
   })
 
@@ -916,11 +920,8 @@ server <- function(input, output, session) {
     height = function() {
       panels <- max(1, length(selection()$genes))
       cols <- ceiling(sqrt(panels))
-      aspect <- if (is.null(TISSUE_PLOT)) 1 else diff(range(TISSUE_PLOT$y)) / max(diff(range(TISSUE_PLOT$x)), 1e-9)
-      legend <- if (length(selection()$genes) > 0) 110 else 170
-      panel_width <- max(100, (plot_width("plot_TissuePlot") - legend) / cols)
       strip <- if (length(selection()$genes) > 0) 25 else 0
-      as.integer(max(150, ceiling(panels / cols) * (panel_width * aspect + strip) + 20))
+      as.integer(max(150, ceiling(panels / cols) * (tissue_panel_width("plot_TissuePlot") * tissue_aspect() + strip) + 20))
     },
     {
       td <- tissue_data()
@@ -932,35 +933,58 @@ server <- function(input, output, session) {
           facet_wrap(~gene, ncol = ceiling(sqrt(length(d$genes)))) +
           theme(text = element_text(size = 14))
       } else {
-        p <- ggPlantmap.plot(td$table, layer = cell_type) +
-          scale_fill_manual(
-            values = setNames(colorblind_palette(length(d$clusters)), d$clusters),
-            na.value = "grey85",
-            drop = TRUE,
-            name = NULL
-          ) +
-          labs(caption = tissue_note()) +
-          theme(text = element_text(size = 14))
-        if (isTRUE(d$label)) {
-          # A label at the middle of the corners of each outline that has a cell type
-          centers <- aggregate(cbind(x, y) ~ ROI.id + ROI.name, td$table[td$table$ROI.name %in% d$clusters, ], function(v) mean(range(v)))
-          p <- p + geom_text(aes(x, y, label = ROI.name), centers, inherit.aes = FALSE, size = 4, check_overlap = TRUE)
-        }
-        p
+        tissue_cell_type_plot(td)
       }
     }
   )
 
+  # The map's height / width, and the width of one map panel in a tissue chart (the chart width less the legend, shared by the gene panels'
+  # columns). The cell type chart uses the panel width of the gene chart, so its map is the same size as a gene panel's.
+  tissue_aspect <- function() {
+    if (is.null(TISSUE_PLOT)) 1 else diff(range(TISSUE_PLOT$y)) / max(diff(range(TISSUE_PLOT$x)), 1e-9)
+  }
+  tissue_panel_width <- function(id) {
+    genes <- length(selection()$genes)
+    legend <- if (genes > 0) 110 else 170
+    max(100, (plot_width(id) - legend) / ceiling(sqrt(max(1, genes))))
+  }
+
+  # The tissue map filled with each outline's cell type (outlines that match no drawn cell type stay grey), labeled when Label clusters is on;
+  # drawn alone without genes and, with genes, as its own chart above the expression panels
+  tissue_cell_type_plot <- function(td) {
+    d <- td$d
+    p <- ggPlantmap.plot(td$cells, layer = cell_type) +
+      scale_fill_manual(
+        values = setNames(colorblind_palette(length(d$clusters)), d$clusters),
+        na.value = "grey85",
+        drop = TRUE,
+        name = NULL
+      ) +
+      labs(caption = tissue_note()) +
+      theme(text = element_text(size = 14))
+    if (isTRUE(d$label)) {
+      # A label at the middle of the corners of each outline that has a cell type
+      centers <- aggregate(cbind(x, y) ~ ROI.id + ROI.name, td$cells[td$cells$ROI.name %in% d$clusters, ], function(v) mean(range(v)))
+      p <- p + geom_text(aes(x, y, label = ROI.name), centers, inherit.aes = FALSE, size = 4, check_overlap = TRUE)
+    }
+    p
+  }
+
+  # The cell type map shown with the gene panels, so the outlines can be read against their cell types
+  output$plot_TissueCells <- renderPlot(
+    height = function() {
+      as.integer(max(150, tissue_panel_width("plot_TissueCells") * tissue_aspect() + 20))
+    },
+    tissue_cell_type_plot(tissue_data())
+  )
+
   # The box that follows the mouse over the tissue plot: the outline's name and, with genes, the gene (the panel hovered) with its average
   # expression and % of cells expressing. It sits left of the pointer in the right part of the chart, so it stays inside it.
-  output$tissue_tip <- renderUI({
-    h <- input$tissue_hover
+  tissue_tip_ui <- function(h, tbl, genes, id) {
     if (is.null(h)) {
       return(NULL)
     }
-    td <- tissue_data()
-    tbl <- td$table
-    if (td$genes) {
+    if (genes) {
       if (is.null(h$panelvar1)) {
         return(NULL)
       }
@@ -970,7 +994,7 @@ server <- function(input, output, session) {
     if (is.null(hit)) {
       return(NULL)
     }
-    body <- if (td$genes) {
+    body <- if (genes) {
       if (is.na(hit$avg_expression)) {
         list(tags$b(hit$ROI.name), tags$br(), "no matching cell type")
       } else {
@@ -986,8 +1010,8 @@ server <- function(input, output, session) {
       list(tags$b(hit$ROI.name), if (is.na(hit$cell_type)) list(tags$br(), "no matching cell type"))
     }
     x <- h$coords_css$x
-    side <- if (x > plot_width("plot_TissuePlot") * 0.6) {
-      sprintf("right: %dpx;", as.integer(plot_width("plot_TissuePlot") - x + 12))
+    side <- if (x > plot_width(id) * 0.6) {
+      sprintf("right: %dpx;", as.integer(plot_width(id) - x + 12))
     } else {
       sprintf("left: %dpx;", as.integer(x + 12))
     }
@@ -1000,6 +1024,24 @@ server <- function(input, output, session) {
       ),
       body
     )
+  }
+
+  output$tissue_tip <- renderUI({
+    h <- input$tissue_hover
+    if (is.null(h)) {
+      return(NULL)
+    }
+    td <- tissue_data()
+    tissue_tip_ui(h, td$table, td$genes, "plot_TissuePlot")
+  })
+
+  # The same box over the cell type chart shown with the gene panels: the outline's name (and that it matches no cell type)
+  output$tissue_cells_tip <- renderUI({
+    h <- input$tissue_cells_hover
+    if (is.null(h)) {
+      return(NULL)
+    }
+    tissue_tip_ui(h, tissue_data()$cells, FALSE, "plot_TissueCells")
   })
 
   # Like Seurat's DoHeatmap, one heatmap per Group by column (i-th of them): a column per cell, grouped by cell label under a colored identity bar with the group names above it, a row
