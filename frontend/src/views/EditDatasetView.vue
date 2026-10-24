@@ -427,9 +427,9 @@ async function confirmDelete() {
             </v-col>
         </v-row>
 
-        <!-- Delete (edit mode only, left) and submit (right) buttons -->
+        <!-- Delete (edit mode only, and only for the owner and admins; left) and submit (right) buttons -->
         <v-row class="mx-4">
-            <v-col v-if="isEdit" cols="auto">
+            <v-col v-if="isEdit && permissionStore.canManage(dataset)" cols="auto">
                 <v-btn
                     color="error"
                     variant="tonal"

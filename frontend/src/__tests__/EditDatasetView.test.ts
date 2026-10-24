@@ -101,7 +101,7 @@ beforeEach(() => {
         removeDataset: vi.fn(async () => {}),
     });
     mocks.file = reactive({ uploading: null, uploadFile: vi.fn(async () => {}) });
-    mocks.permission = reactive({ fetchMine: vi.fn(async () => {}), canEdit: vi.fn(() => true) });
+    mocks.permission = reactive({ fetchMine: vi.fn(async () => {}), canEdit: vi.fn(() => true), canManage: vi.fn(() => true) });
     mocks.user = reactive({
         users: [] as unknown[],
         fetchUsers: vi.fn(async () => {}),
