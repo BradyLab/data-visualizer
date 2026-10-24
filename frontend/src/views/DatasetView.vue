@@ -27,6 +27,9 @@ const error = ref<string | null>(null);
 const viewerUrl = ref<string | null>(null);
 const viewerLoading = ref(false);
 
+// The description is cut off at 2 lines until it is clicked
+const descriptionExpanded = ref(false);
+
 // The viewer reports how tall its content is (postMessage) so the iframe grows to fit it; only messages from our own iframe count
 const viewerFrame = ref<HTMLIFrameElement | null>(null);
 const viewerHeight = ref<number | null>(null);
@@ -205,7 +208,13 @@ watch(
         </v-row>
 
         <!-- Dataset description -->
-        <v-row class="text-body-large">{{ datasetStore.currentDataset.description }}</v-row>
+        <v-row
+            class="text-body-large description"
+            :class="{ 'description-clamped': !descriptionExpanded }"
+            title="Click to expand or collapse"
+            @click="descriptionExpanded = !descriptionExpanded"
+            >{{ datasetStore.currentDataset.description }}</v-row
+        >
 
         <!-- Plot data status: the plots can only be shown once the uploaded data file has been processed -->
         <v-alert v-if="datasetStore.currentDataset.status === DatasetStatus.PROCESSING" type="info" variant="tonal" class="mt-6">
@@ -227,7 +236,7 @@ watch(
         </v-alert>
 
         <!-- Button that opens the Shiny viewer for this dataset -->
-        <div class="d-flex justify-center mt-6">
+        <div class="d-flex justify-center mt-6 mb-n8">
             <v-btn v-if="!viewerUrl" color="primary" :disabled="!plotsReady" :loading="viewerLoading" @click="generatePlots"
                 >Generate Plots</v-btn
             >
@@ -247,6 +256,16 @@ watch(
 </template>
 
 <style scoped>
+.description {
+    cursor: pointer;
+}
+.description-clamped {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
 .viewer-frame {
     width: 100%;
     height: 600px; /* until the viewer reports its content height */
