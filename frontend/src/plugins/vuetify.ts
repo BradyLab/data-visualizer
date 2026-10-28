@@ -5,6 +5,7 @@ import { aliases, mdi } from "vuetify/iconsets/mdi";
 import type { ThemeDefinition } from "vuetify";
 import "vuetify/styles";
 import "@mdi/font/css/materialdesignicons.css";
+import "@src/assets/a11y.css";
 
 // Plugin function: installed through app.use(vuetify) in main.ts, it builds the Vuetify instance and installs it on the app
 export default (app: App) => {
@@ -18,8 +19,6 @@ export default (app: App) => {
                 "on-surface": "#FFFFFF",
                 primary: "#103819",
                 "on-primary": "#FFFFFF",
-                secondary: "#55ab3d",
-                "on-secondary": "#000000",
                 //error
                 //info
                 //success
