@@ -110,7 +110,7 @@ test.describe("a lab member working on someone else's dataset", () => {
     await loginLive(page, viewer.email, viewer.password)
     await page.goto(`/dataset/${dataset.url}`)
     await expect(page.getByRole('heading', { name: dataset.name })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Data' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Data', exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Edit' })).toHaveCount(0)
 
     // The edit page sends them back, and the API refuses the change itself

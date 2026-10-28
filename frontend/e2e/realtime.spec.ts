@@ -50,7 +50,7 @@ test('making a dataset public and private again shows and hides it live for an e
   const page = await external.newPage()
   await gotoLive(page, '/home')
   // Private datasets are not listed for users without access (give the list a moment to load before asserting an absence)
-  await expect(page.getByText('BRADY LAB DATASETS')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'BRADY LAB DATASETS' })).toBeVisible()
   await expect(page.getByText(dataset.name)).toHaveCount(0)
 
   await updateDataset(request, lab, dataset.id, { visibility: DatasetVisibility.PUBLIC })
@@ -70,13 +70,13 @@ test('granting and revoking DOWNLOAD access shows and hides the Data button live
   await gotoLive(page, `/dataset/${dataset.url}`)
   await expect(page.getByRole('heading', { name: dataset.name })).toBeVisible()
   // A public dataset can be viewed, but not downloaded, without a DOWNLOAD permission
-  await expect(page.getByRole('button', { name: 'Data' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Data', exact: true })).toHaveCount(0)
 
   await grant(request, lab, dataset.id, externalUser.id, PermissionOptions.DOWNLOAD)
-  await expect(page.getByRole('button', { name: 'Data' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Data', exact: true })).toBeVisible()
 
   await revoke(request, lab, dataset.id, externalUser.id)
-  await expect(page.getByRole('button', { name: 'Data' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Data', exact: true })).toHaveCount(0)
   await external.close()
 })
 
@@ -108,7 +108,7 @@ test('a dataset made public while the page is still loading its list is not lost
   // The push has arrived before the stale list is let through
   await expect.poll(() => page.evaluate(() => document.body.innerText)).toContain(dataset.name)
   await release()
-  await expect(page.getByText('BRADY LAB DATASETS')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'BRADY LAB DATASETS' })).toBeVisible()
   await expect(page.getByText(dataset.name)).toBeVisible()
   await external.close()
 })

@@ -4,6 +4,7 @@ import Header from "@src/layouts/AppHeader.vue";
 import Footer from "@src/layouts/AppFooter.vue";
 import { useAuthStore } from "@src/stores/auth";
 import { useDatasetStore } from "@src/stores/dataset";
+import { announcement } from "@src/utils/announce";
 
 const auth = useAuthStore();
 const datasetStore = useDatasetStore();
@@ -13,13 +14,18 @@ const retryDatasets = () => datasetStore.fetchDatasets().catch(() => {});
 
 // Retries the session restore by reloading the page
 const reload = () => window.location.reload();
+
+// Moves focus to the page content (a plain #main link would also change the URL, which the router would try to resolve)
+const skipToMain = () => document.getElementById("main")?.focus();
 </script>
 
 <template>
+    <!-- First stop for keyboard users: jumps past the navigation to the page content -->
+    <a href="#main" class="skip-link" @click.prevent="skipToMain">Skip to main content</a>
     <!-- Top navigation bar -->
     <Header></Header>
     <!-- Current page is rendered by the router here -->
-    <v-main id="main">
+    <v-main id="main" tabindex="-1">
         <!-- Shown when the saved login could not be restored (server unreachable); the token is kept, so reloading retries -->
         <v-alert v-if="auth.restoreFailed" type="warning" variant="tonal" class="ma-4" prominent>
             We couldn't restore your session because the server didn't respond properly. You may appear logged out.
@@ -36,6 +42,8 @@ const reload = () => window.location.reload();
         </v-alert>
         <router-view />
     </v-main>
+    <!-- Spoken by screen readers when the page changes or the viewer is moved to another page -->
+    <div class="visually-hidden" role="status" aria-live="polite">{{ announcement }}</div>
     <!-- Footer (hidden on routes with meta.hideFooter) -->
     <Footer></Footer>
 </template>

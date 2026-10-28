@@ -86,7 +86,7 @@ test('the Data button downloads exactly the uploaded .rds bytes, and a new versi
   const page = await context.newPage()
   await page.goto(`/dataset/${dataset.url}`)
   const downloading = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Data' }).click()
+  await page.getByRole('button', { name: 'Data', exact: true }).click()
   const file = await downloading
   expect(file.suggestedFilename()).toBe('data.rds')
   expect(readFileSync((await file.path())!)).toEqual(first)
@@ -103,7 +103,7 @@ test('a dataset without an .rds file reports it when Data is clicked', async ({ 
   const context = await browser.newContext({ storageState: authFile('lab') })
   const page = await context.newPage()
   await page.goto(`/dataset/${dataset.url}`)
-  await page.getByRole('button', { name: 'Data' }).click()
+  await page.getByRole('button', { name: 'Data', exact: true }).click()
   await expect(page.getByText('This dataset has no data file yet.')).toBeVisible()
   await context.close()
 })

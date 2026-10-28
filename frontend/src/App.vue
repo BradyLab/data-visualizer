@@ -9,6 +9,7 @@ import { useDatasetStore } from "@src/stores/dataset";
 import { usePermissionStore } from "@src/stores/permission";
 import { useSocketStore } from "@src/stores/socket";
 import { useUserStore } from "@src/stores/user";
+import { announce } from "@src/utils/announce";
 
 const auth = useAuthStore();
 const datasetStore = useDatasetStore();
@@ -40,8 +41,11 @@ watch([() => auth.user.id, () => auth.user.role], ([id], [previousId]) => {
     permissionStore.fetchMine(auth.user.id).catch(() => {});
     datasetStore.fetchDatasets().catch(() => {});
     const meta = router.currentRoute.value.meta;
-    if ((meta.requiresAdmin && !auth.isAdmin) || (meta.requiresDatasetCreator && !auth.canCreateDatasets))
+    if ((meta.requiresAdmin && !auth.isAdmin) || (meta.requiresDatasetCreator && !auth.canCreateDatasets)) {
         router.push({ name: "home" });
+        // The page changes under the viewer without them asking, so say why
+        announce("Your role changed, so you can no longer open that page. You were taken to the home page.");
+    }
 });
 
 // Initial load: the watch above only fires when the user changes, so load the dataset list once on startup

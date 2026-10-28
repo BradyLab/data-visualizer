@@ -35,12 +35,12 @@ async function logout() {
             <BradyLabLogo />
         </template>
         <!-- Navigation items -->
-        <v-row class="align-center ml-2">
+        <v-row tag="nav" aria-label="Main" class="align-center ml-2">
             <v-col cols="auto">
                 <!-- Dropdown of datasets that opens on hover; each item links to its dataset page -->
                 <v-menu open-on-hover open-on-click>
                     <template v-slot:activator="{ props }">
-                        <div v-bind="props">DATASETS <v-icon>mdi-chevron-down</v-icon></div>
+                        <v-btn v-bind="props" variant="text" color="on-primary" append-icon="mdi-chevron-down">DATASETS</v-btn>
                     </template>
 
                     <v-list>
@@ -58,10 +58,12 @@ async function logout() {
                     </v-list>
                 </v-menu>
             </v-col>
-            <v-col cols="auto"> | </v-col>
+            <v-col cols="auto" aria-hidden="true"> | </v-col>
             <v-col cols="auto">
                 <!-- Link to the help document (opens in a new tab) -->
-                <a :href="HELP_URL" target="_blank" class="text-decoration-none text-text"> HELP </a>
+                <a :href="HELP_URL" target="_blank" rel="noopener" class="text-decoration-none text-text">
+                    HELP<span class="visually-hidden"> (opens in new tab)</span>
+                </a>
             </v-col>
             <!-- ABOUT and FEEDBACK links shared with the footer -->
             <LayoutHelper />
@@ -72,9 +74,7 @@ async function logout() {
             <!-- Opens on hover or click (click is what touch devices use), like the DATASETS menu -->
             <v-menu open-on-hover open-on-click>
                 <template v-slot:activator="{ props }">
-                    <div v-bind="props">
-                        <v-icon>mdi-dots-vertical</v-icon>
-                    </div>
+                    <v-btn v-bind="props" variant="text" color="on-primary" icon="mdi-dots-vertical" aria-label="Account menu"></v-btn>
                 </template>
 
                 <v-list>
