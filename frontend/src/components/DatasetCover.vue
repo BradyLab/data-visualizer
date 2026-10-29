@@ -23,8 +23,8 @@ watch(
 
 <template>
     <!-- Loaded cover, or the fallback color block of the same height -->
-    <v-img v-if="src" :src="src" :height="height" cover></v-img>
-    <div v-else class="cover-fallback" :style="{ height: `${height}px` }"></div>
+    <v-img v-if="src" :src="src" :height="height" alt="" cover></v-img>
+    <div v-else class="cover-fallback" aria-hidden="true" :style="{ height: `${height}px` }"></div>
 </template>
 
 <style scoped>

@@ -11,6 +11,7 @@ import AppHeader from "@src/layouts/AppHeader.vue";
 import BradyLabLogo from "@src/components/BradyLabLogo.vue";
 import LayoutHelper from "@src/components/LayoutHelper.vue";
 import NotFoundView from "@src/views/NotFoundView.vue";
+import { announce } from "@src/utils/announce";
 
 type Fake = {
     push: ReturnType<typeof vi.fn>;
@@ -69,11 +70,10 @@ describe("LayoutHelper", () => {
 });
 
 describe("BradyLabLogo", () => {
-    it("takes the user home when clicked", async () => {
+    it("is a link that takes the user home", async () => {
         const wrapper = mount(BradyLabLogo, { global });
-        expect(wrapper.find("img").attributes("alt")).toBe("Brady Lab logo");
-        await wrapper.find("img").trigger("click");
-        expect(fake.push).toHaveBeenCalledWith("/home");
+        expect(wrapper.find("img").attributes("alt")).toBe("Brady Lab, home");
+        expect(wrapper.findComponent(RouterLinkStub).props("to")).toBe("/home");
     });
 });
 
@@ -92,7 +92,7 @@ describe("AppFooter", () => {
     it("shows the help link and the shared links", () => {
         const wrapper = mount(AppFooter, { global });
         const help = wrapper.find(`a[href="${HELP_URL}"]`);
-        expect(help.text()).toBe("HELP");
+        expect(help.text()).toBe("HELP (opens in new tab)");
         expect(help.attributes("target")).toBe("_blank");
         expect(wrapper.text()).toContain("ABOUT");
         expect(wrapper.find("img").exists()).toBe(true);
@@ -107,7 +107,7 @@ describe("AppFooter", () => {
 describe("AppHeader", () => {
     it("lists the datasets in the DATASETS menu and opens the chosen one", async () => {
         const wrapper = inApp(AppHeader);
-        const items = await menuItems(wrapper.findAll(".v-app-bar .v-col div").find((d) => d.text().includes("DATASETS"))!);
+        const items = await menuItems(wrapper.findAll(".v-app-bar .v-col button").find((d) => d.text().includes("DATASETS"))!);
         expect(items.map((i) => i.textContent!.trim())).toEqual(["Brain", "Liver"]);
         items[1]!.click();
         expect(fake.push).toHaveBeenCalledWith("/dataset/liver");
@@ -115,13 +115,13 @@ describe("AppHeader", () => {
 
     it("offers New Dataset only to those who may create datasets", async () => {
         let wrapper = inApp(AppHeader);
-        let items = await menuItems(wrapper.findAll(".v-app-bar .v-col div").find((d) => d.text().includes("DATASETS"))!);
+        let items = await menuItems(wrapper.findAll(".v-app-bar .v-col button").find((d) => d.text().includes("DATASETS"))!);
         expect(items.map((i) => i.textContent!.trim())).not.toContain("New Dataset");
         wrapper.unmount();
         document.body.innerHTML = "";
         fake.auth.canCreateDatasets = true;
         wrapper = inApp(AppHeader);
-        items = await menuItems(wrapper.findAll(".v-app-bar .v-col div").find((d) => d.text().includes("DATASETS"))!);
+        items = await menuItems(wrapper.findAll(".v-app-bar .v-col button").find((d) => d.text().includes("DATASETS"))!);
         const create = items.find((i) => i.textContent!.includes("New Dataset"))!;
         create.click();
         expect(fake.push).toHaveBeenCalledWith("/dataset/new");
@@ -129,7 +129,7 @@ describe("AppHeader", () => {
 
     it("offers LOG IN to a logged-out visitor", async () => {
         const wrapper = inApp(AppHeader);
-        const items = await menuItems(wrapper.find(".v-toolbar__append div"));
+        const items = await menuItems(wrapper.find(".v-toolbar__append button"));
         expect(items.map((i) => i.textContent!.trim())).toEqual(["LOG IN"]);
         items[0]!.click();
         expect(fake.push).toHaveBeenCalledWith("/login");
@@ -138,7 +138,7 @@ describe("AppHeader", () => {
     it("offers SETTINGS and LOG OUT to a logged-in user, and logging out goes home", async () => {
         fake.auth.isLoggedIn = true;
         const wrapper = inApp(AppHeader);
-        const items = await menuItems(wrapper.find(".v-toolbar__append div"));
+        const items = await menuItems(wrapper.find(".v-toolbar__append button"));
         expect(items.map((i) => i.textContent!.trim())).toEqual(["SETTINGS", "LOG OUT"]);
         items[0]!.click();
         expect(fake.push).toHaveBeenCalledWith("/settings");
@@ -148,8 +148,12 @@ describe("AppHeader", () => {
         expect(fake.push).toHaveBeenLastCalledWith("/home");
     });
 
+    it("names the icon-only account menu button", () => {
+        expect(inApp(AppHeader).find(".v-toolbar__append button").attributes("aria-label")).toBe("Account menu");
+    });
+
     it("links to the help document", () => {
-        expect(inApp(AppHeader).find(`a[href="${HELP_URL}"]`).text()).toBe("HELP");
+        expect(inApp(AppHeader).find(`a[href="${HELP_URL}"]`).text()).toBe("HELP (opens in new tab)");
     });
 });
 
@@ -159,6 +163,26 @@ describe("AppDefault", () => {
         AppFooter: { template: "<footer class='stub-footer' />" },
         "router-view": { template: "<section class='stub-view' />" },
     };
+
+    it("starts with a skip link that moves focus to the main content", async () => {
+        const wrapper = inApp(AppDefault, stubs);
+        const skip = wrapper.find("a.skip-link");
+        expect(skip.text()).toBe("Skip to main content");
+        expect(skip.attributes("href")).toBe("#main");
+        await skip.trigger("click");
+        expect(document.activeElement).toBe(wrapper.find("main#main").element);
+    });
+
+    it("has a polite live region for announcements", async () => {
+        vi.useFakeTimers();
+        const wrapper = inApp(AppDefault, stubs);
+        announce("Moved to the home page");
+        await vi.advanceTimersByTimeAsync(100);
+        const region = wrapper.find('[role="status"]');
+        expect(region.attributes("aria-live")).toBe("polite");
+        expect(region.text()).toBe("Moved to the home page");
+        vi.useRealTimers();
+    });
 
     it("renders the header, the routed view and the footer without warnings when all is well", () => {
         const wrapper = inApp(AppDefault, stubs);

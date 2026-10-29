@@ -36,7 +36,7 @@ test('a guest sees public datasets only, and can open a public one without edit 
   await expect(page).toHaveURL(new RegExp(`/dataset/${open.url}$`))
   await expect(page.getByRole('heading', { name: open.name })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Edit' })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Data' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Data', exact: true })).toHaveCount(0)
 })
 
 test('a private dataset looks like it does not exist to a guest', async ({ page, request }) => {

@@ -5,6 +5,7 @@ import axios from "axios";
 import { authApi } from "@src/api/auth";
 import { useAuthStore } from "@src/stores/auth";
 import { useSocketStore } from "@src/stores/socket";
+import { validateForm } from "@src/utils/validateForm";
 import { UserStatus } from "@commons/user";
 import { MIN_PASSWORD_LENGTH } from "@commons/general";
 
@@ -56,7 +57,7 @@ watch(open, (isOpen) => {
 // Validates the form, then changes the password; shows a message either way and closes only via the buttons
 async function submit() {
     // Ignore repeat submits (e.g. Enter key) once the change has gone through
-    if (success.value || !(await form.value?.validate())?.valid) return;
+    if (success.value || !(await validateForm(form.value))) return;
     saving.value = true;
     error.value = null;
     try {
@@ -83,15 +84,19 @@ async function submit() {
 
 <template>
     <!-- Cannot be dismissed while saving, or while an invited user still has to replace the default password -->
-    <v-dialog v-model="open" max-width="480" :persistent="saving || mustChange">
+    <v-dialog v-model="open" max-width="480" :persistent="saving || mustChange" aria-labelledby="change-password-title">
         <v-card class="pa-4">
-            <v-card-title>Change Password</v-card-title>
+            <v-card-title id="change-password-title" tag="h2">Change Password</v-card-title>
             <v-card-text class="px-4 pb-0">
-                <v-form ref="form" @submit.prevent="submit">
+                <v-alert v-if="mustChange && !success" type="info" variant="tonal" density="compact" class="mb-4">
+                    You must replace your temporary password before you can continue.
+                </v-alert>
+                <v-form id="change-password-form" ref="form" @submit.prevent="submit">
                     <v-text-field
                         v-model="oldPassword"
                         label="Old password"
                         type="password"
+                        autocomplete="current-password"
                         :clearable="false"
                         :rules="[required('Old password')]"
                     ></v-text-field>
@@ -99,6 +104,7 @@ async function submit() {
                         v-model="newPassword"
                         label="New password"
                         type="password"
+                        autocomplete="new-password"
                         :clearable="false"
                         :rules="[required('New password'), minLength, notSameAsOld]"
                     ></v-text-field>
@@ -106,6 +112,7 @@ async function submit() {
                         v-model="confirmPassword"
                         label="Confirm new password"
                         type="password"
+                        autocomplete="new-password"
                         :clearable="false"
                         :rules="[required('Confirmation'), matchesNew]"
                     ></v-text-field>
@@ -118,7 +125,9 @@ async function submit() {
                 <v-btn v-if="!mustChange" :disabled="saving" color="white" @click="open = false">{{
                     success ? "Close" : "Cancel"
                 }}</v-btn>
-                <v-btn v-if="!success" :loading="saving" color="white" variant="tonal" @click="submit">Change</v-btn>
+                <v-btn v-if="!success" :loading="saving" color="white" variant="tonal" type="submit" form="change-password-form">
+                    Change
+                </v-btn>
             </v-card-actions>
         </v-card>
     </v-dialog>

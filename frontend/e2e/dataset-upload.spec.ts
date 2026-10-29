@@ -27,8 +27,8 @@ test('creates a dataset with an .rds upload and shows it', async ({ page }) => {
   await expect(page).toHaveURL(new RegExp(`/dataset/${slug}$`))
   await expect(page.getByRole('heading', { name })).toBeVisible()
   // The Data button only shows for users who may download, and the download itself needs the uploaded file to exist
-  await expect(page.getByRole('button', { name: 'Data' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Data', exact: true })).toBeVisible()
   const download = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Data' }).click()
+  await page.getByRole('button', { name: 'Data', exact: true }).click()
   expect((await download).suggestedFilename()).toContain('smoke')
 })

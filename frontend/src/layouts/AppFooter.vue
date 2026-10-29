@@ -13,12 +13,14 @@ const route = useRoute();
     <!-- Footer is only rendered when the current route does not hide it -->
     <v-footer class="pa-0 pl-1" style="min-height: unset; height: auto" v-if="!route.meta.hideFooter">
         <v-container fluid class="pa-0">
-            <v-row class="align-center">
+            <v-row tag="nav" aria-label="Footer" class="align-center">
                 <!-- Logo (links to home) -->
                 <BradyLabLogo />
                 <v-col cols="auto" class="ml-n4">
                     <!-- Link to the help document (opens in a new tab) -->
-                    <a :href="HELP_URL" target="_blank" class="text-decoration-none text-text"> HELP </a>
+                    <a :href="HELP_URL" target="_blank" rel="noopener" class="text-decoration-none text-text">
+                        HELP<span class="visually-hidden"> (opens in new tab)</span>
+                    </a>
                 </v-col>
                 <!-- ABOUT and FEEDBACK links shared with the header -->
                 <LayoutHelper />

@@ -1,13 +1,12 @@
 <script setup lang="ts">
 // Brady Lab logo that returns the user to the home page when clicked
-import { useRouter } from "vue-router";
-
-const router = useRouter();
 </script>
 
 <template>
-    <!-- Whole column is the click target so the logo and its padding both navigate home -->
-    <v-col cols="auto" class="cursor-pointer mt-2" @click="router.push('/home')">
-        <img alt="Brady Lab logo" class="logo" src="@src/assets/BradyLabNewLogo.png" width="100" height="58" />
+    <!-- A real link, so it can be reached and activated with the keyboard; its name is where it goes -->
+    <v-col cols="auto" class="mt-2">
+        <RouterLink to="/home" class="d-inline-block">
+            <img alt="Brady Lab, home" class="logo" src="@src/assets/BradyLabNewLogo.png" width="100" height="58" />
+        </RouterLink>
     </v-col>
 </template>

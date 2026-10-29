@@ -132,6 +132,7 @@ function inviteUser() {
                 closable
                 color="primary"
                 @click:close="statusFilter = statusFilter.filter((s) => s !== status)"
+                :close-label="`Remove filter Status: ${status}`"
             >
                 Status: {{ status }}
             </v-chip>
@@ -141,25 +142,44 @@ function inviteUser() {
                 closable
                 color="primary"
                 @click:close="roleFilter = roleFilter.filter((r) => r !== role)"
+                :close-label="`Remove filter Role: ${role}`"
             >
                 Role: {{ role }}
             </v-chip>
         </div>
 
         <!-- One row per user, with buttons to edit them or jump to their permissions and activity logs -->
-        <v-data-table :headers="headers" :items="filteredUsers" item-value="id">
+        <!-- Tells screen readers how many users the filters leave -->
+        <div class="visually-hidden" role="status">
+            {{ filteredUsers.length }} {{ filteredUsers.length === 1 ? "user" : "users" }} shown
+        </div>
+        <v-data-table :headers="headers" :items="filteredUsers" item-value="id" aria-label="Users">
+            <template #[`header.actions`]><span class="visually-hidden">Actions</span></template>
             <template v-slot:item="{ item: user }">
                 <tr>
                     <td>{{ user.name }}</td>
                     <td>{{ user.email }}</td>
                     <td>{{ user.role }}</td>
                     <td>{{ user.status }}</td>
-                    <td>
-                        <v-btn class="mr-2" prepend-icon="mdi-pencil" @click="edit(user)"> Edit </v-btn>
-                        <v-btn class="mr-2" prepend-icon="mdi-shield-key-outline" @click="viewPermissions(user.id)">
+                    <td class="text-no-wrap">
+                        <v-btn class="mr-2" prepend-icon="mdi-pencil" :aria-label="`Edit ${user.name}`" @click="edit(user)">
+                            Edit
+                        </v-btn>
+                        <v-btn
+                            class="mr-2"
+                            prepend-icon="mdi-shield-key-outline"
+                            :aria-label="`Permissions of ${user.name}`"
+                            @click="viewPermissions(user.id)"
+                        >
                             Permissions
                         </v-btn>
-                        <v-btn prepend-icon="mdi-history" @click="viewActivityLogs(user.id)">Activity Logs</v-btn>
+                        <v-btn
+                            prepend-icon="mdi-history"
+                            :aria-label="`Activity Logs of ${user.name}`"
+                            @click="viewActivityLogs(user.id)"
+                        >
+                            Activity Logs
+                        </v-btn>
                     </td>
                 </tr>
             </template>

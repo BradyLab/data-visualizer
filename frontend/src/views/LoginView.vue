@@ -4,6 +4,7 @@ import { ref, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "@src/stores/auth";
 import { UserStatus } from "@commons/user";
+import { validateForm } from "@src/utils/validateForm";
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -24,8 +25,13 @@ const afterLogin = () => {
     return typeof redirect === "string" && redirect.startsWith("/") && !redirect.startsWith("//") ? redirect : "/home";
 };
 
+// The v-form, used to run the field rules before logging in
+const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
+const required = (label: string) => (v: string) => !!v || `${label} is required`;
+
 // Submits the credentials; on success goes to afterLogin(), otherwise the store's error is shown
 const submit = async () => {
+    if (!(await validateForm(form.value))) return;
     if (!(await auth.login(email.value, password.value))) return;
     await router.push(afterLogin());
 };
@@ -46,18 +52,19 @@ onMounted(() => {
                 <img src="@src/assets/BradyLabNewLogo.png" alt="Brady Lab logo" width="180" />
             </v-row>
 
-            <v-form @submit.prevent="submit">
+            <h1 class="text-h6 text-center mb-4 visually-hidden">Log In</h1>
+
+            <v-form ref="form" @submit.prevent="submit">
                 <!-- Email input -->
                 <v-row class="mt-2 mb-0">
                     <v-col>
-                        <div class="text-body-medium">Email Address</div>
                         <v-text-field
                             v-model="email"
                             type="email"
                             autocomplete="username"
                             prepend-inner-icon="mdi-email-outline"
                             label="Email Address"
-                            single-line
+                            :rules="[required('Email address')]"
                             clearable
                         ></v-text-field>
                     </v-col>
@@ -65,18 +72,28 @@ onMounted(() => {
                 <!-- Password input with show/hide toggle -->
                 <v-row class="my-0">
                     <v-col>
-                        <div class="text-body-medium">Password</div>
                         <v-text-field
                             v-model="password"
                             autocomplete="current-password"
                             prepend-inner-icon="mdi-lock-outline"
-                            :append-inner-icon="showPass ? 'mdi-eye-outline' : 'mdi-eye-off-outline'"
                             :type="showPass ? 'text' : 'password'"
-                            @click:append-inner="showPass = !showPass"
                             label="Password"
+                            :rules="[required('Password')]"
                             single-line
                             clearable
-                        ></v-text-field>
+                        >
+                            <template #append-inner>
+                                <v-btn
+                                    :icon="showPass ? 'mdi-eye-outline' : 'mdi-eye-off-outline'"
+                                    variant="text"
+                                    size="small"
+                                    density="comfortable"
+                                    :aria-label="showPass ? 'Hide password' : 'Show password'"
+                                    :aria-pressed="showPass"
+                                    @click="showPass = !showPass"
+                                ></v-btn>
+                            </template>
+                        </v-text-field>
                     </v-col>
                 </v-row>
 
@@ -84,9 +101,7 @@ onMounted(() => {
                 <v-alert v-if="auth.error" type="error" variant="tonal" density="compact" class="mb-3">
                     {{ auth.error }}
                 </v-alert>
-                <v-btn type="submit" color="primary" block class="mb-3" :loading="auth.loading" :disabled="!email || !password">
-                    Log In
-                </v-btn>
+                <v-btn type="submit" color="primary" block class="mb-3" :loading="auth.loading"> Log In </v-btn>
             </v-form>
 
             <v-row class="justify-center text-label-medium">Need an account? Reach out to the Brady Lab!</v-row>

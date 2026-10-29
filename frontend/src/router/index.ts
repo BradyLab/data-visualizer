@@ -1,11 +1,13 @@
 // Vue Router setup: defines the app's pages and their URLs
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@src/stores/auth";
+import { announce } from "@src/utils/announce";
 
-// Route meta flags: hideFooter hides the footer, requiresAuth needs a login, requiresAdmin needs an admin (and implies a login),
+// Route meta flags: title is the page title (shown in the tab and read by screen readers on navigation), hideFooter hides the footer, requiresAuth needs a login, requiresAdmin needs an admin (and implies a login),
 // requiresDatasetCreator needs an admin or lab member (and implies a login)
 declare module "vue-router" {
     interface RouteMeta {
+        title?: string;
         hideFooter?: boolean;
         requiresAuth?: boolean;
         requiresAdmin?: boolean;
@@ -30,33 +32,33 @@ const router = createRouter({
             path: "/home",
             name: "home",
             component: async () => import("@src/views/HomeView.vue"),
-            meta: { hideFooter: false },
+            meta: { title: "Datasets", hideFooter: false },
         },
         {
             path: "/about",
             name: "about",
             component: () => import("@src/views/AboutView.vue"),
-            meta: { hideFooter: false },
+            meta: { title: "About", hideFooter: false },
         },
         {
             path: "/settings",
             name: "settings",
             component: () => import("@src/views/SettingsView.vue"),
-            meta: { hideFooter: false, requiresAuth: true },
+            meta: { title: "Settings", hideFooter: false, requiresAuth: true },
         },
         // Shows the dataset with the URL slug in :datasetURL
         {
             path: "/dataset/:datasetURL",
             name: "dataset",
             component: () => import("@src/views/DatasetView.vue"),
-            meta: { hideFooter: false },
+            meta: { title: "Dataset", hideFooter: false },
         },
         // Page for editing the dataset with the URL slug in :datasetURL (same form as /new)
         {
             path: "/dataset/:datasetURL/edit",
             name: "edit-dataset",
             component: () => import("@src/views/EditDatasetView.vue"),
-            meta: { hideFooter: false, requiresAuth: true },
+            meta: { title: "Edit Dataset", hideFooter: false, requiresAuth: true },
         },
         // Page for creating a new dataset; static routes outrank "/dataset/:datasetURL", so "new" is a reserved slug
         // (RESERVED_DATASET_SLUGS in commons/dataset.ts, enforced by the Datasets model and the edit form)
@@ -64,42 +66,42 @@ const router = createRouter({
             path: "/dataset/new",
             name: "new",
             component: () => import("@src/views/EditDatasetView.vue"),
-            meta: { hideFooter: false, requiresAuth: true, requiresDatasetCreator: true },
+            meta: { title: "New Dataset", hideFooter: false, requiresAuth: true, requiresDatasetCreator: true },
         },
         // Login page (footer hidden)
         {
             path: "/login",
             name: "login",
             component: () => import("@src/views/LoginView.vue"),
-            meta: { hideFooter: true },
+            meta: { title: "Log In", hideFooter: true },
         },
         // Admin User Management Page
         {
             path: "/admin/user-mgmt",
             name: "user-mgmt",
             component: () => import("@src/views/admin/UserManagement.vue"),
-            meta: { hideFooter: false, requiresAuth: true, requiresAdmin: true },
+            meta: { title: "User Management", hideFooter: false, requiresAuth: true, requiresAdmin: true },
         },
         // Admin Activity Logs Page
         {
             path: "/admin/activity-logs",
             name: "activity-logs",
             component: () => import("@src/views/admin/ActivityLogs.vue"),
-            meta: { hideFooter: false, requiresAuth: true, requiresAdmin: true },
+            meta: { title: "Activity Logs", hideFooter: false, requiresAuth: true, requiresAdmin: true },
         },
         // Permission management page (admins see all datasets, other users only the datasets they own; see fetchManaged)
         {
             path: "/admin/permissions",
             name: "permissions",
             component: () => import("@src/views/admin/PermissionManagement.vue"),
-            meta: { hideFooter: false, requiresAuth: true },
+            meta: { title: "Permissions Management", hideFooter: false, requiresAuth: true },
         },
         // Catch-all for URLs that match no other route; must stay last
         {
             path: "/:pathMatch(.*)*",
             name: "not-found",
             component: () => import("@src/views/NotFoundView.vue"),
-            meta: { hideFooter: false },
+            meta: { title: "Page Not Found", hideFooter: false },
         },
     ],
 });
@@ -116,6 +118,12 @@ router.beforeEach((to) => {
     if (to.meta.requiresAuth && !auth.isLoggedIn) return { name: "login", query: { redirect: to.fullPath } };
     if (to.meta.requiresAdmin && !auth.isAdmin) return { name: "home" };
     if (to.meta.requiresDatasetCreator && !auth.canCreateDatasets) return { name: "home" };
+});
+
+// Gives every page its own title, so the tab tells pages apart, and announces it, since a screen reader says nothing when only the content changes
+router.afterEach((to) => {
+    document.title = to.meta.title ? `${to.meta.title} | Brady Lab Datasets` : "Brady Lab Datasets";
+    announce(document.title);
 });
 
 export default router;

@@ -207,7 +207,7 @@ describe("PermissionManagement", () => {
 
     it("asks for confirmation before revoking, and Cancel revokes nothing", async () => {
         const { wrapper, vm } = await render();
-        await wrapper.findAll('button[aria-label="Delete permission"]')[1]!.trigger("click");
+        await wrapper.findAll('button[aria-label^="Delete permission"]')[1]!.trigger("click");
         expect(vm.confirmOpen).toBe(true);
         expect(document.body.textContent).toContain("Remove Bo's access to Liver?");
         const buttons = [...document.body.querySelectorAll<HTMLButtonElement>(".v-dialog button")];
@@ -220,7 +220,7 @@ describe("PermissionManagement", () => {
     it("revokes the confirmed permission and closes the popup, or reports a failure", async () => {
         const { wrapper, vm } = await render();
         const confirm = async () => {
-            await wrapper.findAll('button[aria-label="Delete permission"]')[0]!.trigger("click");
+            await wrapper.findAll('button[aria-label^="Delete permission"]')[0]!.trigger("click");
             [...document.body.querySelectorAll<HTMLButtonElement>(".v-dialog button")].find((b) => b.textContent!.includes("Delete"))!.click();
             await flushPromises();
         };

@@ -49,14 +49,25 @@ beforeEach(() => {
 });
 
 describe("LoginView", () => {
-    it("keeps the button disabled until both fields are filled", async () => {
-        const { wrapper } = render();
-        const button = () => wrapper.find('button[type="submit"]');
-        expect(button().attributes("disabled")).toBeDefined();
+    it("does not log in until both fields are filled, and says which are missing", async () => {
+        const { wrapper, auth } = render();
+        const login = vi.spyOn(auth, "login");
         await wrapper.find('input[type="email"]').setValue("a@b.c");
-        expect(button().attributes("disabled")).toBeDefined();
-        await wrapper.find('input[autocomplete="current-password"]').setValue("pw");
-        expect(button().attributes("disabled")).toBeUndefined();
+        await wrapper.find("form").trigger("submit");
+        await flushPromises();
+        expect(login).not.toHaveBeenCalled();
+        expect(wrapper.text()).toContain("Password is required");
+        expect(wrapper.find('button[type="submit"]').attributes("disabled")).toBeUndefined();
+    });
+
+    it("has a page heading and a named show/hide password button", async () => {
+        const { wrapper } = render();
+        expect(wrapper.find("h1").text()).toBe("Log In");
+        const toggle = wrapper.find('button[aria-label="Show password"]');
+        expect(wrapper.find('input[autocomplete="current-password"]').attributes("type")).toBe("password");
+        await toggle.trigger("click");
+        expect(wrapper.find('input[autocomplete="current-password"]').attributes("type")).toBe("text");
+        expect(wrapper.find('button[aria-label="Hide password"]').attributes("aria-pressed")).toBe("true");
     });
 
     it("logs in with what was typed and goes home", async () => {

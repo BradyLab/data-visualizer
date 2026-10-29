@@ -5,6 +5,7 @@ import { UserRoles, UserStatus, type IUser } from "@commons/user";
 import { authApi } from "@src/api/auth";
 import { useAuthStore } from "@src/stores/auth";
 import router from "@src/router";
+import { announcement } from "@src/utils/announce";
 
 vi.mock("@src/api/auth", () => ({ authApi: { login: vi.fn(), logout: vi.fn(), me: vi.fn() } }));
 // Pages are lazy-loaded and not under test; stub them so navigating does not pull in the whole UI
@@ -24,6 +25,22 @@ beforeEach(async () => {
     localStorage.clear();
     setActivePinia(createPinia());
     await router.push("/home");
+});
+
+describe("page titles", () => {
+    it("sets the title of the page that opened, and announces it", async () => {
+        vi.useFakeTimers();
+        await router.push("/about");
+        expect(document.title).toBe("About | Brady Lab Datasets");
+        await vi.advanceTimersByTimeAsync(100);
+        expect(announcement.value).toBe("About | Brady Lab Datasets");
+        vi.useRealTimers();
+    });
+
+    it("gives the 404 page its own title", async () => {
+        await router.push("/no/such/page");
+        expect(document.title).toBe("Page Not Found | Brady Lab Datasets");
+    });
 });
 
 describe("route guard", () => {

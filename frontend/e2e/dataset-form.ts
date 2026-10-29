@@ -9,7 +9,7 @@ export const TISSUE_MAP = Buffer.from(['"ROI.name","ROI.id","point","x","y"', '"
 
 /** The "Pick Your Plots" dropdown */
 export const plotsField = (page: Page) =>
-  page.locator('xpath=//*[normalize-space(text())="Pick Your Plots"]/following::div[contains(@class,"v-select")][1]')
+  page.locator('div.v-select', { has: page.locator('label', { hasText: 'Pick Your Plots' }) })
 
 /** Picks a plot in the dropdown and closes it */
 export const pickPlot = async (page: Page, plot: DatasetPlots) => {

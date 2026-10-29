@@ -229,7 +229,7 @@ async function confirmDelete() {
                         </v-menu>
                     </v-list-item>
                     <v-divider></v-divider>
-                    <v-list-item @click="showInactive = !showInactive">
+                    <v-list-item role="menuitemcheckbox" :aria-checked="showInactive" @click="showInactive = !showInactive">
                         <template #prepend>
                             <v-icon :icon="showInactive ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'"></v-icon>
                         </template>
@@ -243,7 +243,13 @@ async function confirmDelete() {
 
         <!-- Active filters (only shown when there are any); closing a chip removes that value -->
         <div v-if="userFilter.length || datasetFilter.length || showInactive" class="d-flex flex-wrap ga-2 mb-3">
-            <v-chip v-if="showInactive" closable color="primary" @click:close="showInactive = false">
+            <v-chip
+                v-if="showInactive"
+                closable
+                color="primary"
+                close-label="Remove filter Including deactivated users"
+                @click:close="showInactive = false"
+            >
                 Including deactivated users
             </v-chip>
             <v-chip
@@ -252,6 +258,7 @@ async function confirmDelete() {
                 closable
                 color="primary"
                 @click:close="userFilter = userFilter.filter((u) => u !== id)"
+                :close-label="`Remove filter User: ${userName(id)}`"
             >
                 User: {{ userName(id) }}
             </v-chip>
@@ -261,13 +268,19 @@ async function confirmDelete() {
                 closable
                 color="primary"
                 @click:close="datasetFilter = datasetFilter.filter((d) => d !== id)"
+                :close-label="`Remove filter Dataset: ${datasetName(id)}`"
             >
                 Dataset: {{ datasetName(id) }}
             </v-chip>
         </div>
 
         <!-- One row per permission; the level is edited in place and the bin button opens the delete confirmation -->
-        <v-data-table :headers="headers" :items="rows" item-value="key">
+        <!-- Tells screen readers how many permissions the filters leave -->
+        <div class="visually-hidden" role="status">
+            {{ rows.length }} {{ rows.length === 1 ? "permission" : "permissions" }} shown
+        </div>
+        <v-data-table :headers="headers" :items="rows" item-value="key" aria-label="Permissions">
+            <template #[`header.actions`]><span class="visually-hidden">Actions</span></template>
             <template v-slot:item="{ item: perm }">
                 <tr>
                     <td>{{ perm.userName }}</td>
@@ -282,6 +295,7 @@ async function confirmDelete() {
                         <v-select
                             v-if="optionsFor(perm.userId).length"
                             :model-value="perm.perm"
+                            :aria-label="`Permission of ${perm.userName} on ${perm.datasetName}`"
                             :items="optionsFor(perm.userId)"
                             :disabled="savingKey === perm.key"
                             :loading="savingKey === perm.key"
@@ -298,7 +312,7 @@ async function confirmDelete() {
                         <v-btn
                             icon="mdi-delete"
                             variant="text"
-                            aria-label="Delete permission"
+                            :aria-label="`Delete permission of ${perm.userName} on ${perm.datasetName}`"
                             :disabled="savingKey === perm.key"
                             @click="openDelete(perm)"
                         ></v-btn>
@@ -308,9 +322,9 @@ async function confirmDelete() {
         </v-data-table>
 
         <!-- Cannot be dismissed while the delete is in flight -->
-        <v-dialog v-model="confirmOpen" max-width="480" :persistent="deleting">
+        <v-dialog v-model="confirmOpen" max-width="480" :persistent="deleting" aria-labelledby="delete-permission-title">
             <v-card class="pa-4">
-                <v-card-title>Delete Permission</v-card-title>
+                <v-card-title id="delete-permission-title" tag="h2">Delete Permission</v-card-title>
                 <v-card-text>
                     Remove {{ toDelete?.userName }}'s access to {{ toDelete?.datasetName }}? This cannot be undone.
                 </v-card-text>

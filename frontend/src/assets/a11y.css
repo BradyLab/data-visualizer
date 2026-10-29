@@ -1,0 +1,79 @@
+/* Accessibility helpers shared by every page */
+
+/* Text for screen readers only (it stays in the accessibility tree but takes no visible space) */
+.visually-hidden {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Skip link: first focusable element on the page, only visible while it has focus */
+.skip-link {
+    position: fixed;
+    top: 8px;
+    left: 8px;
+    z-index: 3000;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #103819;
+    font-weight: 500;
+    transform: translateY(-200%);
+}
+.skip-link:focus {
+    transform: none;
+}
+
+/* Visible keyboard focus with at least 3:1 contrast on both the white page and the dark green surfaces:
+   a white ring with a dark green ring around it, so one of the two always stands out */
+:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 0;
+    box-shadow: 0 0 0 4px #103819;
+}
+/* Text fields already show focus through their thicker border, so the ring is left off the inner input */
+.v-field input:focus-visible,
+.v-field textarea:focus-visible,
+.v-field select:focus-visible {
+    outline: none;
+    box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* The dialogs sit on the dark green surface, where the default error red (1.9:1) and info blue (3.8:1) are too dark to read,
+   so inside them those colours are swapped for lighter ones (and the text on top of them for the dark green).
+   Every Vuetify component redeclares the theme colors on itself, so this has to match all of them, not just the card */
+.v-dialog .v-theme--light {
+    --v-theme-error: 255, 138, 128;
+    --v-theme-on-error: 16, 56, 25;
+    --v-theme-info: 100, 181, 246;
+    --v-theme-on-info: 16, 56, 25;
+}
+
+/* Vuetify dims secondary text (field labels, hints, subtitles) to 60% of the text color, which leaves grey text on white just
+   under the 4.5:1 minimum; 70% clears it on both the white page and the dark green surfaces */
+.v-theme--light {
+    --v-medium-emphasis-opacity: 0.7;
+}
+
+/* Error text inside the dialogs is the light red at full strength, since the usual dimming would take it below 4.5:1 on the dark green */
+.v-dialog .v-input--error .v-field-label,
+.v-dialog .v-input--error .v-messages {
+    opacity: 1 !important;
+}

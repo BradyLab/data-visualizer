@@ -149,16 +149,21 @@ describe("ActivityLogs", () => {
             act("long", "u1", ActivityType.USER_UPDATED, { a: 1, b: 2, c: 3, d: 4 }),
         ];
         const { wrapper, vm } = await render();
-        const [short, long] = wrapper.findAll("tbody pre");
-        await short!.trigger("click");
-        expect(vm.expanded).toEqual([]);
-        expect(long!.attributes("title")).toBe("Click to expand or collapse");
+        // Only the long data gets a toggle button; the short data has nothing to expand
+        const toggles = wrapper.findAll("tbody button");
+        expect(toggles).toHaveLength(1);
+        const [, long] = wrapper.findAll("tbody pre");
+        expect(toggles[0]!.text()).toBe("Show more");
+        expect(toggles[0]!.attributes("aria-expanded")).toBe("false");
+        expect(toggles[0]!.attributes("aria-controls")).toBe(long!.attributes("id"));
         expect(long!.attributes("style")).toContain("line-clamp");
-        await long!.trigger("click");
+        await toggles[0]!.trigger("click");
         await nextTick();
         expect(vm.expanded).toEqual(["long"]);
         expect(wrapper.findAll("tbody pre")[1]!.attributes("style")).not.toContain("line-clamp");
-        await wrapper.findAll("tbody pre")[1]!.trigger("click");
+        expect(wrapper.find("tbody button").text()).toBe("Show less");
+        expect(wrapper.find("tbody button").attributes("aria-expanded")).toBe("true");
+        await wrapper.find("tbody button").trigger("click");
         expect(vm.expanded).toEqual([]);
     });
 });

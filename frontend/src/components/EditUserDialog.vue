@@ -53,9 +53,9 @@ async function save() {
 </script>
 
 <template>
-    <v-dialog v-model="open" max-width="480" :persistent="saving">
+    <v-dialog v-model="open" max-width="480" :persistent="saving" aria-labelledby="edit-user-title">
         <v-card v-if="user" class="pa-4">
-            <v-card-title>{{ user.name }} ({{ user.email }})</v-card-title>
+            <v-card-title id="edit-user-title" tag="h2">{{ user.name }} ({{ user.email }})</v-card-title>
             <v-card-text class="px-4 pb-0">
                 <v-alert v-if="isSelf" type="info" variant="tonal" density="compact" class="mb-4">
                     You can't change your own role or status.

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Dataset page view: shows a dataset from the backend (found by the url slug in the route) and opens the Shiny plot viewer for it,
 // where the plots, genes and cell types are picked.
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import axios from "axios";
 import { useRoute, useRouter } from "vue-router";
 import { useFileStore } from "@src/stores/file";
@@ -49,6 +49,9 @@ async function generatePlots() {
     viewerLoading.value = true;
     try {
         viewerUrl.value = await datasetApi.getViewerUrl(datasetStore.currentDataset!.id);
+        // The Generate Plots button the keyboard focus was on disappears, so move the focus to the plots that replace it
+        await nextTick();
+        viewerFrame.value?.focus();
     } catch (err) {
         error.value =
             axios.isAxiosError(err) && err.response?.status === 503
@@ -60,6 +63,14 @@ async function generatePlots() {
         viewerLoading.value = false;
     }
 }
+
+// The tab title names the open dataset, so it is not just "Dataset" for every dataset page
+watch(
+    () => datasetStore.currentDataset?.name,
+    (name) => {
+        if (name) document.title = `${name} | Brady Lab Datasets`;
+    }
+);
 
 // Plots can only be shown once the server has built the plot data from the uploaded file
 const plotsReady = computed(() => datasetStore.currentDataset?.status === DatasetStatus.READY);
@@ -164,7 +175,7 @@ watch(
 <template>
     <!-- Not loaded yet: spinner while loading, otherwise the error -->
     <v-container v-if="!datasetStore.currentDataset" class="px-12">
-        <v-progress-circular v-if="loading" indeterminate></v-progress-circular>
+        <v-progress-circular v-if="loading" indeterminate aria-label="Loading dataset"></v-progress-circular>
         <v-alert v-else type="error" variant="tonal">{{ error }}</v-alert>
     </v-container>
     <div v-else class="px-5 mx-5 justify-center">
@@ -208,13 +219,23 @@ watch(
         </v-row>
 
         <!-- Dataset description -->
-        <v-row
+        <div
+            id="dataset-description"
             class="text-body-large description"
             :class="{ 'description-clamped': !descriptionExpanded }"
-            title="Click to expand or collapse"
-            @click="descriptionExpanded = !descriptionExpanded"
-            >{{ datasetStore.currentDataset.description }}</v-row
         >
+            {{ datasetStore.currentDataset.description }}
+        </div>
+        <v-btn
+            v-if="datasetStore.currentDataset.description"
+            variant="text"
+            size="small"
+            class="mt-1"
+            aria-controls="dataset-description"
+            :aria-expanded="descriptionExpanded"
+            @click="descriptionExpanded = !descriptionExpanded">
+            {{ descriptionExpanded ? "Show less" : "Show more" }}
+        </v-btn>
 
         <!-- Plot data status: the plots can only be shown once the uploaded data file has been processed -->
         <v-alert v-if="datasetStore.currentDataset.status === DatasetStatus.PROCESSING" type="info" variant="tonal" class="mt-6">
@@ -248,7 +269,7 @@ watch(
             ref="viewerFrame"
             :src="viewerUrl"
             :style="viewerHeight ? { height: `${viewerHeight}px` } : undefined"
-            title="Interactive plots"
+            :title="`Interactive plots for ${datasetStore.currentDataset.name}`"
             class="viewer-frame mt-6"
             referrerpolicy="same-origin"
         ></iframe>
@@ -256,9 +277,6 @@ watch(
 </template>
 
 <style scoped>
-.description {
-    cursor: pointer;
-}
 .description-clamped {
     display: -webkit-box;
     -webkit-line-clamp: 2;
