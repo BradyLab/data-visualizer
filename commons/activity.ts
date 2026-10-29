@@ -17,6 +17,7 @@ export enum ActivityType {
     FILE_UPLOADED = "FILE_UPLOADED",
     FILE_DOWNLOADED = "FILE_DOWNLOADED",
     FILE_DELETED = "FILE_DELETED",
+    PAGE_UPDATED = "PAGE_UPDATED",
 }
 
 // One page of the activity list: the rows on this page and how many activities match the filters in total

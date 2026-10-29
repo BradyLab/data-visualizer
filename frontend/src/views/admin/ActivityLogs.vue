@@ -49,6 +49,7 @@ const typeLabels: Record<ActivityType, string> = {
     [ActivityType.FILE_UPLOADED]: "File Uploaded",
     [ActivityType.FILE_DOWNLOADED]: "File Downloaded",
     [ActivityType.FILE_DELETED]: "File Deleted",
+    [ActivityType.PAGE_UPDATED]: "Page Updated",
 };
 
 // Shows the user's name, falling back to the id if the user isn't loaded, or "Deleted user" when the activity has no user id
