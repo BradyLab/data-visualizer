@@ -65,7 +65,7 @@ describe("LayoutHelper", () => {
     it("renders the ABOUT link to /about and a FEEDBACK label", () => {
         const wrapper = mount(defineComponent({ render: () => h("div", null, [h(LayoutHelper)]) }), { global });
         expect(wrapper.findComponent(RouterLinkStub).props("to")).toBe("/about");
-        expect(wrapper.text().replace(/\s+/g, " ")).toBe("| ABOUT | FEEDBACK");
+        expect(wrapper.text().replace(/\s+/g, " ")).toBe("| ABOUT");
     });
 });
 

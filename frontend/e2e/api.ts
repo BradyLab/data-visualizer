@@ -273,3 +273,13 @@ export const tryCreateDataset = (request: APIRequestContext, session: Session) =
     headers: bearer(session),
     data: { name: `Refused ${uid()}`, url: `refused-${uid()}`, description: '', doi: '', attribution: '', plots: [] },
   })
+
+/** Saves the About page's Markdown through the API (admin sessions only; an empty text restores the default) */
+export const saveAboutPage = async (request: APIRequestContext, session: Session, content: string) => {
+  const response = await request.put(`${API}/pages/about`, { headers: bearer(session), data: { content } })
+  expect(response.status(), 'save about page').toBe(200)
+}
+
+/** The raw response of an About page save, for specs that check who is refused (no session sends it logged out) */
+export const trySaveAboutPage = (request: APIRequestContext, session: Session | null, content: string) =>
+  request.put(`${API}/pages/about`, { headers: session ? bearer(session) : {}, data: { content } })

@@ -5,6 +5,7 @@ import { Datasets } from "@src/models/dataset.ts";
 import { Permissions } from "@src/models/permission.ts";
 import { Files } from "@src/models/file.ts";
 import { Activities } from "@src/models/activity.ts";
+import { Pages } from "@src/models/page.ts";
 
 // Read connection details from environment variables (see env.d.ts)
 const dbName = process.env.DB_NAME as string;
@@ -22,5 +23,5 @@ export const sequelize = new Sequelize({
     port: Number(dbPort),
     dialect: "postgres",
     logging: false, // do not print every SQL query
-    models: [Users, Datasets, Permissions, Files, Activities],
+    models: [Users, Datasets, Permissions, Files, Activities, Pages],
 });
