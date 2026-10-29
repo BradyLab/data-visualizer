@@ -23,6 +23,7 @@ import permissionRouter from "@src/routers/permission.ts";
 import fileRouter from "@src/routers/file.ts";
 import activityRouter from "@src/routers/activity.ts";
 import authRouter from "@src/routers/auth.ts";
+import pageRouter from "@src/routers/page.ts";
 
 import { UniqueConstraintError, ValidationError, ForeignKeyConstraintError, DatabaseError } from "sequelize";
 
@@ -67,6 +68,7 @@ export const get = () => {
     app.use(`/api/${apis.FILE}`, fileRouter);
     app.use(`/api/${apis.ACTIVITY}`, activityRouter);
     app.use(`/api/${apis.AUTH}`, authRouter);
+    app.use(`/api/${apis.PAGE}`, pageRouter);
 
     // Centralized error handling: must be registered after the routers. Express 5 forwards rejected async handlers here
     app.use((err: Error, req: Request, res: Response, next: NextFunction) => {

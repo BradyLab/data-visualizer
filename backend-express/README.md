@@ -105,6 +105,7 @@ All routes are under `/api/<resource>`; resource names come from `commons/genera
 | `files` | List/get/update/delete, `GET /current/:datasetId/:type/content` to download, `POST .../download-token` for browser downloads. Covers are visible with VIEW access; the records and bytes of data files (`.rds`, tissue map) need DOWNLOAD, so listing as a VIEW-only user returns just the cover and the live `file:uploaded` / `file:removed` events for data files go only to users who may download |
 | `files/upload` | tus endpoint for resumable uploads (metadata: `dataset_id`, `type`, `filename`, optional `version`, `updates`) |
 | `activities` | Read-only activity log (admin, or a user's own) |
+| `pages` | `GET /:slug` (anyone) returns an editable page's Markdown (currently `about`; empty until saved), `PUT /:slug` (admin only) replaces it. Needs migration 07 (`npm run db:migrate`) |
 
 Authentication is a `Bearer` JWT from `/auth/login`. Users in the `INVITED` state get a `403` with code
 `PASSWORD_CHANGE_REQUIRED` everywhere except `/auth/me`, `/auth/logout` and `/auth/change-password` until they change the default password (on routes open to guests they are treated as guests).

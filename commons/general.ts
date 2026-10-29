@@ -7,6 +7,7 @@ export enum apis {
     FILE = "files",
     ACTIVITY = "activities",
     AUTH = "auth",
+    PAGE = "pages",
 }
 
 // Minimum length for user passwords; enforced by the backend and mirrored by the frontend form rules
