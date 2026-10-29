@@ -7,6 +7,7 @@ import type { IDataset } from "@commons/dataset";
 import { UserStatus } from "@commons/user";
 import { usePermissionStore } from "@src/stores/permission";
 import { useUserStore } from "@src/stores/user";
+import { validateForm } from "@src/utils/validateForm";
 
 // v-model controls whether the popup is open
 const open = defineModel<boolean>({ default: false });
@@ -63,7 +64,7 @@ watch(open, (isOpen) => {
 
 // Validates the form, then grants the permission and closes the popup; shows an error and stays open if the request fails
 async function submit() {
-    if (!(await form.value?.validate())?.valid) return;
+    if (!(await validateForm(form.value))) return;
     saving.value = true;
     error.value = null;
     try {
@@ -82,11 +83,11 @@ async function submit() {
 
 <template>
     <!-- Cannot be dismissed while the request is in flight -->
-    <v-dialog v-model="open" max-width="480" :persistent="saving">
+    <v-dialog v-model="open" max-width="480" :persistent="saving" aria-labelledby="new-permission-title">
         <v-card class="pa-4">
-            <v-card-title>New Permission</v-card-title>
+            <v-card-title id="new-permission-title" tag="h2" class="my-0">New Permission</v-card-title>
             <v-card-text class="px-4 pb-0">
-                <v-form ref="form" @submit.prevent="submit">
+                <v-form id="new-permission-form" ref="form" @submit.prevent="submit">
                     <v-select
                         v-model="datasetId"
                         :items="datasets"
@@ -117,7 +118,7 @@ async function submit() {
             <v-card-actions>
                 <v-spacer></v-spacer>
                 <v-btn :disabled="saving" color="white" @click="open = false">Cancel</v-btn>
-                <v-btn :loading="saving" color="white" variant="tonal" @click="submit">Create</v-btn>
+                <v-btn :loading="saving" color="white" variant="tonal" type="submit" form="new-permission-form">Create</v-btn>
             </v-card-actions>
         </v-card>
     </v-dialog>

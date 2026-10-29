@@ -1,11 +1,12 @@
 <script setup lang="ts">
 // Popup for an admin to enter the name, email and role of a user to invite; sends the invite through the user store.
 // Afterwards it shows the user's temporary password once (it is never emailed), for the admin to pass on over another channel
-import { ref, watch } from "vue";
+import { nextTick, ref, watch } from "vue";
 import axios from "axios";
 import { ASSIGNABLE_ROLES, UserRoles } from "@commons/user";
 import { useUserStore } from "@src/stores/user";
 import { type InviteUserResult } from "@src/interfaces/user";
+import { validateForm } from "@src/utils/validateForm";
 
 // v-model controls whether the popup is open
 const open = defineModel<boolean>({ default: false });
@@ -44,11 +45,14 @@ watch(open, (isOpen) => {
 
 // Validates the form, then sends the invite and shows the temporary password; shows an error and stays on the form if the request fails
 async function submit() {
-    if (!(await form.value?.validate())?.valid) return;
+    if (!(await validateForm(form.value))) return;
     saving.value = true;
     error.value = null;
     try {
         invited.value = await userStore.addUser({ name: name.value.trim(), email: email.value.trim(), role: role.value });
+        // The form (with the focused button) is replaced by the password card, so move focus to the password
+        await nextTick();
+        document.getElementById("invite-temporary-password")?.focus();
     } catch (err) {
         error.value =
             axios.isAxiosError(err) && err.response?.status === 409
@@ -72,10 +76,15 @@ async function copyPassword() {
 
 <template>
     <!-- Cannot be dismissed while the invite request is in flight, or while the one-time password is showing -->
-    <v-dialog v-model="open" max-width="480" :persistent="saving || !!invited">
+    <v-dialog
+        v-model="open"
+        max-width="480"
+        :persistent="saving || !!invited"
+        :aria-labelledby="invited ? 'invited-title' : 'invite-title'"
+    >
         <!-- Step 2: the one-time temporary password -->
         <v-card v-if="invited" class="pa-4">
-            <v-card-title>User Invited</v-card-title>
+            <v-card-title id="invited-title" tag="h2" class="my-0">User Invited</v-card-title>
             <v-card-text class="px-4 pb-0">
                 <v-alert v-if="invited.emailSent" type="success" variant="tonal" density="compact" class="mb-4">
                     An email with a login link was sent to {{ invited.user.email }}.
@@ -89,12 +98,27 @@ async function copyPassword() {
                     <strong>It will not be shown again.</strong>
                 </p>
                 <v-text-field
+                    id="invite-temporary-password"
                     :model-value="invited.temporaryPassword"
                     label="Temporary password"
                     readonly
-                    :append-inner-icon="copied ? 'mdi-check' : 'mdi-content-copy'"
-                    @click:append-inner="copyPassword"
-                ></v-text-field>
+                    :clearable="false"
+                >
+                    <template #append-inner>
+                        <v-btn
+                            :icon="copied ? 'mdi-check' : 'mdi-content-copy'"
+                            variant="text"
+                            size="small"
+                            density="comfortable"
+                            aria-label="Copy temporary password"
+                            @click="copyPassword"
+                        ></v-btn>
+                    </template>
+                </v-text-field>
+                <!-- Announces the copy to screen readers -->
+                <span class="visually-hidden" role="status">{{
+                    copied ? "Temporary password copied to the clipboard" : ""
+                }}</span>
             </v-card-text>
             <v-card-actions>
                 <v-spacer></v-spacer>
@@ -103,9 +127,9 @@ async function copyPassword() {
         </v-card>
         <!-- Step 1: the invite form -->
         <v-card v-else class="pa-4">
-            <v-card-title>Invite User</v-card-title>
+            <v-card-title id="invite-title" tag="h2" class="my-0">Invite User</v-card-title>
             <v-card-text class="px-4 pb-0">
-                <v-form ref="form" @submit.prevent="submit">
+                <v-form id="invite-user-form" ref="form" @submit.prevent="submit">
                     <v-text-field v-model="name" label="Name" :rules="[required('Name')]"></v-text-field>
                     <v-text-field
                         v-model="email"
@@ -120,7 +144,7 @@ async function copyPassword() {
             <v-card-actions>
                 <v-spacer></v-spacer>
                 <v-btn :disabled="saving" color="white" @click="open = false">Cancel</v-btn>
-                <v-btn :loading="saving" color="white" variant="tonal" @click="submit">Invite</v-btn>
+                <v-btn :loading="saving" color="white" variant="tonal" type="submit" form="invite-user-form">Invite</v-btn>
             </v-card-actions>
         </v-card>
     </v-dialog>

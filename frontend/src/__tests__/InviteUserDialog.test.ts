@@ -50,6 +50,7 @@ const type = async (label: string, value: string) => {
     await flushPromises();
 };
 const button = (text: string) => wrapper.findAllComponents({ name: "VBtn" }).find((b) => b.text() === text)!;
+const copyButton = () => document.body.querySelector<HTMLButtonElement>('button[aria-label="Copy temporary password"]')!;
 const alerts = () => wrapper.findAllComponents({ name: "VAlert" }).map((a) => a.text());
 const errors = () => wrapper.findAllComponents({ name: "VMessages" }).flatMap((m) => m.text() || []);
 const invite = async () => {
@@ -127,10 +128,11 @@ describe("InviteUserDialog", () => {
         await type("Name", "Ann Lee");
         await type("Email", "ann@b.c");
         await invite();
-        input("Temporary password").vm.$emit("click:appendInner");
+        copyButton().click();
         await flushPromises();
         expect(writeText).toHaveBeenCalledWith("Temp-1234");
-        expect(input("Temporary password").props("appendInnerIcon")).toBe("mdi-check");
+        expect(copyButton().querySelector(".mdi-check")).not.toBeNull();
+        expect(document.body.querySelector('[role="status"]')!.textContent).toContain("copied");
     });
 
     it("keeps the copy icon when the browser refuses the clipboard", async () => {
@@ -139,9 +141,9 @@ describe("InviteUserDialog", () => {
         await type("Name", "Ann Lee");
         await type("Email", "ann@b.c");
         await invite();
-        input("Temporary password").vm.$emit("click:appendInner");
+        copyButton().click();
         await flushPromises();
-        expect(input("Temporary password").props("appendInnerIcon")).toBe("mdi-content-copy");
+        expect(copyButton().querySelector(".mdi-content-copy")).not.toBeNull();
     });
 
     it("closes through Done, and is empty again when reopened", async () => {
