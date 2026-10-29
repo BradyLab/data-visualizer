@@ -2,7 +2,7 @@
 // Settings page view: user settings (name, plus a change password popup) and an admin section with per-dataset
 // visibility switches and edit buttons, plus links to the management pages the user is allowed to see
 import { useRouter } from "vue-router";
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { UserStatus } from "@commons/user";
 import { DatasetVisibility, type IDataset } from "@commons/dataset";
 import { useAuthStore } from "@src/stores/auth";
@@ -10,6 +10,7 @@ import { useUserStore } from "@src/stores/user";
 import { usePermissionStore } from "@src/stores/permission";
 import { useDatasetStore } from "@src/stores/dataset";
 import ChangePasswordDialog from "@src/components/ChangePasswordDialog.vue";
+import { validateForm } from "@src/utils/validateForm";
 
 // Router instance used for programmatic navigation
 const router = useRouter();
@@ -27,12 +28,16 @@ const missingPublicFields = (dataset: IDataset) => [
     ...(dataset.attribution.trim() ? [] : ["attribution"]),
 ];
 const incomplete = ref<{ dataset: IDataset; missing: string[] } | null>(null);
-// The switch shows its own flipped state until its value changes, so a refused flip re-creates the switches (they are keyed on this)
-const switchResets = ref(0);
+// The switch shows its own flipped state until its value changes, so a refused flip re-creates that dataset's switch (it is keyed on this)
+const switchResets = ref<Record<string, number>>({});
 const incompleteOpen = computed({
     get: () => incomplete.value !== null,
     set: (open: boolean) => {
-        if (!open) incomplete.value = null;
+        if (open) return;
+        const id = incomplete.value?.dataset.id;
+        incomplete.value = null;
+        // The re-created switch is a new element, so give it back the focus the popup took from the old one
+        if (id) nextTick(() => document.getElementById(`visibility-${id}`)?.focus());
     },
 });
 function editIncomplete() {
@@ -49,7 +54,7 @@ async function setVisibility(dataset: IDataset, isPublic: boolean | null) {
     const missing = isPublic ? missingPublicFields(dataset) : [];
     if (missing.length) {
         incomplete.value = { dataset, missing };
-        switchResets.value++;
+        switchResets.value[dataset.id] = (switchResets.value[dataset.id] ?? 0) + 1;
         return;
     }
     try {
@@ -59,11 +64,6 @@ async function setVisibility(dataset: IDataset, isPublic: boolean | null) {
     } catch {
         visibilityError.value = `Unable to change the visibility of ${dataset.name}. Please try again.`;
     }
-}
-
-// Navigate to the given route path
-function navTo(route: string) {
-    router.push(route);
 }
 
 // Dataset list for the admin section; if the request fails the list is simply empty (the login requirement is the route guard's job)
@@ -87,7 +87,7 @@ const nameMessage = ref<{ type: "success" | "error"; text: string } | null>(null
 
 // Saves the new name and updates the logged-in user
 async function saveName() {
-    if (!(await nameForm.value?.validate())?.valid) return;
+    if (!(await validateForm(nameForm.value))) return;
     nameSaving.value = true;
     nameMessage.value = null;
     try {
@@ -121,7 +121,7 @@ watch(
         <v-form ref="nameForm" @submit.prevent="saveName">
             <v-row class="mb-6 mx-4">
                 <v-col cols="12" md="6">
-                    <v-text-field v-model="auth.user.name" label="Name" :rules="[required('Name')]" />
+                    <v-text-field v-model="auth.user.name" label="Name" autocomplete="name" :rules="[required('Name')]" />
                     <v-alert v-if="nameMessage" :type="nameMessage.type" variant="tonal" density="compact" class="mb-3">
                         {{ nameMessage.text }}
                     </v-alert>
@@ -170,11 +170,15 @@ watch(
         </v-alert>
         <template v-if="auth.isAdmin">
             <v-row v-for="dataset in datasetStore.datasets" :key="dataset.url" align="center" class="mx-4">
-                <v-col @click="navTo('/dataset/' + dataset.url)" class="cursor-pointer">{{ dataset.name }}</v-col>
+                <v-col>
+                    <RouterLink :to="'/dataset/' + dataset.url">{{ dataset.name }}</RouterLink>
+                </v-col>
                 <v-col cols="auto" class="d-flex align-center">
-                    <span class="mr-2">Private</span>
+                    <span class="mr-2" aria-hidden="true">Private</span>
                     <v-switch
-                        :key="switchResets"
+                        :id="`visibility-${dataset.id}`"
+                        :key="switchResets[dataset.id] ?? 0"
+                        :aria-label="`${dataset.name} is public`"
                         :model-value="dataset.visibility === DatasetVisibility.PUBLIC"
                         @update:model-value="(value) => setVisibility(dataset, value)"
                         color="primary"
@@ -182,10 +186,14 @@ watch(
                         inset
                         hide-details
                     ></v-switch>
-                    <span class="ml-2">Public</span>
+                    <span class="ml-2" aria-hidden="true">Public</span>
                 </v-col>
                 <v-col cols="auto">
-                    <v-btn prepend-icon="mdi-pencil-outline" @click="router.push(`/dataset/${dataset.url}/edit`)">
+                    <v-btn
+                        prepend-icon="mdi-pencil-outline"
+                        @click="router.push(`/dataset/${dataset.url}/edit`)"
+                        :aria-label="`Edit Dataset ${dataset.name}`"
+                    >
                         Edit Dataset
                     </v-btn>
                 </v-col>
@@ -193,9 +201,9 @@ watch(
         </template>
 
         <!-- Shown when a dataset without a DOI or attribution is switched to public -->
-        <v-dialog v-model="incompleteOpen" max-width="480">
+        <v-dialog v-model="incompleteOpen" max-width="480" aria-labelledby="incomplete-title">
             <v-card class="pa-4">
-                <v-card-title>Can't make this dataset public yet</v-card-title>
+                <v-card-title id="incomplete-title" tag="h2">Can't make this dataset public yet</v-card-title>
                 <v-card-text>
                     A public dataset needs a DOI and an attribution. {{ incomplete?.dataset.name }} has no
                     {{ incomplete?.missing.join(" and ") }}. It stays private until you add

@@ -2,7 +2,7 @@
 // dataset without a DOI or attribution), and the password popup (stores and router are mocked)
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h, nextTick, reactive } from "vue";
-import { mount, flushPromises, type VueWrapper } from "@vue/test-utils";
+import { mount, flushPromises, RouterLinkStub, type VueWrapper } from "@vue/test-utils";
 import { createVuetify } from "vuetify";
 import { DatasetStatus, DatasetVisibility, type IDataset } from "@commons/dataset";
 import { UserRoles, UserStatus } from "@commons/user";
@@ -75,7 +75,7 @@ const setAuth = (role: UserRoles, status = UserStatus.ACTIVE) =>
 
 const mountView = () =>
     mount(SettingsView, {
-        global: { plugins: [createVuetify()], stubs: { ChangePasswordDialog: PasswordDialog } },
+        global: { plugins: [createVuetify()], stubs: { ChangePasswordDialog: PasswordDialog, RouterLink: RouterLinkStub } },
         attachTo: document.body,
     });
 const button = (w: VueWrapper, label: string) => w.findAll("button").find((b) => b.text().includes(label));
@@ -213,8 +213,9 @@ describe("SettingsView: who sees the admin section", () => {
 
         await button(wrapper, "Edit Dataset")!.trigger("click");
         expect(mocks.push).toHaveBeenLastCalledWith("/dataset/root-atlas/edit");
-        await wrapper.findAll(".cursor-pointer")[1]!.trigger("click");
-        expect(mocks.push).toHaveBeenLastCalledWith("/dataset/leaf");
+        // The dataset names are links, so they can be reached with the keyboard
+        const links = wrapper.findAllComponents(RouterLinkStub).map((l) => l.props("to"));
+        expect(links).toEqual(["/dataset/root-atlas", "/dataset/leaf"]);
     });
 });
 

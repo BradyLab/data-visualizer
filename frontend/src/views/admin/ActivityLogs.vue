@@ -171,6 +171,7 @@ onMounted(() => {
                 closable
                 color="primary"
                 @click:close="typeFilter = typeFilter.filter((t) => t !== type)"
+                :close-label="`Remove filter Type: ${typeLabels[type]}`"
             >
                 Type: {{ typeLabels[type] }}
             </v-chip>
@@ -180,9 +181,15 @@ onMounted(() => {
                 closable
                 color="primary"
                 @click:close="userFilter = userFilter.filter((u) => u !== id)"
+                :close-label="`Remove filter User: ${userName(id)}`"
             >
                 User: {{ userName(id) }}
             </v-chip>
+        </div>
+
+        <!-- Tells screen readers when a page or filter change has loaded -->
+        <div class="visually-hidden" role="status">
+            {{ loading ? "" : `${activityStore.total} ${activityStore.total === 1 ? "activity" : "activities"} found` }}
         </div>
 
         <!-- Server-side paging: each page and filter change fetches from the backend -->
@@ -194,6 +201,7 @@ onMounted(() => {
             :items-length="activityStore.total"
             :loading="loading"
             item-value="id"
+            aria-label="Activity log"
         >
             <template v-slot:item="{ item: activity }">
                 <tr>
@@ -201,9 +209,9 @@ onMounted(() => {
                     <td>{{ activity.userName }}</td>
                     <td>
                         <pre
-                            class="py-2"
+                            class="py-2 activity-data"
+                            :id="`activity-data-${activity.id}`"
                             :style="{
-                                cursor: lineCount(activity.data) > PREVIEW_LINES ? 'pointer' : 'default',
                                 ...(expanded.includes(activity.id)
                                     ? {}
                                     : {
@@ -213,9 +221,16 @@ onMounted(() => {
                                           overflow: 'hidden',
                                       }),
                             }"
-                            :title="lineCount(activity.data) > PREVIEW_LINES ? 'Click to expand or collapse' : undefined"
-                            @click="lineCount(activity.data) > PREVIEW_LINES && toggleExpanded(activity.id)"
                             >{{ formatData(activity.data) }}</pre>
+                        <v-btn
+                            v-if="lineCount(activity.data) > PREVIEW_LINES"
+                            variant="text"
+                            size="small"
+                            :aria-controls="`activity-data-${activity.id}`"
+                            :aria-expanded="expanded.includes(activity.id)"
+                            @click="toggleExpanded(activity.id)"
+                            >{{ expanded.includes(activity.id) ? "Show less" : "Show more" }}</v-btn
+                        >
                     </td>
                     <td>{{ prettyDate(activity.createdAt) }}</td>
                 </tr>
@@ -223,3 +238,11 @@ onMounted(() => {
         </v-data-table-server>
     </v-container>
 </template>
+
+<style scoped>
+/* Long lines wrap instead of forcing the table to scroll sideways */
+.activity-data {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+</style>
