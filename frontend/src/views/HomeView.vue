@@ -58,7 +58,7 @@ function navTo(route: string) {
                     <!-- Cover image, or a color block when the dataset has none -->
                     <DatasetCover :dataset-id="dataset.id" :height="110" />
                     <v-card-item>
-                        <v-card-title class="text-body-2 font-weight-bold">{{ dataset.name }}</v-card-title>
+                        <v-card-title tag="h2" class="text-body-2 font-weight-bold">{{ dataset.name }}</v-card-title>
                         <v-card-subtitle>
                             <div>Author: {{ dataset.ownerName ?? dataset.owner }}</div>
                             <div v-if="dataset.visibility === DatasetVisibility.PUBLIC">

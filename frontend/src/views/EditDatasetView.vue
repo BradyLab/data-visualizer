@@ -281,10 +281,12 @@ async function confirmDelete() {
                 <v-btn variant="text" @click="changedElsewhere = false">Keep mine</v-btn>
             </template>
         </v-alert>
+        <h1 class="visually-hidden">{{ isEdit ? "Edit Dataset" : "New Dataset" }}</h1>
         <!-- Dataset name -->
         <v-text-field
             :model-value="dataset.name"
             @update:model-value="onNameInput"
+            aria-label="Dataset name (required)"
             placeholder="DATASET NAME"
             variant="plain"
             class="text-headline-small mb-2"
@@ -293,10 +295,10 @@ async function confirmDelete() {
         <v-divider class="mb-4"></v-divider>
 
         <!-- Owner (defaults to the current user when creating, and only admins may pick someone else; fixed once the dataset exists) -->
-        <v-row class="text-body-medium mb-1 mx-4">Owner</v-row>
         <v-select
             v-model="dataset.owner"
             :items="ownerOptions"
+            label="Owner"
             placeholder="Select an owner"
             :disabled="isEdit || !auth.isAdmin"
             density="compact"
@@ -305,9 +307,9 @@ async function confirmDelete() {
         ></v-select>
 
         <!-- Description -->
-        <v-row class="text-body-medium mb-1 mx-4">Description</v-row>
         <v-textarea
             v-model="dataset.description"
+            label="Description"
             placeholder="Type a description of the dataset here"
             rows="2"
             hide-details
@@ -315,9 +317,10 @@ async function confirmDelete() {
         ></v-textarea>
 
         <!-- URL slug: the dataset is served at /dataset/<url> -->
-        <v-row class="text-body-medium mb-1 mx-4">Website URL</v-row>
         <v-text-field
             :model-value="dataset.url"
+            label="Website URL (required)"
+            persistent-placeholder
             @update:model-value="onUrlInput"
             prefix="/dataset/"
             placeholder="dataset-url"
@@ -328,9 +331,9 @@ async function confirmDelete() {
         ></v-text-field>
 
         <!-- DOI link -->
-        <v-row class="text-body-medium mb-1 mx-4">DOI</v-row>
         <v-text-field
             v-model="dataset.doi"
+            label="DOI"
             prepend-inner-icon="mdi-link"
             placeholder="Add DOI link here"
             density="compact"
@@ -339,9 +342,9 @@ async function confirmDelete() {
         ></v-text-field>
 
         <!-- Attribution / credit text -->
-        <v-row class="text-body-medium mb-1 mx-4">Attribution</v-row>
         <v-text-field
             v-model="dataset.attribution"
+            label="Attribution"
             placeholder="Add attribution here"
             density="compact"
             hide-details
@@ -349,10 +352,11 @@ async function confirmDelete() {
         ></v-text-field>
 
         <!-- Plot types available for the dataset -->
-        <v-row class="text-body-medium mb-1 mx-4">Pick Your Plots</v-row>
         <v-select
             v-model="dataset.plots"
             :items="plotOptions"
+            label="Pick Your Plots"
+            close-label="Remove plot"
             multiple
             chips
             closable-chips
@@ -367,6 +371,7 @@ async function confirmDelete() {
                 v-model="coverFile"
                 density="compact"
                 title="Upload Cover Photo"
+                aria-label="Upload Cover Photo"
                 accept="image/*"
                 clearable
                 :multiple="false"
@@ -378,6 +383,7 @@ async function confirmDelete() {
                 v-model="rdsFile"
                 density="compact"
                 title="Upload .rds File"
+                aria-label="Upload .rds File"
                 accept=".rds"
                 clearable
                 :multiple="false"
@@ -385,10 +391,10 @@ async function confirmDelete() {
             ></v-file-upload>
         </v-row>
         <!-- What changed since the previous version of the .rds file (logged with the file upload) -->
-        <v-row v-if="firstFile(rdsFile)" class="text-body-medium mb-1 mx-4">Updates</v-row>
         <v-textarea
             v-if="firstFile(rdsFile)"
             v-model="rdsUpdates"
+            label="Updates"
             placeholder="Describe what changed since the last version of the .rds file"
             rows="2"
             hide-details
@@ -401,13 +407,14 @@ async function confirmDelete() {
                 v-model="tissueMapFile"
                 density="compact"
                 title="Upload Tissue Map (ggPlantmap .csv)"
+                aria-label="Upload Tissue Map (ggPlantmap .csv)"
                 accept=".csv"
                 clearable
                 :multiple="false"
                 hide-details
             ></v-file-upload>
         </v-row>
-        <v-row v-if="tissueMapMissing" class="text-body-small text-error mb-1 mx-4">
+        <v-row v-if="tissueMapMissing" role="alert" class="text-body-small text-error mb-1 mx-4">
             A tissue map is required because this dataset offers the tissue plot (picking no plots offers all of them). Upload a
             .csv or pick the plots you want.
         </v-row>
@@ -423,7 +430,12 @@ async function confirmDelete() {
                 <div class="text-body-medium mb-1">
                     {{ fileStore.uploading.label }}: {{ Math.round(fileStore.uploading.fraction * 100) }}%
                 </div>
-                <v-progress-linear :model-value="fileStore.uploading.fraction * 100" height="8" rounded></v-progress-linear>
+                <v-progress-linear
+                    :model-value="fileStore.uploading.fraction * 100"
+                    :aria-label="`${fileStore.uploading.label} upload progress`"
+                    height="8"
+                    rounded
+                ></v-progress-linear>
             </v-col>
         </v-row>
 
@@ -447,9 +459,9 @@ async function confirmDelete() {
         </v-row>
 
         <!-- Cannot be dismissed while the delete is in flight -->
-        <v-dialog v-model="confirmDeleteOpen" max-width="480" :persistent="deleting">
+        <v-dialog v-model="confirmDeleteOpen" max-width="480" :persistent="deleting" aria-labelledby="delete-dataset-title">
             <v-card class="pa-4">
-                <v-card-title>Delete Dataset</v-card-title>
+                <v-card-title id="delete-dataset-title" tag="h2">Delete Dataset</v-card-title>
                 <v-card-text>Delete {{ dataset.name }}? This cannot be undone.</v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
