@@ -161,7 +161,7 @@ function inviteUser() {
                     <td>{{ user.email }}</td>
                     <td>{{ user.role }}</td>
                     <td>{{ user.status }}</td>
-                    <td>
+                    <td class="text-no-wrap">
                         <v-btn class="mr-2" prepend-icon="mdi-pencil" :aria-label="`Edit ${user.name}`" @click="edit(user)">
                             Edit
                         </v-btn>
@@ -177,7 +177,6 @@ function inviteUser() {
                             prepend-icon="mdi-history"
                             :aria-label="`Activity Logs of ${user.name}`"
                             @click="viewActivityLogs(user.id)"
-                            
                         >
                             Activity Logs
                         </v-btn>

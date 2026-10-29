@@ -111,6 +111,7 @@ async function copyPassword() {
                             size="small"
                             density="comfortable"
                             aria-label="Copy temporary password"
+                            color="on-primary"
                             @click="copyPassword"
                         ></v-btn>
                     </template>
