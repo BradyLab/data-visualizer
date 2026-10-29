@@ -45,6 +45,11 @@ test.describe('logged out', () => {
     await expectAccessible(page)
   })
 
+  test('about page', async ({ page }) => {
+    await open(page, '/about')
+    await expectAccessible(page)
+  })
+
   test('404 page', async ({ page }) => {
     await open(page, '/no-such-page')
     await expectAccessible(page)
@@ -89,6 +94,13 @@ test.describe('as an admin', () => {
     await open(page, `/dataset/${dataset.url}`)
     await expectAccessible(page)
     await open(page, `/dataset/${dataset.url}/edit`)
+    await expectAccessible(page)
+  })
+
+  test('about page editor', async ({ page }) => {
+    await open(page, '/about')
+    await page.getByRole('button', { name: 'Edit' }).click()
+    await expect(page.getByRole('textbox', { name: 'About page text (Markdown)' })).toBeVisible()
     await expectAccessible(page)
   })
 
