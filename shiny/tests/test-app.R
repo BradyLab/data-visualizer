@@ -79,7 +79,6 @@ test("viewer_context gives the dataset and offered plots, and accepts a bare ?da
   context <- app$viewer_context(list(ctx = BACKEND_CTX))
   expect_equal(context$dataset_id, ID)
   expect_equal(context$plots, c("UMAP", "TissuePlot"))
-  expect(!context$can_download, "a context without can_download allowed downloads")
   expect(context$can_download, "the backend's can_download was not read")
   # a context without can_download (or with it false) never allows downloads
   expect(!app$viewer_context(list(ctx = sign(list(dataset_id = ID, plots = list(), exp = future))))$can_download)
