@@ -59,15 +59,16 @@ verify_context <- function(token) {
   payload
 }
 
-# Who is looking at what: list(dataset_id, plots) from the signed ctx in the URL, or NULL if there is none that is valid.
-# With SHINY_DEV=1 a bare ?dataset=<uuid> is accepted too (every plot)
+# Who is looking at what: list(dataset_id, plots, can_download) from the signed ctx in the URL, or NULL if there is none that is valid.
+# can_download is whether the viewer has DOWNLOAD access or above (a context without it means no).
+# With SHINY_DEV=1 a bare ?dataset=<uuid> is accepted too (every plot, downloads allowed)
 viewer_context <- function(query) {
   payload <- verify_context(query$ctx)
   if (!is.null(payload)) {
-    return(list(dataset_id = payload$dataset_id, plots = as.character(unlist(payload$plots))))
+    return(list(dataset_id = payload$dataset_id, plots = as.character(unlist(payload$plots)), can_download = isTRUE(payload$can_download)))
   }
   if (DEV && !is.null(query$dataset)) {
-    return(list(dataset_id = query$dataset, plots = character()))
+    return(list(dataset_id = query$dataset, plots = character(), can_download = TRUE))
   }
   NULL
 }
@@ -135,6 +136,8 @@ CLUSTER_COL <- "seurat_clusters"
 TISSUE_COL <- "tissue_type"
 # Most charts one UMAP or PCA plot can fan out into, one per picked group by column
 MAX_GROUP_PLOTS <- 8
+# Image formats a chart can be saved as (file extension = button label), for viewers with DOWNLOAD access or above
+DOWNLOAD_FORMATS <- c(png = "PNG", pdf = "PDF", svg = "SVG")
 # Columns with more distinct values than this are not offered to group or split the UMAP and PCA by
 MAX_GROUPS <- 50
 
@@ -262,6 +265,8 @@ server <- function(input, output, session) {
 
   # Plots the dataset offers (signed)
   offered <- context$plots
+  # Whether the viewer may save the charts as images (DOWNLOAD access or above, signed): without it there are no buttons and no handlers
+  can_download <- isTRUE(context$can_download)
 
   # One in-memory DuckDB per session (cheap), closed with it; the Parquet files are only read
   con <- dbConnect(duckdb())
@@ -548,6 +553,23 @@ server <- function(input, output, session) {
 
   chart_size <- debounce(reactive(as.integer(input$chart_size %||% 600)), 300)
 
+  # Save as buttons under a chart, only for viewers with DOWNLOAD access or above
+  download_buttons <- function(id) {
+    if (!can_download) {
+      return(NULL)
+    }
+    div(
+      class = "chart-downloads",
+      role = "group",
+      `aria-label` = "Save this chart as an image",
+      style = "display: flex; gap: 6px; align-items: center; margin-top: 4px;",
+      span("Save as", style = "font-size: 12px;"),
+      lapply(names(DOWNLOAD_FORMATS), function(ext) {
+        downloadButton(paste0("download_", id, "_", ext), DOWNLOAD_FORMATS[[ext]], class = "btn-sm btn-default", icon = icon("download"))
+      })
+    )
+  }
+
   output$plots_ui <- renderUI({
     # Every chart is a box of the slider's width (never wider than the page), flowing left to right and wrapping, so small charts sit
     # side by side. The slider is not held back by Update plots; it is debounced so dragging it does not redraw on every step.
@@ -572,10 +594,11 @@ server <- function(input, output, session) {
           div(
             style = sprintf("width: %dpx; max-width: 100%%; position: relative;", size),
             plotOutput(id, width = "100%", height = "auto", hover = hoverOpts(hover_id, delay = 80, delayType = "debounce")),
-            uiOutput(if (id == "plot_TissuePlot") "tissue_tip" else "tissue_cells_tip")
+            uiOutput(if (id == "plot_TissuePlot") "tissue_tip" else "tissue_cells_tip"),
+            download_buttons(id)
           )
         } else {
-          div(style = sprintf("width: %dpx; max-width: 100%%;", size), plotOutput(id, width = "100%", height = "auto"))
+          div(style = sprintf("width: %dpx; max-width: 100%%;", size), plotOutput(id, width = "100%", height = "auto"), download_buttons(id))
         }
       })
     )
@@ -678,6 +701,13 @@ server <- function(input, output, session) {
 
   # Width of a plot's box as the browser laid it out, for heights that follow it
   plot_width <- function(id) session$clientData[[paste0("output_", id, "_width")]] %||% 800
+
+  # The charts as they were last drawn, by output id, so a download is the very chart on screen (same data, same selection)
+  drawn <- new.env()
+  remember <- function(id, p) {
+    drawn[[id]] <- p
+    p
+  }
 
   # Panels of about 4:3 cells, 350-700 px tall each
   grid_height <- function(id, rows, cols) {
@@ -786,7 +816,7 @@ server <- function(input, output, session) {
           id <- paste0("plot_", spec[[1]], "_", i)
           output[[id]] <- renderPlot(height = function() scatter_height(id), {
             req(i <= n_group_plots())
-            scatter_plot(spec[[2]], spec[[3]], i)
+            remember(id, scatter_plot(spec[[2]], spec[[3]], i))
           })
         })
       }
@@ -841,7 +871,7 @@ server <- function(input, output, session) {
           show.legend = FALSE
         )
     }
-    p +
+    p <- p +
       facet_wrap(~gene, ncol = 1, scales = "free_y", strip.position = "left") +
       labs(x = NULL, y = "Expression") +
       theme_classic(base_size = 14) +
@@ -851,6 +881,7 @@ server <- function(input, output, session) {
         strip.placement = "outside",
         strip.text.y.left = element_text(angle = 0)
       )
+    remember("plot_ViolinPlot", p)
   })
 
   # Mean expression and share of cells expressing, per cluster and gene (the numbers behind the dot plot and the heatmap)
@@ -866,13 +897,14 @@ server <- function(input, output, session) {
   # Like Seurat's DotPlot: dot size is the percent of cells expressing, color the scaled average expression
   output$plot_DotPlot <- renderPlot(height = function() as.integer(max(350, 120 + 28 * n_clusters())), {
     sm <- cluster_summary(long_expression(plot_data()))
-    ggplot(sm, aes(gene, cluster, size = pct, color = scaled)) +
+    p <- ggplot(sm, aes(gene, cluster, size = pct, color = scaled)) +
       geom_point() +
       scale_size(range = c(0, 8), limits = c(0, 100)) +
       scale_color_viridis_c(option = "plasma", direction = -1, begin = 0.1, end = 0.9) +
       labs(x = NULL, y = NULL, size = "% expressed", color = "Avg. expression\n(scaled)") +
       theme_classic(base_size = 14) +
       theme(axis.text.x = element_text(angle = 45, hjust = 1), panel.grid.major = element_line(color = "grey92"))
+    remember("plot_DotPlot", p)
   })
 
   # The column whose values name the outlines of the tissue map: tissue_type, else the cell labels (with a note under the plot)
@@ -926,7 +958,7 @@ server <- function(input, output, session) {
     {
       td <- tissue_data()
       d <- td$d
-      if (td$genes) {
+      p <- if (td$genes) {
         ggPlantmap.heatmap(td$table, value.quant = avg_expression) +
           scale_fill_viridis_c(option = "plasma", direction = -1, begin = 0.1, end = 0.9, na.value = "grey85") +
           labs(fill = "Avg. expression", caption = tissue_note()) +
@@ -935,6 +967,7 @@ server <- function(input, output, session) {
       } else {
         tissue_cell_type_plot(td)
       }
+      remember("plot_TissuePlot", p)
     }
   )
 
@@ -975,7 +1008,7 @@ server <- function(input, output, session) {
     height = function() {
       as.integer(max(150, tissue_panel_width("plot_TissueCells") * tissue_aspect() + 20))
     },
-    tissue_cell_type_plot(tissue_data())
+    remember("plot_TissueCells", tissue_cell_type_plot(tissue_data()))
   )
 
   # The box that follows the mouse over the tissue plot: the outline's name and, with genes, the gene (the panel hovered) with its average
@@ -1137,11 +1170,37 @@ server <- function(input, output, session) {
   for (i in seq_len(MAX_GROUP_PLOTS)) {
     local({
       i <- i
-      output[[paste0("plot_Heatmap_", i)]] <- renderPlot(height = function() as.integer(max(350, 150 + 30 * n_genes())), {
+      id <- paste0("plot_Heatmap_", i)
+      output[[id]] <- renderPlot(height = function() as.integer(max(350, 150 + 30 * n_genes())), {
         req(i <= n_heatmaps())
-        heatmap_plot(i)
+        remember(id, heatmap_plot(i))
       })
     })
+  }
+
+  # One handler per chart and format, saved at the size it has on screen (a plot pixel is a point, so the type keeps its size); PNG at
+  # 300 dpi. Registered only for viewers with DOWNLOAD access or above, so no other viewer has a download URL to call.
+  if (can_download) {
+    plot_height <- function(id) session$clientData[[paste0("output_", id, "_height")]] %||% 600
+    group_ids <- as.vector(outer(c("plot_UMAP_", "plot_PCA_", "plot_Heatmap_"), seq_len(MAX_GROUP_PLOTS), paste0))
+    for (id in c(group_ids, "plot_ViolinPlot", "plot_DotPlot", "plot_TissuePlot", "plot_TissueCells")) {
+      for (ext in names(DOWNLOAD_FORMATS)) {
+        local({
+          id <- id
+          ext <- ext
+          output[[paste0("download_", id, "_", ext)]] <- downloadHandler(
+            filename = function() paste0(sub("^plot_", "", id), ".", ext),
+            content = function(file) {
+              p <- drawn[[id]]
+              req(p)
+              device <- switch(ext, png = "png", pdf = "pdf", svg = grDevices::svg)
+              size <- isolate(c(plot_width(id), plot_height(id))) / 72
+              ggsave(file, p, device = device, width = size[[1]], height = size[[2]], units = "in", dpi = 300)
+            }
+          )
+        })
+      }
+    }
   }
 }
 

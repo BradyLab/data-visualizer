@@ -18,7 +18,7 @@ ID <- "3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b"
 
 # A context made by the backend (services/viewer.ts signShinyContext) with the secret "test-secret" and an expiry in 2100, so a change
 # to either side's format shows up here
-BACKEND_CTX <- "eyJkYXRhc2V0X2lkIjoiM2YyYjhjMWUtNWE0ZC00ZTZmLTliN2EtMWMyZDNlNGY1YTZiIiwicGxvdHMiOlsiVU1BUCIsIlRpc3N1ZVBsb3QiXSwiZXhwIjo0MTAyNDQ0ODAwfQ.6430ac9a0350a9a132e469951db4676746a1c9e9a91fc44433eb084b657d5a52"
+BACKEND_CTX <- "eyJkYXRhc2V0X2lkIjoiM2YyYjhjMWUtNWE0ZC00ZTZmLTliN2EtMWMyZDNlNGY1YTZiIiwicGxvdHMiOlsiVU1BUCIsIlRpc3N1ZVBsb3QiXSwiY2FuX2Rvd25sb2FkIjp0cnVlLCJleHAiOjQxMDI0NDQ4MDB9.96c3b916f5852bdd13c653727b7300312e9d38c01ebdcb8d66a163c568ddfb96"
 
 # Signs a payload the way the backend does, with the secret the app was started with
 sign <- function(payload, secret = "test-secret") {
@@ -79,6 +79,11 @@ test("viewer_context gives the dataset and offered plots, and accepts a bare ?da
   context <- app$viewer_context(list(ctx = BACKEND_CTX))
   expect_equal(context$dataset_id, ID)
   expect_equal(context$plots, c("UMAP", "TissuePlot"))
+  expect(!context$can_download, "a context without can_download allowed downloads")
+  expect(context$can_download, "the backend's can_download was not read")
+  # a context without can_download (or with it false) never allows downloads
+  expect(!app$viewer_context(list(ctx = sign(list(dataset_id = ID, plots = list(), exp = future))))$can_download)
+  expect(!app$viewer_context(list(ctx = sign(list(dataset_id = ID, plots = list(), can_download = FALSE, exp = future))))$can_download)
   expect(is.null(app$viewer_context(list(dataset = ID))), "a bare dataset id was accepted outside dev mode")
   expect(is.null(app$viewer_context(list())))
   with_app("DEV", TRUE, {
