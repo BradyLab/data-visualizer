@@ -139,12 +139,22 @@ test("signShinyContext makes a payload.hmac value Shiny can verify, and without 
     process.env.SHINY_SECRET = "shared";
     process.env.SHINY_URL = "http://shiny:3838";
     assert.equal(viewerEnabled(), true);
-    const token = signShinyContext({ dataset: { id: "d1", plots: ["UMAP"] } as never });
+    const token = signShinyContext({ dataset: { id: "d1", plots: ["UMAP"] } as never, access: PermissionOptions.VIEW });
     const [payload, sig] = token.split(".") as [string, string];
     assert.equal(sig, createHmac("sha256", "shared").update(payload).digest("hex"));
     const body = JSON.parse(Buffer.from(payload, "base64url").toString());
-    assert.deepEqual({ ...body, exp: undefined }, { dataset_id: "d1", plots: ["UMAP"], exp: undefined });
+    assert.deepEqual({ ...body, exp: undefined }, { dataset_id: "d1", plots: ["UMAP"], can_download: false, exp: undefined });
     assert.ok(body.exp > Date.now() / 1000);
+    // DOWNLOAD and above may save the charts as images; VIEW may not
+    for (const [access, expected] of [
+        [PermissionOptions.VIEW, false],
+        [PermissionOptions.DOWNLOAD, true],
+        [PermissionOptions.EDIT, true],
+        ["OWNER", true],
+    ] as const) {
+        const [p] = signShinyContext({ dataset: { id: "d1" } as never, access }).split(".") as [string];
+        assert.equal(JSON.parse(Buffer.from(p, "base64url").toString()).can_download, expected, access);
+    }
 });
 
 test("authorizeViewer refuses a dataset whose plot data is not READY", async () => {
