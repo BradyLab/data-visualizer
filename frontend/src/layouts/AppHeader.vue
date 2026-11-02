@@ -40,7 +40,7 @@ async function logout() {
                 <!-- Dropdown of datasets that opens on hover; each item links to its dataset page -->
                 <v-menu open-on-hover open-on-click>
                     <template v-slot:activator="{ props }">
-                        <v-btn v-bind="props" variant="text" color="on-primary" append-icon="mdi-chevron-down">DATASETS</v-btn>
+                        <v-btn v-bind="props" variant="text" color="on-primary" append-icon="mdi-chevron-down" class="px-0">DATASETS</v-btn>
                     </template>
 
                     <v-list>

@@ -392,7 +392,7 @@ async function confirmDelete() {
         </v-row>
         <!-- What changed since the previous version of the .rds file (logged with the file upload) -->
         <v-textarea
-            v-if="firstFile(rdsFile)"
+            v-if="isEdit && firstFile(rdsFile)"
             v-model="rdsUpdates"
             label="Updates"
             placeholder="Describe what changed since the last version of the .rds file"
