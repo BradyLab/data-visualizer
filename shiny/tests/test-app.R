@@ -184,6 +184,27 @@ test("outline_at finds the outline under a point, the topmost where they overlap
 
 # ---- colors and ordering ----------------------------------------------------------------------------------------------------------------
 
+test("contrast_with_white gives the WCAG ratio", {
+  expect_equal(unname(app$contrast_with_white("#FFFFFF")), 1)
+  expect_equal(round(unname(app$contrast_with_white("#000000"))), 21)
+  expect_equal(round(unname(app$contrast_with_white("#767676")), 1), 4.5, "the classic lightest grey that passes 4.5:1")
+})
+
+test("ensure_contrast darkens only the colors that are too light, keeping their hue", {
+  expect_equal(app$ensure_contrast(c("#0072B2", "#D55E00")), c("#0072B2", "#D55E00"), "colors that already pass are untouched")
+  yellow <- app$ensure_contrast("#F0E442")
+  expect(app$contrast_with_white(yellow) >= 3, "the yellow now has 3:1")
+  expect(app$contrast_with_white(yellow) < 3.3, "and is not darkened more than needed")
+  rgb <- grDevices::col2rgb(yellow)[, 1]
+  expect(rgb[[1]] > rgb[[3]] && rgb[[2]] > rgb[[3]], "it is still a yellow (red and green well above blue)")
+})
+
+test("colorblind_palette gives colors that all reach 3:1 against white, as many as asked for", {
+  for (n in c(8, 12, 36, 60)) {
+    expect(all(app$contrast_with_white(app$colorblind_palette(n)) >= 3), paste("a color is too light for", n, "groups"))
+  }
+})
+
 test("colorblind_palette gives n distinct colors, from Okabe-Ito up to 8 and Polychrome after", {
   for (n in c(1, 5, 8, 9, 36, 60)) {
     colors <- app$colorblind_palette(n)
@@ -238,8 +259,14 @@ test("the page declares its language and title, and has a live region for what U
   expect(grepl('id="update_status"', html, fixed = TRUE), "the region shows update_status")
 })
 
-test("the keyboard focus styles reach the controls that had none", {
-  for (selector in c(".selectize-input.focus", ".form-control:focus", ".irs-line:focus-visible", ".btn:focus-visible")) {
+test("the keyboard focus styles reach the controls that had none, and the remove x is a big enough target", {
+  for (selector in c(
+    ".selectize-input.focus",
+    ".form-control:focus",
+    ".btn:focus-visible",
+    "summary:focus-visible",
+    "plugin-remove_button .item .remove"
+  )) {
     expect(grepl(selector, app$STYLE, fixed = TRUE), paste("no focus style for", selector))
   }
 })

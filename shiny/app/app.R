@@ -141,17 +141,49 @@ DOWNLOAD_FORMATS <- c(png = "PNG", pdf = "PDF", svg = "SVG")
 # Columns with more distinct values than this are not offered to group or split the UMAP and PCA by
 MAX_GROUPS <- 50
 
+# Limits of the chart width box (px)
+MIN_CHART_WIDTH <- 300
+MAX_CHART_WIDTH <- 1200
+
 # The heatmap has a column per cell; above this many cells it draws a random sample
 MAX_HEATMAP_CELLS <- 20000
 
 # Colorblind-friendly colors for n groups, like scCustomize's discrete palettes: Okabe-Ito (without its black, which the labels and
-# points use) for up to 8, then Polychrome 36, then Polychrome 36 stretched for more
+# points use) for up to 8, then Polychrome 36, then Polychrome 36 stretched for more; the light ones are darkened to 3:1 against white
 colorblind_palette <- function(n) {
-  if (n <= 8) {
-    return(unname(palette.colors(9, "Okabe-Ito")[-1][seq_len(n)]))
+  colors <- if (n <= 8) {
+    unname(palette.colors(9, "Okabe-Ito")[-1][seq_len(n)])
+  } else {
+    polychrome <- unname(palette.colors(36, "Polychrome 36"))
+    if (n <= 36) polychrome[seq_len(n)] else colorRampPalette(polychrome)(n)
   }
-  polychrome <- unname(palette.colors(36, "Polychrome 36"))
-  if (n <= 36) polychrome[seq_len(n)] else colorRampPalette(polychrome)(n)
+  ensure_contrast(colors)
+}
+
+# WCAG contrast ratio of colors against white (the chart background)
+contrast_with_white <- function(colors) {
+  rgb <- col2rgb(colors) / 255
+  linear <- ifelse(rgb <= 0.03928, rgb / 12.92, ((rgb + 0.055) / 1.055)^2.4)
+  1.05 / (0.2126 * linear[1, ] + 0.7152 * linear[2, ] + 0.0722 * linear[3, ] + 0.05)
+}
+
+# Darkens (mixes with black) each color whose contrast with white is under `min`, keeping its hue, so points and legend swatches stay visible
+# on the white chart (WCAG 1.4.11 asks 3:1). Okabe-Ito's yellow, orange and sky blue, and many of Polychrome's colors, are too light as they are
+ensure_contrast <- function(colors, min = 3) {
+  vapply(
+    colors,
+    function(color) {
+      for (kept in seq(1, 0.02, by = -0.02)) {
+        mixed <- rgb(t(col2rgb(color) * kept), maxColorValue = 255)
+        if (contrast_with_white(mixed) >= min) {
+          return(mixed)
+        }
+      }
+      "#000000"
+    },
+    character(1),
+    USE.NAMES = FALSE
+  )
 }
 
 # Columns of cells.parquet that are not metadata to color by
@@ -189,7 +221,7 @@ ordered_levels <- function(table, column, values) {
 }
 
 # html/body: the parent sizes the iframe to the content, so the page itself never scrolls. .options-row lays out the option controls; the
-# rest paints the Update plots button, the chart width slider and the label checkbox in the accent color.
+# rest paints the Update plots button, the chart width box and the label checkbox in the accent color.
 ACCENT <- "#103819"
 STYLE <- paste0(
   "
@@ -207,21 +239,17 @@ html, body { overflow-y: hidden; }
 .options-row { display: flex; flex-wrap: wrap; gap: 0 30px; }
 .options-row > .shiny-html-output { display: contents; }
 .options-row > .accent, .options-row .shiny-panel-conditional { width: calc((100% - 90px) / 4); } /* the width of a column in the row above */
-.accent .irs--shiny .irs-bar, .accent .irs--shiny .irs-handle { background: ",
-  ACCENT,
-  "; border-color: ",
-  ACCENT,
-  "; }
-.accent .irs--shiny .irs-single, .accent .irs--shiny .irs-from, .accent .irs--shiny .irs-to { background-color: ",
-  ACCENT,
-  "; }
 .accent input[type=checkbox] { accent-color: ",
   ACCENT,
   "; }
-/* Visible keyboard focus: the selectize boxes, the number box and the slider (its tab stop is the line) had none or a faint one */
-.selectize-input.focus, .form-control:focus, .irs-line:focus-visible, .btn:focus-visible { outline: 2px solid ",
+/* Visible keyboard focus: the selectize boxes and the number boxes had none or a faint one */
+.selectize-input.focus, .form-control:focus, .btn:focus-visible, summary:focus-visible { outline: 2px solid ",
   ACCENT,
-  " !important; outline-offset: 2px; box-shadow: none; } /* !important: the selectize, Bootstrap and slider styles set outline: none */
+  " !important; outline-offset: 2px; box-shadow: none; } /* !important: the selectize and Bootstrap styles set outline: none */
+/* The x that removes a picked item is a target of at least 24 x 24 px (it was 19 x 22) */
+.selectize-control.plugin-remove_button .item { min-height: 24px; }
+.selectize-control.plugin-remove_button .item .remove { min-width: 24px; min-height: 24px; display: inline-flex; align-items: center; justify-content: center; }
+summary { cursor: pointer; }
 "
 )
 
@@ -249,32 +277,49 @@ ui <- fluidPage(
     # the parent sizes the iframe to the content, so the page itself never scrolls
     tags$script(HTML(REPORT_HEIGHT_JS))
   ),
-  fluidRow(
-    column(3, uiOutput("plot_picker")),
-    column(3, uiOutput("gene_picker")),
-    column(3, uiOutput("cell_type_picker"))
-  ),
-  # Chart options, in the same four columns as the pickers above; the button applies everything
-  # A flex row rather than grid columns, so the controls that are hidden (group by and split by without a UMAP or PCA) free their space
-  div(
-    class = "options-row",
-    uiOutput("group_picker"),
-    uiOutput("split_picker"),
-    div(
-      class = "accent",
-      sliderInput("chart_size", "Chart width (px)", min = 300, max = 1200, value = 600, step = 50, ticks = FALSE, width = "100%")
+  # Two labelled regions with a heading each (hidden on screen), so a screen reader can jump between the options and the charts
+  tags$section(
+    `aria-labelledby` = "options-heading",
+    tags$h2(id = "options-heading", class = "sr-only", "Plot options"),
+    fluidRow(
+      column(3, uiOutput("plot_picker")),
+      column(3, uiOutput("gene_picker")),
+      column(3, uiOutput("cell_type_picker"))
     ),
-    div(class = "accent", style = "margin-top: 25px", checkboxInput("label", "Label clusters", value = TRUE)),
-    uiOutput("na_cutoff_picker"),
-    uiOutput("violin_options")
+    # Chart options, in the same four columns as the pickers above; the button applies everything
+    # A flex row rather than grid columns, so the controls that are hidden (group by and split by without a UMAP or PCA) free their space
+    div(
+      class = "options-row",
+      uiOutput("group_picker"),
+      uiOutput("split_picker"),
+      div(
+        class = "accent",
+        numericInput(
+          "chart_size",
+          "Chart width (px, 300 to 1200)",
+          value = 600,
+          min = MIN_CHART_WIDTH,
+          max = MAX_CHART_WIDTH,
+          step = 50,
+          width = "100%"
+        )
+      ),
+      div(class = "accent", style = "margin-top: 25px", checkboxInput("label", "Label clusters", value = TRUE)),
+      uiOutput("na_cutoff_picker"),
+      uiOutput("violin_options")
+    ),
+    fluidRow(
+      column(12, actionButton("generate", "Update plots", class = "btn-primary")),
+      # Read out by screen readers after every press of the button (Bootstrap's sr-only hides it on screen)
+      column(12, div(class = "sr-only", role = "status", `aria-live` = "polite", textOutput("update_status", inline = TRUE)))
+    )
   ),
-  fluidRow(
-    column(12, actionButton("generate", "Update plots", class = "btn-primary")),
-    # Read out by screen readers after every press of the button (Bootstrap's sr-only hides it on screen)
-    column(12, div(class = "sr-only", role = "status", `aria-live` = "polite", textOutput("update_status", inline = TRUE)))
-  ),
-  fluidRow(
-    column(12, uiOutput("status"), uiOutput("plots_ui"))
+  tags$section(
+    `aria-labelledby` = "charts-heading",
+    tags$h2(id = "charts-heading", class = "sr-only", "Charts"),
+    fluidRow(
+      column(12, uiOutput("status"), uiOutput("plots_ui"))
+    )
   )
 )
 
@@ -567,25 +612,32 @@ server <- function(input, output, session) {
     if (length(chosen) == 0) default_plots else SUPPORTED_PLOTS[SUPPORTED_PLOTS %in% chosen]
   })
 
-  # A split by column or the violin, dot or heat plot makes the charts wide, so picking one sets the width slider to its maximum, and
-  # going back to none sets the default; the slider can still be moved afterwards. An empty plot picker means the defaults.
+  # A split by column or the violin, dot or heat plot makes the charts wide, so picking one sets the chart width to its maximum, and
+  # going back to none sets the default; the width can still be changed afterwards. An empty plot picker means the defaults.
   observe({
     plots <- if (length(input$plots)) input$plots else default_plots
     wide <- nzchar(input$split_by %||% "") || any(c("ViolinPlot", "DotPlot", "Heatmap") %in% plots)
-    updateSliderInput(session, "chart_size", value = if (wide) 1200 else 600)
+    updateNumericInput(session, "chart_size", value = if (wide) MAX_CHART_WIDTH else 600)
   })
 
-  chart_size <- debounce(reactive(as.integer(input$chart_size %||% 600)), 300)
+  # What was typed, kept between the limits (an empty or invalid box is the default); debounced so typing does not redraw on every digit
+  chart_size <- debounce(
+    reactive({
+      width <- suppressWarnings(as.integer(input$chart_size %||% 600))
+      if (is.na(width)) 600L else as.integer(min(max(width, MIN_CHART_WIDTH), MAX_CHART_WIDTH))
+    }),
+    300
+  )
 
   # Save as buttons under a chart, only for viewers with DOWNLOAD access or above
-  download_buttons <- function(id) {
+  download_buttons <- function(id, title) {
     if (!can_download) {
       return(NULL)
     }
     div(
       class = "chart-downloads",
       role = "group",
-      `aria-label` = "Save this chart as an image",
+      `aria-label` = paste("Save the", title, "as an image"),
       style = "display: flex; gap: 6px; align-items: center; margin-top: 4px;",
       span("Save as", style = "font-size: 12px;"),
       lapply(names(DOWNLOAD_FORMATS), function(ext) {
@@ -594,9 +646,27 @@ server <- function(input, output, session) {
     )
   }
 
+  # The name of a chart: its heading for screen readers and part of the label of its Save as buttons. With several group by charts, the
+  # column each is colored by tells them apart
+  chart_title <- function(id) {
+    i <- suppressWarnings(as.integer(sub("^.*_", "", id)))
+    kind <- sub("^plot_", "", sub("_[0-9]+$", "", id))
+    switch(
+      kind,
+      UMAP = ,
+      PCA = if (n_group_plots() > 1) sprintf("%s colored by %s", kind, group_cols()[[i]]) else kind,
+      Heatmap = if (n_heatmaps() > 1) sprintf("Heatmap grouped by %s", group_cols()[[i]]) else "Heatmap",
+      ViolinPlot = "Violin plot",
+      DotPlot = "Dot plot",
+      TissuePlot = "Tissue plot",
+      TissueCells = "Tissue map with cell types",
+      id
+    )
+  }
+
   output$plots_ui <- renderUI({
-    # Every chart is a box of the slider's width (never wider than the page), flowing left to right and wrapping, so small charts sit
-    # side by side. The slider is not held back by Update plots; it is debounced so dragging it does not redraw on every step.
+    # Every chart is a box of the chart width (never wider than the page), flowing left to right and wrapping, so small charts sit
+    # side by side. The width is not held back by Update plots; it is debounced so typing it does not redraw on every digit.
     size <- chart_size()
     ids <- unlist(lapply(shown(), function(p) {
       if (p %in% c("UMAP", "PCA")) {
@@ -617,12 +687,20 @@ server <- function(input, output, session) {
           hover_id <- if (id == "plot_TissuePlot") "tissue_hover" else "tissue_cells_hover"
           div(
             style = sprintf("width: %dpx; max-width: 100%%; position: relative;", size),
+            tags$h3(class = "sr-only", chart_title(id)),
             plotOutput(id, width = "100%", height = "auto", hover = hoverOpts(hover_id, delay = 80, delayType = "debounce")),
             uiOutput(if (id == "plot_TissuePlot") "tissue_tip" else "tissue_cells_tip"),
-            download_buttons(id)
+            # The numbers the hover shows, for keyboard and screen reader users (a native <details>, so it opens with Enter or Space)
+            if (id == "plot_TissuePlot") tags$details(tags$summary("Show the values as a table"), tableOutput("tissue_values")),
+            download_buttons(id, chart_title(id))
           )
         } else {
-          div(style = sprintf("width: %dpx; max-width: 100%%;", size), plotOutput(id, width = "100%", height = "auto"), download_buttons(id))
+          div(
+            style = sprintf("width: %dpx; max-width: 100%%;", size),
+            tags$h3(class = "sr-only", chart_title(id)),
+            plotOutput(id, width = "100%", height = "auto"),
+            download_buttons(id, chart_title(id))
+          )
         }
       })
     )
@@ -800,7 +878,7 @@ server <- function(input, output, session) {
       ),
       TissuePlot = if (length(genes) > 0) {
         sprintf(
-          "Tissue map with one panel per gene (%s). Each tissue outline is filled with the average expression of its cell type, darker is higher; outlines that match no cell type are grey. The values are shown when hovering over an outline with a mouse.",
+          "Tissue map with one panel per gene (%s). Each tissue outline is filled with the average expression of its cell type, darker is higher; outlines that match no cell type are grey. The values are also listed in the table below the chart.",
           list_text(genes)
         )
       } else {
@@ -1115,6 +1193,29 @@ server <- function(input, output, session) {
     }
     p
   }
+
+  # The numbers of the tissue plot as a table, for whoever cannot hover over the outlines: per outline (and gene) the average expression and
+  # % of cells expressing, or without genes the cell type; outlines that match no drawn cell type say so
+  tissue_values <- function(td) {
+    if (td$genes) {
+      v <- unique(td$table[c("ROI.name", "gene", "avg_expression", "pct_expressed")])
+      data.frame(
+        Outline = v$ROI.name,
+        Gene = as.character(v$gene),
+        `Avg. expression` = ifelse(is.na(v$avg_expression), "no matching cell type", as.character(signif(v$avg_expression, 3))),
+        `% of cells expressing` = ifelse(is.na(v$pct_expressed), "", as.character(round(v$pct_expressed, 1))),
+        check.names = FALSE
+      )
+    } else {
+      v <- unique(td$table[c("ROI.name", "cell_type")])
+      data.frame(
+        Outline = v$ROI.name,
+        `Cell type` = ifelse(is.na(v$cell_type), "no matching cell type", as.character(v$cell_type)),
+        check.names = FALSE
+      )
+    }
+  }
+  output$tissue_values <- renderTable(tissue_values(tissue_data()), striped = TRUE, spacing = "xs")
 
   # The cell type map shown with the gene panels, so the outlines can be read against their cell types
   output$plot_TissueCells <- renderPlot(
