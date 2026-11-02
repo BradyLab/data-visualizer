@@ -215,10 +215,12 @@ test.describe('settings', () => {
       const row = page.locator('.v-row', { hasText: dataset.name })
       await expect(row).toBeVisible()
       // Clicks, not setChecked: the switch follows the store, so it springs back until the save returns, which setChecked would report as a failed click
-      await row.getByRole('checkbox').click()
+      // Each click waits for its save to return: until the store has the new visibility the switch can show the flipped state and then spring back, so a second click sent too early flips it the wrong way
+      const saved = () => page.waitForResponse((res) => res.request().method() === 'PUT' && res.url().includes(dataset.id))
+      await Promise.all([saved(), row.getByRole('checkbox').click()])
       await expect(row.getByRole('checkbox')).toBeChecked()
       await expect.poll(async () => (await getDataset(request, lab, dataset.id)).visibility).toBe(DatasetVisibility.PUBLIC)
-      await row.getByRole('checkbox').click()
+      await Promise.all([saved(), row.getByRole('checkbox').click()])
       await expect(row.getByRole('checkbox')).not.toBeChecked()
       await expect.poll(async () => (await getDataset(request, lab, dataset.id)).visibility).toBe(DatasetVisibility.PRIVATE)
     })
