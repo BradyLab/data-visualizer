@@ -85,6 +85,14 @@ upload. The ggPlantmap package is installed in the Shiny image (from GitHub, pin
 
 The backend checks the CSV when the upload finishes (`backend-express/src/services/tissue.ts`) and refuses it with a 400 and the reason, keeping the current map, if the header lacks `ROI.name`, `ROI.id`, `x` or `y`, or no row has numeric `x` and `y` (only the first 64 KB are read). It cannot check that `ROI.name` matches the dataset's cell types: a map that matches none of them draws every outline grey.
 
+## Accessibility
+
+- Every chart has a text description (`chart_description()` in `app/app.R`, passed as `renderPlot(alt = ...)`): the kind of chart, the cells and genes in it and what the colors mean. A new plot type needs its own case there, or its image is read out as just "<kind> chart".
+- A hidden status line (`update_status`, a polite live region) tells screen readers what **Update plots** did, including when a plot needs genes and none are picked. The boxes from `output$status` carry `role="alert"` (an unusable viewer link) or `role="status"`.
+- `lang` and the page title are set in `fluidPage()`, and the download icons are built with `decorative_icon()` (Shiny's own `icon()` adds ARIA that axe rejects).
+- Keyboard focus is outlined in the accent color on the selectize boxes, the number box, the slider and the buttons (`STYLE`); `!important` is needed because those libraries set `outline: none`.
+- Known gaps: the chart width slider is a bare `<span>` tab stop with no role, the tissue plot's values show only on mouse hover, and the viewer has no headings or landmarks.
+
 ## Formatting
 
 The R code (`app/`, `preprocess/`, `tests/`) is formatted with [Air](https://posit-dev.github.io/air/), configured in `air.toml` (150 columns, 2 spaces). From `shiny/`:

@@ -212,5 +212,37 @@ test("ordered_levels follows the object's factor levels, then sorts the rest", {
   expect_equal(app$ordered_levels(NULL, "type", c("b", "a")), c("a", "b"))
 })
 
+# ---- accessibility ----------------------------------------------------------------------------------------------------------------------
+
+test("list_text names the values, and counts the rest when there are many", {
+  expect_equal(app$list_text(c("a", "b")), "a, b")
+  expect_equal(app$list_text(1:3), "1, 2, 3")
+  expect_equal(app$list_text(letters[1:10]), "a, b, c, d, e, f, g, h and 2 more")
+  expect_equal(app$list_text(letters[1:10], max = 3), "a, b, c and 7 more")
+})
+
+test("decorative_icon hides the icon from screen readers without the ARIA that conflicts with that", {
+  html <- as.character(app$decorative_icon("download"))
+  expect(grepl("fa-download", html), "the icon is still the download icon")
+  expect(grepl('aria-hidden="true"', html, fixed = TRUE), "the icon is hidden from screen readers")
+  expect(!grepl("role=", html, fixed = TRUE), "role=presentation (not allowed with a label) is gone")
+  expect(!grepl("aria-label", html, fixed = TRUE), "the 'download icon' label is gone")
+})
+
+test("the page declares its language and title, and has a live region for what Update plots did", {
+  # The page as Shiny serves it (the title and lang are only added when it is rendered; renderPage is internal, but it is what shinyApp calls)
+  html <- paste(shiny:::renderPage(app$ui), collapse = "")
+  expect(grepl('<html lang="en"', html, fixed = TRUE), "the page declares its language")
+  expect(grepl("<title>Interactive plots</title>", html, fixed = TRUE), "the page has a title")
+  expect(grepl('role="status"', html, fixed = TRUE) && grepl('aria-live="polite"', html, fixed = TRUE), "a polite status region exists")
+  expect(grepl('id="update_status"', html, fixed = TRUE), "the region shows update_status")
+})
+
+test("the keyboard focus styles reach the controls that had none", {
+  for (selector in c(".selectize-input.focus", ".form-control:focus", ".irs-line:focus-visible", ".btn:focus-visible")) {
+    expect(grepl(selector, app$STYLE, fixed = TRUE), paste("no focus style for", selector))
+  }
+})
+
 unlink(work, recursive = TRUE)
 finish()

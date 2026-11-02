@@ -218,10 +218,32 @@ html, body { overflow-y: hidden; }
 .accent input[type=checkbox] { accent-color: ",
   ACCENT,
   "; }
+/* Visible keyboard focus: the selectize boxes, the number box and the slider (its tab stop is the line) had none or a faint one */
+.selectize-input.focus, .form-control:focus, .irs-line:focus-visible, .btn:focus-visible { outline: 2px solid ",
+  ACCENT,
+  " !important; outline-offset: 2px; box-shadow: none; } /* !important: the selectize, Bootstrap and slider styles set outline: none */
 "
 )
 
+# "a, b, c and 2 more": at most `max` of the values, for the text descriptions of the charts
+list_text <- function(x, max = 8) {
+  x <- as.character(x)
+  if (length(x) > max) paste0(paste(head(x, max), collapse = ", "), " and ", length(x) - max, " more") else paste(x, collapse = ", ")
+}
+
+# A Font Awesome icon that screen readers skip. shiny::icon() labels its icon ("download icon") and also marks it role="presentation",
+# which ARIA does not allow together; the buttons beside the icons already say what they do
+decorative_icon <- function(name) {
+  ic <- icon(name)
+  ic$attribs$role <- NULL
+  ic$attribs[["aria-label"]] <- NULL
+  ic$attribs[["aria-hidden"]] <- "true"
+  ic
+}
+
 ui <- fluidPage(
+  lang = "en",
+  title = "Interactive plots",
   tags$head(
     tags$style(HTML(STYLE)),
     # the parent sizes the iframe to the content, so the page itself never scrolls
@@ -247,7 +269,9 @@ ui <- fluidPage(
     uiOutput("violin_options")
   ),
   fluidRow(
-    column(12, actionButton("generate", "Update plots", class = "btn-primary"))
+    column(12, actionButton("generate", "Update plots", class = "btn-primary")),
+    # Read out by screen readers after every press of the button (Bootstrap's sr-only hides it on screen)
+    column(12, div(class = "sr-only", role = "status", `aria-live` = "polite", textOutput("update_status", inline = TRUE)))
   ),
   fluidRow(
     column(12, uiOutput("status"), uiOutput("plots_ui"))
@@ -565,7 +589,7 @@ server <- function(input, output, session) {
       style = "display: flex; gap: 6px; align-items: center; margin-top: 4px;",
       span("Save as", style = "font-size: 12px;"),
       lapply(names(DOWNLOAD_FORMATS), function(ext) {
-        downloadButton(paste0("download_", id, "_", ext), DOWNLOAD_FORMATS[[ext]], class = "btn-sm btn-default", icon = icon("download"))
+        downloadButton(paste0("download_", id, "_", ext), DOWNLOAD_FORMATS[[ext]], class = "btn-sm btn-default", icon = decorative_icon("download"))
       })
     )
   }
@@ -604,16 +628,40 @@ server <- function(input, output, session) {
     )
   })
 
+  # What a screen reader says after Update plots: which plots are now shown (a count tells one press from the next, so the same message is
+  # read again), and why the plots that need genes are empty when none are picked
+  output$update_status <- renderText({
+    req(input$generate > 0)
+    plots <- shown()
+    msg <- sprintf("Plots updated (%d): %s.", input$generate, paste(plots, collapse = ", "))
+    needs_genes <- intersect(plots, c("ViolinPlot", "DotPlot", "Heatmap"))
+    if (length(selection()$genes) == 0 && length(needs_genes) > 0) {
+      msg <- paste0(
+        msg,
+        " ",
+        paste(needs_genes, collapse = ", "),
+        if (length(needs_genes) == 1) " needs" else " need",
+        " at least one gene: pick a gene, then press Update plots."
+      )
+    }
+    msg
+  })
+
   output$status <- renderUI({
     if (is.null(context)) {
-      tags$div(class = "alert alert-danger", "This viewer link is missing, invalid or has expired. Reload the dataset page.")
+      tags$div(class = "alert alert-danger", role = "alert", "This viewer link is missing, invalid or has expired. Reload the dataset page.")
     } else if (!ready) {
-      tags$div(class = "alert alert-warning", "Parquet data not found (dataset not processed yet).")
+      tags$div(class = "alert alert-warning", role = "status", "Parquet data not found (dataset not processed yet).")
     } else if (!has_clusters()) {
-      tags$div(class = "alert alert-warning", paste("This dataset has no", ANNOTATION_COL, "or", CLUSTER_COL, "column to color the plot by."))
+      tags$div(
+        class = "alert alert-warning",
+        role = "status",
+        paste("This dataset has no", ANNOTATION_COL, "or", CLUSTER_COL, "column to color the plot by.")
+      )
     } else if ("TissuePlot" %in% offered && is.null(TISSUE_PLOT)) {
       tags$div(
         class = "alert alert-info",
+        role = "status",
         "The tissue plot is not available: this dataset has no readable tissue map (a CSV of a ggPlantmap table, with the columns ROI.name, ROI.id, x and y)."
       )
     }
@@ -701,6 +749,70 @@ server <- function(input, output, session) {
 
   # Width of a plot's box as the browser laid it out, for heights that follow it
   plot_width <- function(id) session$clientData[[paste0("output_", id, "_width")]] %||% 800
+
+  # What a screen reader says for a chart (the alt text of its image): the kind of chart, the cells and genes in it and what the colors mean.
+  # Each description follows the selection as of the last press of Update plots, like the chart itself
+  chart_description <- function(kind, i = 1) {
+    d <- plot_data()
+    genes <- d$genes
+    cells <- sprintf("%s cells", format(nrow(d$cells), big.mark = ","))
+    split_text <- if (!is.null(d$splits)) sprintf(" One panel per value of %s (%s).", selection()$split_by, list_text(d$splits)) else ""
+    group <- if (kind %in% c("UMAP", "PCA", "Heatmap") && length(d$group_cols) >= i) d$group_cols[[i]] else NULL
+    groups <- if (!is.null(group)) list_text(level_order(group, d[["cells"]][[paste0("grp", i)]])) else ""
+    switch(
+      kind,
+      UMAP = ,
+      PCA = if (length(genes) > 0) {
+        sprintf(
+          "%s scatter plot of %s, one panel per gene (%s). Cells are colored by expression, darker is higher; cells that do not express the gene are grey.%s",
+          kind,
+          cells,
+          list_text(genes),
+          split_text
+        )
+      } else {
+        sprintf(
+          "%s scatter plot of %s, colored by %s: %s.%s%s",
+          kind,
+          cells,
+          group,
+          groups,
+          if (isTRUE(d$label)) " Each group is labeled on the plot." else "",
+          split_text
+        )
+      },
+      ViolinPlot = sprintf(
+        "Violin plot of the expression of %s in each cluster (%s).%s",
+        list_text(genes),
+        list_text(d$clusters),
+        split_text
+      ),
+      DotPlot = sprintf(
+        "Dot plot of %s (columns) by cluster (%s). Dot size is the percent of cells expressing the gene, color is the scaled average expression.",
+        list_text(genes),
+        list_text(d$clusters)
+      ),
+      Heatmap = sprintf(
+        "Heatmap of the expression of %s: a column per cell, grouped by %s (%s), a row per gene.",
+        list_text(genes),
+        group,
+        groups
+      ),
+      TissuePlot = if (length(genes) > 0) {
+        sprintf(
+          "Tissue map with one panel per gene (%s). Each tissue outline is filled with the average expression of its cell type, darker is higher; outlines that match no cell type are grey. The values are shown when hovering over an outline with a mouse.",
+          list_text(genes)
+        )
+      } else {
+        sprintf("Tissue map, each outline filled with its cell type (%s); outlines that match no cell type are grey.", list_text(d$clusters))
+      },
+      TissueCells = sprintf(
+        "Tissue map, each outline filled with its cell type (%s); outlines that match no cell type are grey.",
+        list_text(d$clusters)
+      )
+    )
+  }
+  chart_alt <- function(kind, i = 1) function() tryCatch(chart_description(kind, i), error = function(e) paste(kind, "chart"))
 
   # The charts as they were last drawn, by output id, so a download is the very chart on screen (same data, same selection)
   drawn <- new.env()
@@ -814,7 +926,7 @@ server <- function(input, output, session) {
         local({
           spec <- spec
           id <- paste0("plot_", spec[[1]], "_", i)
-          output[[id]] <- renderPlot(height = function() scatter_height(id), {
+          output[[id]] <- renderPlot(height = function() scatter_height(id), alt = chart_alt(spec[[1]], i), {
             req(i <= n_group_plots())
             remember(id, scatter_plot(spec[[2]], spec[[3]], i))
           })
@@ -824,7 +936,7 @@ server <- function(input, output, session) {
   }
 
   # Like Seurat's VlnPlot: one violin per cluster, a panel per gene
-  output$plot_ViolinPlot <- renderPlot(height = function() as.integer(max(350, 230 * n_genes() + 30)), {
+  output$plot_ViolinPlot <- renderPlot(height = function() as.integer(max(350, 230 * n_genes() + 30)), alt = chart_alt("ViolinPlot"), {
     d <- plot_data()
     df <- long_expression(d)
     # Every cell is drawn as a jittered point over its violin, unless the boxplot or the median is picked, which replace the points.
@@ -895,7 +1007,7 @@ server <- function(input, output, session) {
   }
 
   # Like Seurat's DotPlot: dot size is the percent of cells expressing, color the scaled average expression
-  output$plot_DotPlot <- renderPlot(height = function() as.integer(max(350, 120 + 28 * n_clusters())), {
+  output$plot_DotPlot <- renderPlot(height = function() as.integer(max(350, 120 + 28 * n_clusters())), alt = chart_alt("DotPlot"), {
     sm <- cluster_summary(long_expression(plot_data()))
     p <- ggplot(sm, aes(gene, cluster, size = pct, color = scaled)) +
       geom_point() +
@@ -949,6 +1061,7 @@ server <- function(input, output, session) {
   # below: the height is that of the panels (the chart width less the legend, shared by the columns, times the map's height/width),
   # their titles and the caption, estimated a little short, which only narrows the panels
   output$plot_TissuePlot <- renderPlot(
+    alt = chart_alt("TissuePlot"),
     height = function() {
       panels <- max(1, length(selection()$genes))
       cols <- ceiling(sqrt(panels))
@@ -1005,6 +1118,7 @@ server <- function(input, output, session) {
 
   # The cell type map shown with the gene panels, so the outlines can be read against their cell types
   output$plot_TissueCells <- renderPlot(
+    alt = chart_alt("TissueCells"),
     height = function() {
       as.integer(max(150, tissue_panel_width("plot_TissueCells") * tissue_aspect() + 20))
     },
@@ -1171,7 +1285,7 @@ server <- function(input, output, session) {
     local({
       i <- i
       id <- paste0("plot_Heatmap_", i)
-      output[[id]] <- renderPlot(height = function() as.integer(max(350, 150 + 30 * n_genes())), {
+      output[[id]] <- renderPlot(height = function() as.integer(max(350, 150 + 30 * n_genes())), alt = chart_alt("Heatmap", i), {
         req(i <= n_heatmaps())
         remember(id, heatmap_plot(i))
       })
