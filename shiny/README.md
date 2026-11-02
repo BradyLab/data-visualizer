@@ -69,9 +69,9 @@ The **Pick your plots** box in the viewer chooses which plots show (applied with
 
 **Saving charts:** viewers with DOWNLOAD access or above (lab members, owners, admins, and external users granted DOWNLOAD) get **Save as** PNG / PDF / SVG buttons under every chart; with VIEW access there are none. Express signs the flag into the context (`can_download`), and the app only registers the download handlers when it is set. The file is the chart as last drawn, at its size on screen (PNG at 300 dpi).
 
-**Chart width** (slider in the options row above **Update plots**, 300-1200 px, applies right away) sets the width of every chart; it starts at 600, and picking the violin plot, the dot plot, the heatmap or a **Split by** column sets it to 1200 (move it afterwards if you like). Charts flow left to right and wrap, so when they are narrow enough several sit side by side (the plots you picked, and the group by charts of the UMAP and PCA); a chart is never wider than the page.
+**Chart width** (a number box in the options row above **Update plots**, 300-1200 px in steps of 50, applies right away) sets the width of every chart; it starts at 600, and picking the violin plot, the dot plot, the heatmap or a **Split by** column sets it to 1200 (move it afterwards if you like). Charts flow left to right and wrap, so when they are narrow enough several sit side by side (the plots you picked, and the group by charts of the UMAP and PCA); a chart is never wider than the page.
 
-**Colors and expression options** (modeled on scCustomize): groups use a colorblind-friendly palette (Okabe-Ito for up to 8 groups, then Polychrome 36), and expression uses a plasma gradient where dark is high. On the UMAP and PCA, the cells of every cell type you did not pick in **Pick your cell types** are drawn light grey underneath (with genes picked they count as not expressing). With genes picked, **Grey out expression at or below** (scCustomize's `na_cutoff`; empty, the default, means no cutoff) also draws cells at or below that value in grey, under the expressing cells. The violin plot can show a boxplot and the median (**Show boxplot**, **Show median**); either replaces the points of the cells.
+**Colors and expression options** (modeled on scCustomize): groups use a colorblind-friendly palette (Okabe-Ito for up to 8 groups, then Polychrome 36; colors too light to show against the white chart, such as the yellow, are darkened to a 3:1 contrast, WCAG 1.4.11), and expression uses a plasma gradient where dark is high. On the UMAP and PCA, the cells of every cell type you did not pick in **Pick your cell types** are drawn light grey underneath (with genes picked they count as not expressing). With genes picked, **Grey out expression at or below** (scCustomize's `na_cutoff`; empty, the default, means no cutoff) also draws cells at or below that value in grey, under the expressing cells. The violin plot can show a boxplot and the median (**Show boxplot**, **Show median**); either replaces the points of the cells.
 
 The violin, dot and heat maps need at least one gene picked. UMAP, PCA and violin draw a panel per gene, and every plot shows all the picked genes.
 
@@ -84,6 +84,17 @@ upload. The ggPlantmap package is installed in the Shiny image (from GitHub, pin
 (the order of the vertices; the rows are taken to be in order without it); `Level1`, `Level2` and others are ignored. The dataset must also list `TissuePlot` in its plots. It is independent of the preprocessing: uploading a map does not reprocess the dataset.
 
 The backend checks the CSV when the upload finishes (`backend-express/src/services/tissue.ts`) and refuses it with a 400 and the reason, keeping the current map, if the header lacks `ROI.name`, `ROI.id`, `x` or `y`, or no row has numeric `x` and `y` (only the first 64 KB are read). It cannot check that `ROI.name` matches the dataset's cell types: a map that matches none of them draws every outline grey.
+
+## Accessibility
+
+- Every chart has a text description (`chart_description()` in `app/app.R`, passed as `renderPlot(alt = ...)`): the kind of chart, the cells and genes in it and what the colors mean. A new plot type needs its own case there, or its image is read out as just "<kind> chart".
+- A hidden status line (`update_status`, a polite live region) tells screen readers what **Update plots** did, including when a plot needs genes and none are picked. The boxes from `output$status` carry `role="alert"` (an unusable viewer link) or `role="status"`.
+- `lang` and the page title are set in `fluidPage()`, and the download icons are built with `decorative_icon()` (Shiny's own `icon()` adds ARIA that axe rejects).
+- Keyboard focus is outlined in the accent color on the selectize boxes, the number boxes, the buttons and the table toggle (`STYLE`); `!important` is needed because those libraries set `outline: none`. The x that removes a picked item is at least 24 x 24 px.
+- The chart width is a number box, not a slider (the slider's tab stop had no role or value for assistive technology).
+- The tissue plot's hover values are also in a table under the chart (**Show the values as a table**), so they do not depend on a mouse.
+- The page has two labelled regions (**Plot options** and **Charts**) and a heading per chart, hidden on screen (Bootstrap's `sr-only`); the **Save as** buttons name their chart.
+- Group colors are darkened to at least 3:1 against white (`ensure_contrast()`), so points and legend swatches are visible.
 
 ## Formatting
 

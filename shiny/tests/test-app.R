@@ -184,6 +184,27 @@ test("outline_at finds the outline under a point, the topmost where they overlap
 
 # ---- colors and ordering ----------------------------------------------------------------------------------------------------------------
 
+test("contrast_with_white gives the WCAG ratio", {
+  expect_equal(unname(app$contrast_with_white("#FFFFFF")), 1)
+  expect_equal(round(unname(app$contrast_with_white("#000000"))), 21)
+  expect_equal(round(unname(app$contrast_with_white("#767676")), 1), 4.5, "the classic lightest grey that passes 4.5:1")
+})
+
+test("ensure_contrast darkens only the colors that are too light, keeping their hue", {
+  expect_equal(app$ensure_contrast(c("#0072B2", "#D55E00")), c("#0072B2", "#D55E00"), "colors that already pass are untouched")
+  yellow <- app$ensure_contrast("#F0E442")
+  expect(app$contrast_with_white(yellow) >= 3, "the yellow now has 3:1")
+  expect(app$contrast_with_white(yellow) < 3.3, "and is not darkened more than needed")
+  rgb <- grDevices::col2rgb(yellow)[, 1]
+  expect(rgb[[1]] > rgb[[3]] && rgb[[2]] > rgb[[3]], "it is still a yellow (red and green well above blue)")
+})
+
+test("colorblind_palette gives colors that all reach 3:1 against white, as many as asked for", {
+  for (n in c(8, 12, 36, 60)) {
+    expect(all(app$contrast_with_white(app$colorblind_palette(n)) >= 3), paste("a color is too light for", n, "groups"))
+  }
+})
+
 test("colorblind_palette gives n distinct colors, from Okabe-Ito up to 8 and Polychrome after", {
   for (n in c(1, 5, 8, 9, 36, 60)) {
     colors <- app$colorblind_palette(n)
@@ -210,6 +231,44 @@ test("ordered_levels follows the object's factor levels, then sorts the rest", {
   # a column that was not a factor, or a dataset with no table, is sorted
   expect_equal(app$ordered_levels(levels, "unlisted", c("10", "2")), c("2", "10"))
   expect_equal(app$ordered_levels(NULL, "type", c("b", "a")), c("a", "b"))
+})
+
+# ---- accessibility ----------------------------------------------------------------------------------------------------------------------
+
+test("list_text names the values, and counts the rest when there are many", {
+  expect_equal(app$list_text(c("a", "b")), "a, b")
+  expect_equal(app$list_text(1:3), "1, 2, 3")
+  expect_equal(app$list_text(letters[1:10]), "a, b, c, d, e, f, g, h and 2 more")
+  expect_equal(app$list_text(letters[1:10], max = 3), "a, b, c and 7 more")
+})
+
+test("decorative_icon hides the icon from screen readers without the ARIA that conflicts with that", {
+  html <- as.character(app$decorative_icon("download"))
+  expect(grepl("fa-download", html), "the icon is still the download icon")
+  expect(grepl('aria-hidden="true"', html, fixed = TRUE), "the icon is hidden from screen readers")
+  expect(!grepl("role=", html, fixed = TRUE), "role=presentation (not allowed with a label) is gone")
+  expect(!grepl("aria-label", html, fixed = TRUE), "the 'download icon' label is gone")
+})
+
+test("the page declares its language and title, and has a live region for what Update plots did", {
+  # The page as Shiny serves it (the title and lang are only added when it is rendered; renderPage is internal, but it is what shinyApp calls)
+  html <- paste(shiny:::renderPage(app$ui), collapse = "")
+  expect(grepl('<html lang="en"', html, fixed = TRUE), "the page declares its language")
+  expect(grepl("<title>Interactive plots</title>", html, fixed = TRUE), "the page has a title")
+  expect(grepl('role="status"', html, fixed = TRUE) && grepl('aria-live="polite"', html, fixed = TRUE), "a polite status region exists")
+  expect(grepl('id="update_status"', html, fixed = TRUE), "the region shows update_status")
+})
+
+test("the keyboard focus styles reach the controls that had none, and the remove x is a big enough target", {
+  for (selector in c(
+    ".selectize-input.focus",
+    ".form-control:focus",
+    ".btn:focus-visible",
+    "summary:focus-visible",
+    "plugin-remove_button .item .remove"
+  )) {
+    expect(grepl(selector, app$STYLE, fixed = TRUE), paste("no focus style for", selector))
+  }
 })
 
 unlink(work, recursive = TRUE)
