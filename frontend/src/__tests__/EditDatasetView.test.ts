@@ -212,7 +212,9 @@ describe("EditDatasetView: creating", () => {
         pick(wrapper, "Tissue Map", map);
         pick(wrapper, "Upload .rds", [rds]);
         await nextTick();
-        await wrapper.findAll("textarea")[1]!.setValue("  first version  ");
+        // A new dataset has no earlier version, so there is no box for update notes
+        expect(wrapper.findAll("textarea")).toHaveLength(1);
+        expect(text(wrapper)).not.toContain("Updates");
         await saveButton(wrapper).trigger("click");
         await flushPromises();
 
@@ -229,7 +231,7 @@ describe("EditDatasetView: creating", () => {
         expect(fn("file", "uploadFile").mock.calls).toEqual([
             ["new-id", FileTypes.COVER, cover],
             ["new-id", FileTypes.TISSUE_PLOT, map],
-            ["new-id", FileTypes.RDS, rds, "first version"],
+            ["new-id", FileTypes.RDS, rds, ""],
         ]);
         expect(mocks.push).toHaveBeenCalledWith("/dataset/atlas");
     });
