@@ -7,6 +7,9 @@ updates:
     directory: /backend-express
     schedule:
       interval: weekly
+    # A new release waits a week before it is proposed, so a compromised one can be caught and pulled first (matters for auto-merge)
+    cooldown:
+      default-days: 7
     groups:
       backend-minor-and-patch:
         update-types: [minor, patch]
@@ -19,6 +22,8 @@ updates:
     directory: /frontend
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     groups:
       frontend-minor-and-patch:
         update-types: [minor, patch]
@@ -31,6 +36,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     groups:
       actions:
         update-types: [minor, patch]
