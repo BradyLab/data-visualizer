@@ -1,0 +1,15 @@
+# The production images (backend-express/Dockerfile, frontend/Dockerfile) are built from the repository root, so this keeps
+# secrets, local data and dev leftovers out of the build context and out of the images
+.git
+.github
+.claude
+**/.env
+**/node_modules
+**/dist
+data
+temp
+discussions
+frontend/e2e
+frontend/test-results
+frontend/playwright-report
+backend-express/test

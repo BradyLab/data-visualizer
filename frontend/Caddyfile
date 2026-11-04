@@ -1,0 +1,35 @@
+# Caddy in front of everything (the web service of docker-compose.prod.yml).
+# DOMAIN is the public host name, for example data.example.org: it must point at this server, and ports 80 and 443 must be open, so Caddy
+# can get and renew its HTTPS certificate on its own. Use DOMAIN=localhost to try the stack locally (Caddy then makes a local certificate).
+# Not behind a CDN proxy such as Cloudflare's free plan: it caps request bodies at 100 MB and would break the multi-GB uploads.
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	# Everything the backend answers. Caddy streams request and response bodies and sets no timeouts on them by default, which the long
+	# uploads (tus) and the Shiny websockets need; it also replaces any X-Forwarded-For a client sends, which the backend relies on
+	# (TRUST_PROXY=1). flush_interval -1 sends data on as it arrives (Shiny, downloads)
+	@backend path /api/* /socket.io/* /shiny/* /health
+	handle @backend {
+		reverse_proxy backend:3001 {
+			flush_interval -1
+		}
+	}
+
+	# The single-page app: files from the build, and index.html for every other path so that reloading a page of the app works
+	handle {
+		root * /srv
+		@hashed path /assets/*
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
+		@entry not path /assets/*
+		header @entry Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}
