@@ -111,6 +111,13 @@ services:
       PARQUET_DIR: /data/parquet
       TISSUE_DIR: /data/tissue
       SHINY_SECRET: ${SHINY_SECRET:?set SHINY_SECRET in .env}
+      # Every viewing session has its own DuckDB, which by default may use all cores and 80% of the machine's RAM. These cap each one, so a
+      # few viewers of a large dataset stay inside the container's limits below (the sessions together should fit in SHINY_MEM_LIMIT)
+      DUCKDB_MEMORY_LIMIT: ${SHINY_DUCKDB_MEMORY_LIMIT:-1500MB}
+      DUCKDB_THREADS: ${SHINY_DUCKDB_THREADS:-2}
+    # Keeps plot rendering from starving the website and the preprocess job of memory and CPU
+    mem_limit: ${SHINY_MEM_LIMIT:-6g}
+    cpus: ${SHINY_CPUS:-2}
     volumes:
       - ${DATA_DIR:-./data}/parquet:/data/parquet:ro
       - ${DATA_DIR:-./data}/uploads/tissue:/data/tissue:ro
@@ -134,6 +141,8 @@ services:
     environment:
       HOME: /tmp
     mem_limit: ${PREPROCESS_MEM_LIMIT:-24g}
+    # R runs the job on one core, so one is enough, and the web app and Shiny keep the rest of the server's CPUs
+    cpus: ${PREPROCESS_CPUS:-1}
     volumes:
       - ${DATA_DIR:-./data}:/data
     restart: unless-stopped
