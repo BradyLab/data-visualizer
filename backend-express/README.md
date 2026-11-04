@@ -32,6 +32,7 @@ npm run dev               # tsx watch, http://localhost:3001
 | `DEFAULT_PASSWORD` | Password given to seeded users until they change it (invited users get a random temporary password) |
 | `EMAILJS_SERVICE_ID`, `EMAILJS_TEMPLATE_ID`, `EMAILJS_PUBLIC_KEY`, `EMAILJS_PRIVATE_KEY` | Optional. [EmailJS](https://www.emailjs.com) settings for the invite email; all four are needed, otherwise no email is sent. See [Invite emails](#invite-emails) |
 | `EMAIL_DISABLED` | Optional. `true` sends no email even if EmailJS is configured. It is also off whenever `NODE_ENV=test`; `npm test` and the e2e stack both set this so tests never call the real API |
+| `TRUST_PROXY` | Optional. Number of reverse proxies in front of the server (`1` behind Caddy in `docker-compose.prod.yml`). Needed in production so the login and websocket rate limits see each client's own address; leave unset when there is no proxy. Only a count is accepted, and the proxy must overwrite any `X-Forwarded-For` a client sends |
 | `JWT_SECRET` | Signing secret for login tokens; the server refuses to start without it |
 | `JWT_EXPIRES_IN` | Token lifetime, e.g. `8h` |
 | `UPLOAD_DIR` | Where uploads are stored (default `/data/uploads`); `rds/`, `cover/`, `tissue/` and `tmp/` are created inside |
@@ -117,7 +118,7 @@ Authentication is a `Bearer` JWT from `/auth/login`. Users in the `INVITED` stat
 - **Uploads** go to `<UPLOAD_DIR>/tmp` first and are moved into place once complete. Unfinished uploads expire after 48 hours and are swept hourly. Node's request/socket timeouts are disabled so multi-GB uploads are not cut off.
 - **Processing:** a finished `.rds` upload sets the dataset's `status` to `PROCESSING` and queues one R job at a time (in-process `Rscript`, or the worker container when `PREPROCESS_SPOOL_DIR` is set). It ends `READY` or `FAILED` (with `statusMessage`); unfinished jobs are re-queued on restart. Details in [`../shiny/README.md`](../shiny/README.md).
 - **Shiny viewer:** the frontend gets a short-lived ticket, opens `/shiny/<url>?viewer_ticket=...` in an iframe, and the proxy swaps it for a cookie session, re-checking dataset access. WebSocket upgrades are authorized in `index.ts`. Shiny only trusts a `?ctx=` value signed with `SHINY_SECRET`.
-- **Rate limiting:** 10 failed logins per 15 min per IP, 5 per account, and 5 failed password changes per user. Counters are stored in Postgres, so they survive restarts. Websocket connections with a bad token are limited the same way (20 failures per 15 min per IP). Behind a reverse proxy, set `trust proxy` in `index.ts` or all clients share one IP.
+- **Rate limiting:** 10 failed logins per 15 min per IP, 5 per account, and 5 failed password changes per user. Counters are stored in Postgres, so they survive restarts. Websocket connections with a bad token are limited the same way (20 failures per 15 min per IP). Behind a reverse proxy, set `TRUST_PROXY` (see the table above) or all clients share one IP.
 - **Websockets:** the server decides each socket's rooms from its token; clients only listen. Event names and payloads are in `commons/socket.ts`.
 - **Importing `index.ts`:** `start()` only runs when `index.ts` is the entry point, so a test can import `get()` without connecting to the DB or listening.
 - **Schema changes:** add a new numbered file in `migrations/` rather than editing an applied one.

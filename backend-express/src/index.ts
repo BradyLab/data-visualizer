@@ -16,6 +16,7 @@ import { viewerEnabled } from "@src/services/viewer.ts";
 import { secretsBlockStartup, warnAboutDefaultPassword } from "@src/services/startupChecks.ts";
 import { attachSocket } from "@src/services/socket.ts";
 import { apis } from "@commons/general.ts";
+import { trustProxyHops } from "@src/utils/trustProxy.ts";
 
 import userRouter from "@src/routers/user.ts";
 import datasetRouter from "@src/routers/dataset.ts";
@@ -36,6 +37,10 @@ const REQUIRED_ENV = ["API_PORT", "DB_HOST", "DB_PORT", "DB_NAME", "DB_USERNAME"
 // Builds and configures the Express app (kept separate from start() so it can be reused, e.g. in tests)
 export const get = () => {
     const app: Express = express();
+    // Behind a reverse proxy (the Caddy container in docker-compose.prod.yml) every request would otherwise appear to come from the proxy's
+    // address, and the login rate limits would count all users together. TRUST_PROXY is the number of proxies in front of this server
+    const proxies = trustProxyHops();
+    if (proxies > 0) app.set("trust proxy", proxies);
     // Resumable file uploads (tus). Mounted before the body parsers and CORS middleware below because the tus server reads the raw request
     // itself and sends its own CORS headers; OPTIONS (preflight) carries no token, everything else needs a login
     app.all(
