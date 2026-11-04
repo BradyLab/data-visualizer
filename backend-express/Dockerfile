@@ -6,7 +6,7 @@
 # The code is run with tsx, as in development, not from tsc output: tsconfig.json only emits type declarations, and the source uses
 # .ts import extensions and the @src/@commons aliases, which plain node cannot resolve. That is also why the dev dependencies
 # (tsx, sequelize-cli for the migrations) stay installed.
-FROM node:24-alpine
+FROM node:26-alpine
 
 WORKDIR /app/backend-express
 COPY backend-express/package.json backend-express/package-lock.json ./

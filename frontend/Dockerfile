@@ -3,7 +3,7 @@
 #   docker build -f frontend/Dockerfile -t data-visualizer-web .
 # The build does not depend on the domain: VITE_BACKEND_URL is empty, so the app talks to the origin it was loaded from. The domain is a
 # runtime setting (DOMAIN, read by the Caddyfile). Floating tags within a major version: rebuilding picks up Node and Caddy security patches.
-FROM node:24-alpine AS build
+FROM node:26-alpine AS build
 
 WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json ./
