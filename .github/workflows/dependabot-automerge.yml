@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: meta
-        uses: dependabot/fetch-metadata@v2
+        uses: dependabot/fetch-metadata@v3
         with: { github-token: "${{ secrets.GITHUB_TOKEN }}" }
       # npm and workflow updates only, never majors. The R images (rocker tag = R version + CRAN snapshot) and Postgres stay manual
       - if: steps.meta.outputs.update-type != 'version-update:semver-major' && contains(fromJSON('["npm_and_yarn","github_actions"]'), steps.meta.outputs.package-ecosystem)
