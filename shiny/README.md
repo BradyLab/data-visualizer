@@ -33,6 +33,9 @@ Either way:
   page shows the state, and editors get a **Try again** button (`POST /datasets/:id/reprocess`)
 - unfinished jobs are queued again when the backend restarts; deleting a dataset removes its Parquet folder, and deleting its current `.rds` file removes the Parquet too and puts the dataset back to `PROCESSING` (waiting for a new upload)
 - `PARQUET_DIR` defaults to `data/parquet` (a sibling of the uploads folder); Shiny reads the same folder
+- Shiny opens one in-memory DuckDB per viewing session. `DUCKDB_MEMORY_LIMIT` (for example `1500MB`) and `DUCKDB_THREADS` cap each one; unset, DuckDB uses
+  every core and 80% of the machine's RAM per connection, which can exceed a container's memory limit. `docker-compose.prod.yml` sets both (and limits on the
+  container); development leaves them unset
 
 Datasets created before this existed stay `PROCESSING` until someone presses **Try again** (or re-uploads).
 

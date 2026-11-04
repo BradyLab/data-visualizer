@@ -57,7 +57,7 @@ from `.env`; you will be asked to change it on first login.
 The first `docker compose up` also builds the R images (`shiny` and `preprocess`), which takes a while. Processing a dataset needs RAM
 for the whole Seurat object (often 2-5x the file size); give Docker enough memory.
 
-To run without Docker, see the "Running locally" sections in the two project READMEs (you need Node 24 (see `.nvmrc`) and a Postgres).
+To run without Docker, see the "Running locally" sections in the two project READMEs (you need Node 26 (see `.nvmrc`) and a Postgres).
 
 ## Testing
 

@@ -24,6 +24,8 @@ declare global {
             EMAILJS_PRIVATE_KEY?: string;
             // "true" skips sending the invite email even when the EmailJS settings above are set
             EMAIL_DISABLED?: string;
+            // Number of reverse proxies in front of the server (1 for the Caddy container of the production compose file); unset when there are none
+            TRUST_PROXY?: string;
             // Secret used to sign login tokens, and how long they last (e.g. "8h")
             JWT_SECRET: string;
             JWT_EXPIRES_IN?: string;

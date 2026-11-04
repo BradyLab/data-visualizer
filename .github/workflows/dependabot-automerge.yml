@@ -1,0 +1,40 @@
+# Auto-merges Dependabot's npm and GitHub Actions updates once CI passes (item 22 of discussions/deploymentTasks.txt).
+# To activate: rename this file to dependabot-automerge.yml, then do the repository settings below.
+#
+# When Dependabot opens a pull request for an npm package or a GitHub Action and the update is not a major version, this turns on
+# auto-merge; GitHub then merges the PR by itself when the required checks pass. Majors, the R images (the rocker tag fixes the R version and
+# the CRAN snapshot), Postgres and the compose files are left for a person.
+#
+# Repository settings (a repo admin, once; required: without required checks, auto-merge merges immediately without waiting for CI):
+#   - Settings > General > Pull Requests: turn on "Allow auto-merge".
+#   - Settings > Rules > Rulesets (or Branches > branch protection) for main: require a pull request and require these checks to pass
+#     (the job names in ci.yml): Backend, Frontend, R format, Shiny image, Preprocess image, E2E.
+#
+# To verify after the first real PRs:
+#   - What update-type fetch-metadata reports for a grouped minor/patch PR. If it only reports the highest type, the major guard below still
+#     works, since majors are never grouped (dependabot.yml groups only minor and patch).
+#   - That auto-merge waits for all six checks, and that a failing check leaves the PR open.
+#   - The fetch-metadata major version (v2 here) against the newest; Dependabot keeps it up to date afterwards.
+#
+# Limits: merges made with GITHUB_TOKEN do not trigger other workflows, so images.yml publishes these changes at the next weekly run, or when
+# started by hand. Auto-merging npm updates is a supply-chain risk even with CI passing and the cooldown in dependabot.yml; if that is not
+# acceptable, do not activate this file and merge the weekly PRs by hand (nothing else in the plan depends on it).
+
+name: Dependabot auto-merge
+
+on: pull_request
+
+permissions: { contents: write, pull-requests: write }
+
+jobs:
+  automerge:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - id: meta
+        uses: dependabot/fetch-metadata@v2
+        with: { github-token: "${{ secrets.GITHUB_TOKEN }}" }
+      # npm and workflow updates only, never majors. The R images (rocker tag = R version + CRAN snapshot) and Postgres stay manual
+      - if: steps.meta.outputs.update-type != 'version-update:semver-major' && contains(fromJSON('["npm_and_yarn","github_actions"]'), steps.meta.outputs.package-ecosystem)
+        run: gh pr merge --auto --squash "$PR_URL"
+        env: { PR_URL: "${{ github.event.pull_request.html_url }}", GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }

@@ -9,6 +9,7 @@ import { userFromHeader } from "@src/middleware/auth.ts";
 import { PostgresStore } from "@src/middleware/rateLimitStore.ts";
 import { verifyToken } from "@src/services/auth.ts";
 import { ipKeyGenerator, type Options } from "express-rate-limit";
+import { clientAddress, trustProxyHops } from "@src/utils/trustProxy.ts";
 import { DatasetVisibility, type IDataset } from "@commons/dataset.ts";
 import { UserRoles, UserStatus, type IUserName } from "@commons/user.ts";
 import {
@@ -31,7 +32,7 @@ interface SocketData {
 }
 
 // Failed connection attempts (bad, expired or missing token) allowed per client IP and window, counted in the same Postgres table as the
-// login limiters. Successful connections don't count. Like those limiters, this sees the proxy's address unless the app trusts the proxy
+// login limiters. Successful connections don't count. Like those limiters, this sees the proxy's address unless TRUST_PROXY is set
 const HANDSHAKE_WINDOW_MS = 15 * 60 * 1000;
 const HANDSHAKE_FAILURES = 20;
 const handshakeFailures = new PostgresStore("socket-handshake");
@@ -57,7 +58,10 @@ export const attachSocket = (server: HttpServer) => {
         cors: { origin: process.env.FRONTEND_URL as string },
     });
     io.use(async (socket, next) => {
-        const ip = ipKeyGenerator(socket.handshake.address);
+        // socket.handshake.address is the socket's own peer, which behind the reverse proxy is the proxy; read the client from X-Forwarded-For
+        const ip = ipKeyGenerator(
+            clientAddress(socket.request.headers["x-forwarded-for"], socket.handshake.address, trustProxyHops())
+        );
         let user: Awaited<ReturnType<typeof userFromHeader>>;
         try {
             // Too many recent failures from this address: refuse without looking at the token or the user table

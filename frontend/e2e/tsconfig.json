@@ -1,5 +1,5 @@
 {
-  "extends": "@tsconfig/node24/tsconfig.json",
+  "extends": "@tsconfig/node26/tsconfig.json",
   "include": ["./**/*"],
   "compilerOptions": {
     // Same module settings as tsconfig.node.json: specs import with .ts extensions or none, and this is type-checking only

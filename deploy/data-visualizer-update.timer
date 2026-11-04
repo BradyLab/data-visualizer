@@ -1,0 +1,13 @@
+# Runs data-visualizer-update.service every night (see that file for how to install it).
+# 11:00 UTC is 3 or 4 in the morning in California. The random delay spreads the load on the registry, and Persistent=true runs a missed
+# update (server was off) at the next boot.
+[Unit]
+Description=Nightly update of the data-visualizer containers
+
+[Timer]
+OnCalendar=*-*-* 11:00:00 UTC
+RandomizedDelaySec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

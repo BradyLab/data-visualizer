@@ -1,0 +1,20 @@
+# Updates the production containers (deploy/update.sh). Started by data-visualizer-update.timer.
+# Install on the server (the repository cloned to /opt/data-visualizer; change the two paths below if it is elsewhere):
+#   sudo cp deploy/data-visualizer-update.service deploy/data-visualizer-update.timer /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now data-visualizer-update.timer
+# Check:   systemctl list-timers data-visualizer-update.timer   and   journalctl -u data-visualizer-update
+# Run now: sudo systemctl start data-visualizer-update.service
+# Runs as root, which is what access to the Docker socket amounts to anyway.
+[Unit]
+Description=Update the data-visualizer containers
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/data-visualizer
+ExecStart=/opt/data-visualizer/deploy/update.sh
+# Pulling the R images can take a while on a slow link; the health wait inside the script has its own limit
+TimeoutStartSec=2h

@@ -14,7 +14,7 @@ const TOO_MANY = { error: "Too many login attempts. Please try again later." };
 /**
  * Limits login attempts per client IP (10 per 15 minutes).
  * Successful logins do not count, so only failures use up the budget.
- * Behind a reverse proxy, set app.set("trust proxy", ...) in index.ts or every client shares the proxy's IP.
+ * Behind a reverse proxy, set TRUST_PROXY (the number of proxies, see index.ts) or every client shares the proxy's IP.
  */
 export const loginIpLimiter = rateLimit({
     windowMs: WINDOW_MS,

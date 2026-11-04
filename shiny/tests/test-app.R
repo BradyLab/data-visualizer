@@ -271,5 +271,44 @@ test("the keyboard focus styles reach the controls that had none, and the remove
   }
 })
 
+# ---- DuckDB limits ------------------------------------------------------------------------------------------------------------------------
+
+test("duckdb_settings changes nothing unless the limits are set", {
+  expect_equal(app$duckdb_settings("", ""), character())
+})
+
+test("duckdb_settings turns the memory limit and thread count into statements, with a folder to spill into", {
+  statements <- app$duckdb_settings("1500MB", "2")
+  expect_equal(statements[[1]], "SET memory_limit = '1500MB'")
+  expect(grepl("^SET temp_directory = '", statements[[2]]), "no temp_directory")
+  expect_equal(statements[[3]], "SET threads = 2")
+  expect_equal(app$duckdb_settings("2 GB", "")[[1]], "SET memory_limit = '2 GB'")
+})
+
+test("duckdb_settings ignores values that are not a size or a whole number, with a warning", {
+  warned <- character()
+  statements <- withCallingHandlers(
+    app$duckdb_settings("1500; DROP TABLE x", "0"),
+    warning = function(w) {
+      warned <<- c(warned, conditionMessage(w))
+      invokeRestart("muffleWarning")
+    }
+  )
+  expect_equal(statements, character())
+  expect_equal(length(warned), 2L)
+  expect(any(grepl("DUCKDB_MEMORY_LIMIT", warned)) && any(grepl("DUCKDB_THREADS", warned)), "the warnings do not name the variables")
+})
+
+test("the statements work on a real DuckDB connection, and a query still runs under a small limit", {
+  con <- DBI::dbConnect(duckdb::duckdb())
+  for (statement in app$duckdb_settings("300MB", "1")) {
+    DBI::dbExecute(con, statement)
+  }
+  expect_equal(DBI::dbGetQuery(con, "SELECT current_setting('threads') AS v")$v, 1)
+  expect(grepl("MB|MiB", DBI::dbGetQuery(con, "SELECT current_setting('memory_limit') AS v")$v), "the memory limit was not applied")
+  expect_equal(DBI::dbGetQuery(con, "SELECT sum(i) AS s FROM range(1000000) t(i)")$s, 499999500000)
+  DBI::dbDisconnect(con, shutdown = TRUE)
+})
+
 unlink(work, recursive = TRUE)
 finish()

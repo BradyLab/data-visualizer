@@ -21,6 +21,31 @@ SECRET <- Sys.getenv("SHINY_SECRET")
 DEV <- identical(Sys.getenv("SHINY_DEV"), "1")
 UUID_RE <- "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 
+# SQL statements that apply DUCKDB_MEMORY_LIMIT (for example 1500MB) and DUCKDB_THREADS to a session's DuckDB connection. Each session has
+# its own, and DuckDB's defaults are every core and 80% of the machine's RAM per connection, which a few viewers of a large dataset can add
+# up to more than a container's memory limit (docker-compose.prod.yml sets both variables). With neither set nothing changes. A value that
+# is not valid is ignored with a warning, so one typo in the environment does not break every session
+duckdb_settings <- function(memory_limit = Sys.getenv("DUCKDB_MEMORY_LIMIT"), threads = Sys.getenv("DUCKDB_THREADS")) {
+  statements <- character()
+  if (nzchar(memory_limit)) {
+    if (grepl("^[0-9]+(\\.[0-9]+)? ?[KMGT]i?B$", memory_limit)) {
+      # Past the limit DuckDB writes to disk instead of failing, but its default folder is next to the app, which is not writable
+      spill <- gsub("'", "''", tempdir(), fixed = TRUE)
+      statements <- c(statements, sprintf("SET memory_limit = '%s'", memory_limit), sprintf("SET temp_directory = '%s'", spill))
+    } else {
+      warning("Ignoring DUCKDB_MEMORY_LIMIT=", memory_limit, ": expected a size such as 1500MB or 2GB", call. = FALSE)
+    }
+  }
+  if (nzchar(threads)) {
+    if (grepl("^[1-9][0-9]*$", threads)) {
+      statements <- c(statements, sprintf("SET threads = %s", threads))
+    } else {
+      warning("Ignoring DUCKDB_THREADS=", threads, ": expected a whole number", call. = FALSE)
+    }
+  }
+  statements
+}
+
 # Dataset folder for an id, or NULL unless the id is a UUID (it becomes part of a path, so nothing else may through)
 dataset_dir <- function(dataset_id) {
   if (is.null(dataset_id) || length(dataset_id) != 1 || !grepl(UUID_RE, dataset_id)) {
@@ -339,6 +364,9 @@ server <- function(input, output, session) {
 
   # One in-memory DuckDB per session (cheap), closed with it; the Parquet files are only read
   con <- dbConnect(duckdb())
+  for (statement in duckdb_settings()) {
+    dbExecute(con, statement)
+  }
   session$onSessionEnded(function() dbDisconnect(con, shutdown = TRUE))
   cells_sql <- function(select = "*") {
     sprintf("SELECT %s FROM read_parquet(%s)", select, dbQuoteString(con, cells_file))

@@ -1,0 +1,154 @@
+# Production stack: Caddy (HTTPS + the built frontend), backend, Postgres, Shiny and the preprocess worker, on one server.
+#
+#   cp .env.prod.example .env      # fill in the values; compose refuses to start without the required ones
+#   mkdir -p data && sudo chown 1000:1000 data     # the backend (uid 1000) and the preprocess worker write here
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Differences from docker-compose.yml (development): images are built, not assembled from the source on every start; no source mounts,
+# no dev servers and no SHINY_DEV; NODE_ENV=production (weak secrets stop the backend from starting); migrations run on start but the
+# development seeders do not; only Caddy publishes ports; every service restarts by itself and logs are capped.
+# The IMAGE_PREFIX and IMAGE_TAG variables name the images so a registry can supply them (docker compose pull) instead of building on the server.
+
+# Its own project name: without it compose would use the folder name, the same as the development stack's, and share its containers and volumes
+name: data-visualizer-prod
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # Caddy: HTTPS on ports 80/443, the frontend files, and the proxy to the backend (frontend/Caddyfile)
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    image: ${IMAGE_PREFIX:-data-visualizer}-web:${IMAGE_TAG:-latest}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env (see .env.prod.example)}
+    volumes:
+      # Certificates and Caddy's state: losing them only means getting new certificates
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *logging
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend-express/Dockerfile
+    image: ${IMAGE_PREFIX:-data-visualizer}-backend:${IMAGE_TAG:-latest}
+    init: true
+    environment:
+      NODE_ENV: production
+      API_PORT: "3001"
+      BACKEND_URL: https://${DOMAIN}
+      FRONTEND_URL: https://${DOMAIN}
+      # One proxy (Caddy) in front: the login and websocket rate limits then see each client's own address
+      TRUST_PROXY: "1"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: data_visualizer
+      DB_USERNAME: postgres
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
+      SHINY_URL: http://shiny:3838
+      SHINY_SECRET: ${SHINY_SECRET:?set SHINY_SECRET in .env}
+      UPLOAD_DIR: /data/uploads
+      PARQUET_DIR: /data/parquet
+      # Uploads are processed by the preprocess service below, through this shared folder
+      PREPROCESS_SPOOL_DIR: /data/jobs
+      # Invite emails; all four must be set for any to be sent (see backend-express/README.md)
+      EMAILJS_SERVICE_ID: ${EMAILJS_SERVICE_ID:-}
+      EMAILJS_TEMPLATE_ID: ${EMAILJS_TEMPLATE_ID:-}
+      EMAILJS_PUBLIC_KEY: ${EMAILJS_PUBLIC_KEY:-}
+      EMAILJS_PRIVATE_KEY: ${EMAILJS_PRIVATE_KEY:-}
+    volumes:
+      - ${DATA_DIR:-./data}:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      # Migrations run before the server starts
+      start_period: 60s
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *logging
+
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: data_visualizer
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d data_visualizer"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    logging: *logging
+
+  # Only reachable from other services; the backend proxies /shiny to it after checking access. The app is part of the image
+  shiny:
+    build: ./shiny
+    image: ${IMAGE_PREFIX:-data-visualizer}-shiny:${IMAGE_TAG:-latest}
+    environment:
+      PARQUET_DIR: /data/parquet
+      TISSUE_DIR: /data/tissue
+      SHINY_SECRET: ${SHINY_SECRET:?set SHINY_SECRET in .env}
+      # Every viewing session has its own DuckDB, which by default may use all cores and 80% of the machine's RAM. These cap each one, so a
+      # few viewers of a large dataset stay inside the container's limits below (the sessions together should fit in SHINY_MEM_LIMIT)
+      DUCKDB_MEMORY_LIMIT: ${SHINY_DUCKDB_MEMORY_LIMIT:-1500MB}
+      DUCKDB_THREADS: ${SHINY_DUCKDB_THREADS:-2}
+    # Keeps plot rendering from starving the website and the preprocess job of memory and CPU
+    mem_limit: ${SHINY_MEM_LIMIT:-6g}
+    cpus: ${SHINY_CPUS:-2}
+    volumes:
+      - ${DATA_DIR:-./data}/parquet:/data/parquet:ro
+      - ${DATA_DIR:-./data}/uploads/tissue:/data/tissue:ro
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/3838'"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    logging: *logging
+
+  # Turns uploaded .rds files into the Parquet the Shiny app reads (shiny/preprocess/worker.sh). Needs RAM for the largest Seurat object
+  # (often 2-5x the file size). mem_limit keeps a runaway R process from taking the web app and the database down with it: R is killed instead and
+  # the dataset is marked FAILED. Set PREPROCESS_MEM_LIMIT a few GB below the server's RAM
+  preprocess:
+    build: ./shiny/preprocess
+    image: ${IMAGE_PREFIX:-data-visualizer}-preprocess:${IMAGE_TAG:-latest}
+    entrypoint: ["/worker.sh"]
+    # Same user as the backend, so the files it writes are ones the backend can delete; R needs a writable home
+    user: "1000:1000"
+    environment:
+      HOME: /tmp
+    mem_limit: ${PREPROCESS_MEM_LIMIT:-24g}
+    # R runs the job on one core, so one is enough, and the web app and Shiny keep the rest of the server's CPUs
+    cpus: ${PREPROCESS_CPUS:-1}
+    volumes:
+      - ${DATA_DIR:-./data}:/data
+    restart: unless-stopped
+    logging: *logging
+
+volumes:
+  postgres-data:
+  caddy-data:
+  caddy-config:

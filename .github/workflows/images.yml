@@ -1,0 +1,64 @@
+# Publishes the production images to GitHub's container registry (item 20 of discussions/deploymentTasks.txt).
+# To activate: rename this file to images.yml.
+#
+# Builds ghcr.io/<owner>/data-visualizer-{web,backend,shiny,preprocess} (the names docker-compose.prod.yml uses with
+# IMAGE_PREFIX=ghcr.io/<owner>/data-visualizer), tagged :latest and :sha-<commit>. It runs only after CI has passed on main; the weekly
+# rebuild comes from the schedule in ci.yml, so a weekly run is tested first and a broken build never ships. The server's nightly pull
+# fetches :latest.
+#
+# Why workflow_run and not calling ci.yml from here: ci.yml has a concurrency group per ref with cancel-in-progress, and a called copy would
+# share that group with the push-triggered run, so the two would cancel each other.
+#
+# Before relying on it:
+#   - Public or private images? GHCR packages are private by default. Private images need a login token on the server and on the cluster
+#     (Apptainer), and tokens expire. Public images need none and hold no secrets (.dockerignore keeps every .env out of the build), but do
+#     contain the code. After the first publish, change each package's visibility under the organisation's Packages > Package settings.
+#   - Pushes made by Dependabot auto-merge (dependabot-automerge.yml) use GITHUB_TOKEN and do not trigger workflows, so those changes are
+#     published at the next weekly run, or start this workflow by hand (workflow_dispatch).
+#   - Versions of docker/metadata-action and docker/login-action were not checked when this was written; the others follow ci.yml.
+
+name: Publish images
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    # Only after a green CI run on main (not a pull request)
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event != 'pull_request')
+    runs-on: ubuntu-latest
+    permissions: { contents: read, packages: write }
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: web, context: ., file: frontend/Dockerfile }
+          - { name: backend, context: ., file: backend-express/Dockerfile }
+          - { name: shiny, context: shiny, file: shiny/Dockerfile }
+          - { name: preprocess, context: shiny/preprocess, file: shiny/preprocess/Dockerfile }
+    steps:
+      - uses: actions/checkout@v7
+        with: { ref: "${{ github.event.workflow_run.head_sha || github.sha }}" }
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with: { registry: ghcr.io, username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" }
+      - id: meta
+        uses: docker/metadata-action@v6 # lowercases the image name, which GHCR requires
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/data-visualizer-${{ matrix.name }}
+          tags: |
+            type=raw,value=latest
+            type=sha
+      - uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          push: true
+          pull: true # re-check the base image, so a patched node/caddy/rocker image invalidates the layers built on it
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,scope=${{ matrix.name }},mode=max
