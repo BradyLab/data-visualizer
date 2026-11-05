@@ -16,6 +16,23 @@ const DEFAULT_ABOUT = `This site shows the Brady Lab's datasets as interactive p
 
 Questions about a dataset or an account? Reach out to the Brady Lab.`;
 
+// Technical details shown under the text
+// Who built the site: replace the placeholders with your name and profile links
+const AUTHOR = {
+    name: "Elizabeth Wright",
+    links: [
+        { label: "LinkedIn", icon: "mdi-linkedin", url: "https://www.linkedin.com/in/e3wright/" },
+        { label: "GitHub", icon: "mdi-github", url: "https://github.com/lizwright06" },
+    ],
+};
+const REPO_URL ="https://github.com/BradyLab/data-visualizer";
+const BUILT_WITH = [
+    { label: "Frontend", tech: "Vue 3, Vuetify, Pinia, Vite, TypeScript" },
+    { label: "Backend", tech: "Node.js, Express, Sequelize, PostgreSQL, Socket.IO, tus resumable uploads" },
+    { label: "Plots", tech: "R, Shiny, DuckDB, ggplot2, Apache Parquet" },
+    { label: "Infrastructure", tech: "Docker, Caddy, GitHub Actions" },
+];
+
 // The saved text ("" while the page was never saved), and whether it is still being loaded or could not be
 const saved = ref("");
 const loading = ref(true);
@@ -109,6 +126,39 @@ async function save() {
                 <v-btn type="submit" :loading="saving" variant="flat">Save</v-btn>
             </div>
         </form>
-        <MarkdownContent v-else :source="saved || DEFAULT_ABOUT" />
+        <template v-else>
+            <MarkdownContent :source="saved || DEFAULT_ABOUT" />
+
+            <v-divider class="my-6" />
+            <section aria-labelledby="technical-details">
+                <h2 id="technical-details" class="text-h6 font-weight-bold mb-3">Technical details</h2>
+                <dl class="technical-details">
+                    Source code: <a :href="REPO_URL" target="_blank" rel="noopener noreferrer">{{ REPO_URL }}</a>
+                        (MIT license)
+                    
+                    <dt>Built with</dt>
+                    <ul>
+                        <li v-for="item in BUILT_WITH" :key="item.label">
+                            <strong>{{ item.label }}:</strong> {{ item.tech }}
+                        </li>
+                    </ul>
+                </dl>
+            </section>
+
+            <section aria-label="Built by" class="d-flex align-center flex-wrap ga-2">
+                <span>Built by {{ AUTHOR.name }}</span>
+                <v-btn
+                    v-for="link in AUTHOR.links"
+                    :key="link.label"
+                    :href="link.url"
+                    :icon="link.icon"
+                    :aria-label="`${AUTHOR.name} on ${link.label}`"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    variant="text"
+                    density="comfortable"
+                />
+            </section>
+        </template>
     </v-container>
 </template>
