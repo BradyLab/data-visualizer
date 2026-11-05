@@ -47,11 +47,13 @@ updates:
     directory: /
     schedule:
       interval: weekly
+  # The two R images share one entry and one group so they always move to the same R version in a single PR
   - package-ecosystem: docker
-    directory: /shiny
+    directories:
+      - /shiny
+      - /shiny/preprocess
     schedule:
       interval: weekly
-  - package-ecosystem: docker
-    directory: /shiny/preprocess
-    schedule:
-      interval: weekly
+    groups:
+      r-images:
+        patterns: ["rocker/*"]
