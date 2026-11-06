@@ -5,6 +5,7 @@ import { MIN_PASSWORD_LENGTH } from "@commons/general.ts";
 import { UserStatus } from "@commons/user.ts";
 import { Users } from "@src/models/user.ts";
 import { verifyPassword } from "@src/services/auth.ts";
+import { preprocessConfigProblems } from "@src/services/routing.ts";
 
 // A secret shorter than this is too easy to guess (openssl rand -hex 32 makes 64 characters)
 export const MIN_SECRET_LENGTH = 32;
@@ -20,16 +21,24 @@ const secretProblem = (name: string, value: string) => {
     return null;
 };
 
-/** What is wrong with the secrets in the environment (empty when they are fine). SHINY_SECRET is only checked when it is set */
+// The secrets that sign or authorize something; each must be strong and no two may be the same. SHINY_SECRET and REMOTE_WORKER_TOKEN are only
+// checked when set
+const SECRET_NAMES = ["JWT_SECRET", "SHINY_SECRET", "REMOTE_WORKER_TOKEN"] as const;
+
+/** What is wrong with the secrets in the environment (empty when they are fine) */
 export const secretProblems = (env: Env = process.env) => {
     const problems: string[] = [];
-    for (const name of ["JWT_SECRET", "SHINY_SECRET"]) {
+    for (const name of SECRET_NAMES) {
         const value = env[name];
         const problem = value ? secretProblem(name, value) : null;
         if (problem) problems.push(problem);
     }
-    // One leaked secret must not give away the other
-    if (env.JWT_SECRET && env.JWT_SECRET === env.SHINY_SECRET) problems.push("JWT_SECRET and SHINY_SECRET are the same");
+    // One leaked secret must not give away another
+    SECRET_NAMES.forEach((a, i) =>
+        SECRET_NAMES.slice(i + 1).forEach((b) => {
+            if (env[a] && env[a] === env[b]) problems.push(`${a} and ${b} are the same`);
+        })
+    );
     return problems;
 };
 
@@ -95,4 +104,16 @@ export const warnAboutDefaultPassword = async (env: Env = process.env) => {
     } catch (err) {
         console.error("[SERVER]: Could not check for accounts on the default password:", err);
     }
+};
+
+/** Reports problems with the routing settings (PREPROCESS_MODE and friends): logs them and returns true when the server must not start (production only) */
+export const preprocessConfigBlocksStartup = (env: Env = process.env) => {
+    const problems = preprocessConfigProblems(env);
+    if (!problems.length) return false;
+    const blocking = isProduction(env);
+    for (const problem of problems)
+        console[blocking ? "error" : "warn"](
+            `[SERVER]: ${problem}.${blocking ? "" : " Fine for development, refused in production."}`
+        );
+    return blocking;
 };

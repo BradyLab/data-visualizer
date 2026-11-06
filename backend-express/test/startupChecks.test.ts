@@ -8,6 +8,7 @@ import {
     accountsOnDefaultPassword,
     defaultPasswordProblems,
     isProduction,
+    preprocessConfigBlocksStartup,
     secretProblems,
     secretsBlockStartup,
     warnAboutDefaultPassword,
@@ -35,6 +36,35 @@ test("placeholder and short secrets are reported by name", () => {
 
 test("one value must not serve as both secrets", () => {
     assert.deepEqual(secretProblems({ JWT_SECRET: strong, SHINY_SECRET: strong }), ["JWT_SECRET and SHINY_SECRET are the same"]);
+});
+
+test("the large-memory worker's token is checked like the other secrets, and must differ from them", () => {
+    assert.deepEqual(secretProblems({ JWT_SECRET: strong, REMOTE_WORKER_TOKEN: other }), []);
+    assert.deepEqual(secretProblems({ JWT_SECRET: strong, REMOTE_WORKER_TOKEN: "" }), []);
+    assert.deepEqual(secretProblems({ JWT_SECRET: strong, REMOTE_WORKER_TOKEN: "change-me" }), [
+        "REMOTE_WORKER_TOKEN is a placeholder value",
+    ]);
+    assert.deepEqual(secretProblems({ JWT_SECRET: strong, REMOTE_WORKER_TOKEN: "short" }), [
+        "REMOTE_WORKER_TOKEN is shorter than 32 characters",
+    ]);
+    assert.deepEqual(secretProblems({ JWT_SECRET: strong, REMOTE_WORKER_TOKEN: strong }), [
+        "JWT_SECRET and REMOTE_WORKER_TOKEN are the same",
+    ]);
+    assert.deepEqual(secretProblems({ JWT_SECRET: strong, SHINY_SECRET: other, REMOTE_WORKER_TOKEN: other }), [
+        "SHINY_SECRET and REMOTE_WORKER_TOKEN are the same",
+    ]);
+});
+
+test("routing settings that cannot work stop a production start and only warn otherwise", () => {
+    const warn = mock.method(console, "warn", () => {});
+    const error = mock.method(console, "error", () => {});
+    const broken = { PREPROCESS_MODE: "auto" }; // needs REMOTE_WORKER_TOKEN
+    assert.equal(preprocessConfigBlocksStartup({ ...broken }), false);
+    assert.equal(warn.mock.calls.length, 1);
+    assert.equal(preprocessConfigBlocksStartup({ ...broken, NODE_ENV: "production" }), true);
+    assert.match(String(error.mock.calls[0]!.arguments[0]), /PREPROCESS_MODE=auto needs REMOTE_WORKER_TOKEN/);
+    assert.equal(preprocessConfigBlocksStartup({ ...broken, REMOTE_WORKER_TOKEN: other, NODE_ENV: "production" }), false);
+    assert.equal(preprocessConfigBlocksStartup({ NODE_ENV: "production" }), false);
 });
 
 test("weak secrets stop a production start and only warn otherwise", () => {
