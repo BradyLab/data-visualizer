@@ -155,6 +155,12 @@ test("signShinyContext makes a payload.hmac value Shiny can verify, and without 
         const [p] = signShinyContext({ dataset: { id: "d1" } as never, access }).split(".") as [string];
         assert.equal(JSON.parse(Buffer.from(p, "base64url").toString()).can_download, expected, access);
     }
+    // Plots of a PUBLIC dataset can be saved by anyone, VIEW access included
+    const [pub] = signShinyContext({
+        dataset: { id: "d1", visibility: DatasetVisibility.PUBLIC } as never,
+        access: PermissionOptions.VIEW,
+    }).split(".") as [string];
+    assert.equal(JSON.parse(Buffer.from(pub, "base64url").toString()).can_download, true);
 });
 
 test("authorizeViewer refuses a dataset whose plot data is not READY", async () => {
