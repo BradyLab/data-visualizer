@@ -74,7 +74,7 @@ The **Pick your plots** box in the viewer chooses which plots show (applied with
 
 **Chart width** (a number box in the options row above **Update plots**, 300-1200 px in steps of 50, applies right away) sets the width of every chart; it starts at 600, and picking the violin plot, the dot plot, the heatmap or a **Split by** column sets it to 1200 (move it afterwards if you like). Charts flow left to right and wrap, so when they are narrow enough several sit side by side (the plots you picked, and the group by charts of the UMAP and PCA); a chart is never wider than the page.
 
-**Colors and expression options** (modeled on scCustomize): groups use a colorblind-friendly palette (Okabe-Ito for up to 8 groups, then Polychrome 36; colors too light to show against the white chart, such as the yellow, are darkened to a 3:1 contrast, WCAG 1.4.11), and expression uses a plasma gradient where dark is high. On the UMAP and PCA, the cells of every cell type you did not pick in **Pick your cell types** are drawn light grey underneath (with genes picked they count as not expressing). With genes picked, **Grey out expression at or below** (scCustomize's `na_cutoff`; empty, the default, means no cutoff) also draws cells at or below that value in grey, under the expressing cells. The violin plot can show a boxplot and the median (**Show boxplot**, **Show median**); either replaces the points of the cells.
+**Colors and expression options** (modeled on scCustomize): groups use a colorblind-friendly palette (a list of 20 chosen to stay apart under protanopia, deuteranopia and tritanopia as well as normal vision, each at least 3:1 against the white chart, WCAG 1.4.11; Polychrome 36 beyond 20 groups), and expression uses a plasma gradient where dark is high. On the UMAP and PCA, the cells of every cell type you did not pick in **Pick your cell types** are drawn light grey underneath (with genes picked they count as not expressing). With genes picked, **Grey out expression at or below** (scCustomize's `na_cutoff`; empty, the default, means no cutoff) also draws cells at or below that value in grey, under the expressing cells. The violin plot can show a boxplot and the median (**Show boxplot**, **Show median**); either replaces the points of the cells.
 
 The violin, dot and heat maps need at least one gene picked. UMAP, PCA and violin draw a panel per gene, and every plot shows all the picked genes.
 
@@ -97,7 +97,7 @@ The backend checks the CSV when the upload finishes (`backend-express/src/servic
 - The chart width is a number box, not a slider (the slider's tab stop had no role or value for assistive technology).
 - The tissue plot's hover values are also in a table under the chart (**Show the values as a table**), so they do not depend on a mouse.
 - The page has two labelled regions (**Plot options** and **Charts**) and a heading per chart, hidden on screen (Bootstrap's `sr-only`); the **Save as** buttons name their chart.
-- Group colors are darkened to at least 3:1 against white (`ensure_contrast()`), so points and legend swatches are visible.
+- Group colors are at least 3:1 against white (the curated list by construction, `ensure_contrast()` for the Polychrome colors past 20 groups), so points and legend swatches are visible.
 
 ## Formatting
 

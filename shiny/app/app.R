@@ -173,16 +173,24 @@ MAX_CHART_WIDTH <- 1200
 # The heatmap has a column per cell; above this many cells it draws a random sample
 MAX_HEATMAP_CELLS <- 20000
 
-# Colorblind-friendly colors for n groups, like scCustomize's discrete palettes: Okabe-Ito (without its black, which the labels and
-# points use) for up to 8, then Polychrome 36, then Polychrome 36 stretched for more; the light ones are darkened to 3:1 against white
+# Colors for groups that stay apart for people with red-green or blue-yellow color blindness. Okabe-Ito alone does not manage it on a white
+# chart: its yellow, orange and sky blue are too light for 3:1 contrast and darkening them turns orange and yellow into near-twins. So these
+# 20 were picked by greedy farthest-point search, each one the color furthest (CIELAB distance) from all the earlier ones as seen under
+# normal vision and simulated protanopia, deuteranopia and tritanopia (Machado et al. 2009), every one at least 3:1 against white
+# (WCAG 1.4.11). The first 4 are Okabe-Ito's blue, vermillion, green and purple. Any prefix is the best set of that size, and black and grey
+# are left out because the labels and the cells that are not picked use them. Past 8 groups some pairs get close; no palette can avoid that
+COLORBLIND_COLORS <- c(
+  "#0072B2", "#D55E00", "#009E73", "#CC79A7", "#8700F0", "#693C1E", "#9678FF", "#960069", "#FF005A", "#4B3CB4",
+  "#A5004B", "#870F87", "#964B0F", "#5A783C", "#E12DC3", "#874BF0", "#5A96E1", "#5A0FC3", "#B44B87", "#FF2D78"
+)
+
+# n colors: the list above for up to 20 groups, then Polychrome 36 (stretched for more than 36), darkened to 3:1 against white
 colorblind_palette <- function(n) {
-  colors <- if (n <= 8) {
-    unname(palette.colors(9, "Okabe-Ito")[-1][seq_len(n)])
-  } else {
-    polychrome <- unname(palette.colors(36, "Polychrome 36"))
-    if (n <= 36) polychrome[seq_len(n)] else colorRampPalette(polychrome)(n)
+  if (n <= length(COLORBLIND_COLORS)) {
+    return(COLORBLIND_COLORS[seq_len(n)])
   }
-  ensure_contrast(colors)
+  polychrome <- unname(palette.colors(36, "Polychrome 36"))
+  ensure_contrast(if (n <= 36) polychrome[seq_len(n)] else colorRampPalette(polychrome)(n))
 }
 
 # WCAG contrast ratio of colors against white (the chart background)
