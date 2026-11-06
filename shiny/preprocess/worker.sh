@@ -6,7 +6,7 @@
 #   running/<id>.job   the job while it is being worked on (moved here from pending/ in one atomic step)
 #   cancel/<id>        written by the backend to stop a running job
 #   done/<id>.log      written here: the end of the job's output
-#   done/<id>.status   written here, last: "ok" or "fail"
+#   done/<id>.status   written here, last: "ok", "fail", or "oom" when R was killed for lack of memory (exit code 137)
 #
 # Paths are checked before use: input must be an .rds under UPLOAD_DIR/rds, output a folder directly under PARQUET_DIR.
 SPOOL="${SPOOL_DIR:-/data/jobs}"
@@ -23,7 +23,7 @@ for f in "$SPOOL"/running/*.job; do
 done
 rm -f "$SPOOL"/running/*.log
 
-# finish <id> <ok|fail>: publishes the verdict (status last, so the backend never reads a log that is still being written)
+# finish <id> <ok|fail|oom>: publishes the verdict (status last, so the backend never reads a log that is still being written)
 finish() {
     tail -c 4000 "$SPOOL/running/$1.log" > "$SPOOL/done/$1.log.tmp" 2> /dev/null || : > "$SPOOL/done/$1.log.tmp"
     mv "$SPOOL/done/$1.log.tmp" "$SPOOL/done/$1.log"
@@ -83,6 +83,9 @@ while true; do
         finish "$id" fail
     elif [ "$code" -eq 0 ]; then
         finish "$id" ok
+    elif [ "$code" -eq 137 ]; then
+        echo "Processing ran out of memory (the process was killed)" >> "$SPOOL/running/$id.log"
+        finish "$id" oom
     else
         finish "$id" fail
     fi

@@ -2,7 +2,8 @@
 // The two sides share a folder (data/jobs) and talk through files, so no network or Docker access is needed:
 //
 //   backend: pending/<id>.job (2 lines: input path, output path)  ->  worker (shiny/preprocess/worker.sh) moves it to running/
-//   worker:  runs preprocess.R, then writes done/<id>.log (end of the output) and last done/<id>.status ("ok" or "fail")
+//   worker:  runs preprocess.R, then writes done/<id>.log (end of the output) and last done/<id>.status ("ok", "fail", or "oom" when R was
+//            killed for lack of memory)
 //   backend: cancel/<id> asks the worker to stop a running job
 //
 // The worker handles one job at a time, and so does the backend, so a job that is still pending after a short while means that
@@ -14,6 +15,8 @@ import path from "node:path";
 export interface JobResult {
     ok: boolean;
     message: string;
+    // The job was killed for lack of memory (as opposed to failing for another reason): it may succeed on a machine with more
+    outOfMemory?: boolean;
 }
 
 // How the caller can tell the job to stop (set when a re-upload or a delete makes its result worthless)
@@ -102,9 +105,13 @@ export const runSpooled = async (
                         message: `Processing took longer than ${Math.round(limitMs / 60000)} minutes and was stopped`,
                     };
                 if (job.stopped) return { ok: false, message: stoppedMessage };
-                return status === "ok"
-                    ? { ok: true, message: "" }
-                    : { ok: false, message: lastLines(log) || "Processing failed" };
+                if (status === "ok") return { ok: true, message: "" };
+                // The worker writes "oom" when it saw R killed for lack of memory (exit code 137)
+                return {
+                    ok: false,
+                    message: lastLines(log) || "Processing failed",
+                    ...(status === "oom" ? { outOfMemory: true } : {}),
+                };
             }
             // The worker moves pending -> running in one rename and writes done before it drops running, so a job is always in one of them
             if (startedAt === null && (await read(file("running", `${id}.job`))) !== null) startedAt = Date.now();

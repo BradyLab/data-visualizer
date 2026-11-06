@@ -8,17 +8,23 @@
 // - The job runs either here (R with Seurat, arrow and Matrix must be installed; a missing Rscript shows up as a FAILED dataset) or,
 //   when PREPROCESS_SPOOL_DIR is set, in a worker container that picks jobs up from that shared folder (processingSpool.ts).
 // - Jobs left PROCESSING by a restart are queued again at startup (resume).
+// - Datasets too big for this server go to the large-memory worker instead (PREPROCESS_MODE, see routing.ts and remoteProcessing.ts): their
+//   status is WAITING_FOR_LARGE_MEMORY until the worker reports back. In "auto" mode a job that runs out of memory here is sent there too.
 import { spawn, type ChildProcess } from "node:child_process";
 import { access } from "node:fs/promises";
 import path from "node:path";
 import { DatasetStatus } from "@commons/dataset.ts";
 import { FileTypes } from "@commons/file.ts";
 import { Datasets } from "@src/models/dataset.ts";
-import * as datasetService from "@src/services/dataset.ts";
 import * as fileService from "@src/services/file.ts";
-import { emitDatasetUpdated } from "@src/services/socket.ts";
 import * as storage from "@src/services/storage.ts";
-import { runSpooled } from "@src/services/processingSpool.ts";
+import { runSpooled, type JobResult } from "@src/services/processingSpool.ts";
+import { MAX_MESSAGE, redactPaths, setStatus } from "@src/services/datasetStatus.ts";
+import * as remote from "@src/services/remoteProcessing.ts";
+import { isOutOfMemory, needsLargeMemory, retryRemotelyOnOutOfMemory } from "@src/services/routing.ts";
+import { sendNotice } from "@src/services/email.ts";
+
+export { redactPaths };
 
 // Program and script that do the conversion (see shiny/README); the defaults suit a checkout of this repository
 const command = () => process.env.PREPROCESS_COMMAND || "Rscript";
@@ -30,17 +36,6 @@ const timeoutMs = () => Number(process.env.PREPROCESS_TIMEOUT_MS) || 6 * 60 * 60
 const ENV_KEYS = ["PATH", "HOME", "LANG", "LC_ALL", "TMPDIR", "R_HOME", "R_LIBS", "R_LIBS_USER", "R_LIBS_SITE"];
 const jobEnv = () =>
     Object.fromEntries(ENV_KEYS.filter((k) => process.env[k] !== undefined).map((k) => [k, process.env[k]])) as NodeJS.ProcessEnv;
-
-// Longest failure message stored with a dataset
-const MAX_MESSAGE = 500;
-
-/**
- * The failure message as it is stored: every absolute path is cut down to its last part (".../file.rds"). The message is the tail of
- * R's or the worker's output and is sent to everyone who can see the dataset, so it must not reveal how the server's folders are laid out.
- * The full text is still written to the server log
- */
-export const redactPaths = (message: string) =>
-    message.replace(/(?:\/[^\s/'"`:,;()<>]+){2,}/g, (path) => `.../${path.split("/").pop()}`);
 
 // Asks a job to stop (SIGTERM), and kills it if it has not stopped after 10 seconds
 const terminate = (child: ChildProcess | null) => {
@@ -64,24 +59,15 @@ let running: Running | null = null;
 /** True while a dataset's job is queued or running */
 export const isBusy = (datasetId: string) => running?.datasetId === datasetId || queue.includes(datasetId);
 
-// Changes a dataset's status and tells connected browsers; returns false if the dataset no longer exists
-const setStatus = async (datasetId: string, status: DatasetStatus, statusMessage: string | null) => {
-    const dataset = await Datasets.findByPk(datasetId);
-    if (!dataset) return false;
-    await dataset.update({ status, statusMessage });
-    await emitDatasetUpdated((await datasetService.withOwnerName([dataset]))[0]!, dataset.visibility);
-    return true;
-};
-
 // With a spool folder the job goes to a worker container (see processingSpool.ts); otherwise R is run here
-const execute = (job: Running, input: string, output: string) =>
+const execute = (job: Running, input: string, output: string): Promise<JobResult> =>
     process.env.PREPROCESS_SPOOL_DIR
         ? runSpooled(process.env.PREPROCESS_SPOOL_DIR, job, input, output, timeoutMs())
         : executeLocally(job, input, output);
 
 // Runs the script as a child process; resolves with how it ended and the tail of its output. Never rejects
 const executeLocally = (job: Running, input: string, output: string) =>
-    new Promise<{ ok: boolean; message: string }>((resolve) => {
+    new Promise<JobResult>((resolve) => {
         // Stopped (re-upload, delete) before it even started
         if (job.stopped) return resolve({ ok: false, message: "Processing was stopped" });
         let tail = "";
@@ -118,9 +104,35 @@ const executeLocally = (job: Running, input: string, output: string) =>
                 .split("\n")
                 .map((l) => l.trim())
                 .filter(Boolean);
-            resolve({ ok: false, message: lines.slice(-3).join(" ") || `Processing stopped (${signal ?? `exit code ${code}`})` });
+            resolve({
+                ok: false,
+                message: lines.slice(-3).join(" ") || `Processing stopped (${signal ?? `exit code ${code}`})`,
+                ...(isOutOfMemory({ code, signal, text: tail }) ? { outOfMemory: true } : {}),
+            });
         });
     });
+
+// Gives the dataset to the large-memory worker: status first (a worker only takes jobs of datasets that wait), then the job; tells the lab
+const handOff = async (job: Running, fileVersion: number, sizeBytes: number) => {
+    const { datasetId } = job;
+    try {
+        if (!(await setStatus(datasetId, DatasetStatus.WAITING_FOR_LARGE_MEMORY, null))) return;
+        await remote.enqueue(datasetId, fileVersion);
+    } catch (err) {
+        console.error("[PROCESSING] Could not queue the dataset for the large-memory worker:", err);
+        await setStatus(datasetId, DatasetStatus.FAILED, "Could not queue the dataset for large-memory processing").catch(
+            () => {}
+        );
+        return;
+    }
+    const dataset = await Datasets.findByPk(datasetId);
+    const gigabytes = (sizeBytes / 1024 ** 3).toFixed(1);
+    void sendNotice(
+        "A dataset is waiting for the large-memory worker",
+        `The dataset "${dataset?.name ?? datasetId}" (data file ${gigabytes} GB) is too large to process on the server. ` +
+            "Start the large-memory worker on the cluster (shiny/preprocess/cluster-worker.sh) to process it; the dataset page shows its status."
+    );
+};
 
 // One job from start to finish
 const runJob = async (job: Running) => {
@@ -130,8 +142,14 @@ const runJob = async (job: Running) => {
         await setStatus(datasetId, DatasetStatus.FAILED, "There is no data file to process");
         return;
     }
+    // Too big for this server: no point in trying here (a worker with enough memory takes it)
+    if (remote.enabled() && needsLargeMemory(rds.sizeBytes)) {
+        console.log(`[PROCESSING] Dataset ${datasetId} is too large for this server, sending it to the large-memory worker`);
+        await handOff(job, rds.version, rds.sizeBytes);
+        return;
+    }
     const output = storage.parquetPath(datasetId);
-    let result: { ok: boolean; message: string };
+    let result: JobResult;
     try {
         // With a worker the script lives in its container, not here
         if (!process.env.PREPROCESS_SPOOL_DIR) await access(script());
@@ -154,6 +172,12 @@ const runJob = async (job: Running) => {
     if (job.stopped || !current || current.version !== rds.version) {
         console.log("[PROCESSING] Result is out of date, discarding it");
         if (!(await Datasets.findByPk(datasetId))) await storage.removeParquet(datasetId).catch(() => {});
+        return;
+    }
+    // Ran out of memory here: the worker has more, so try there rather than give up
+    if (!result.ok && result.outOfMemory && remote.enabled() && retryRemotelyOnOutOfMemory()) {
+        console.log(`[PROCESSING] Dataset ${datasetId} ran out of memory on this server, sending it to the large-memory worker`);
+        await handOff(job, rds.version, rds.sizeBytes);
         return;
     }
     if (result.ok && !(await storage.hasParquet(datasetId)))
@@ -196,6 +220,8 @@ export const enqueue = (datasetId: string) => {
  * A job already running for the dataset is stopped, since it works on an older file
  */
 export const start = async (datasetId: string) => {
+    // An earlier job on the large-memory worker works on an older file (or is being retried): the worker is told it is gone
+    await remote.cancel(datasetId).catch((err) => console.error("[PROCESSING] Could not drop the remote job:", err));
     if (running?.datasetId === datasetId) {
         running.stopped = true;
         terminate(running.child);
@@ -205,6 +231,7 @@ export const start = async (datasetId: string) => {
 
 /** Forgets a deleted dataset's job: dequeues it and stops it if it is running */
 export const cancel = (datasetId: string) => {
+    void remote.cancel(datasetId).catch((err) => console.error("[PROCESSING] Could not drop the remote job:", err));
     const i = queue.indexOf(datasetId);
     if (i !== -1) queue.splice(i, 1);
     if (running?.datasetId === datasetId) {
