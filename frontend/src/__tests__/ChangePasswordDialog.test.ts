@@ -78,7 +78,9 @@ describe("ChangePasswordDialog", () => {
         await button("Change")!.trigger("click");
         await flushPromises();
         expect(authApi.changePassword).not.toHaveBeenCalled();
-        expect(errors()).toEqual(expect.arrayContaining(["Old password is required", "New password is required", "Confirmation is required"]));
+        expect(errors()).toEqual(
+            expect.arrayContaining(["Old password is required", "New password is required", "Confirmation is required"])
+        );
     });
 
     it("rejects a short new password, one equal to the old, and a confirmation that differs", async () => {
@@ -140,7 +142,11 @@ describe("ChangePasswordDialog", () => {
     it.each([
         [403, {}, "Old password is incorrect."],
         [400, { error: "Choose another password" }, "Choose another password"],
-        [429, { error: "Too many password change attempts. Please try again later." }, "Too many password change attempts. Please try again later."],
+        [
+            429,
+            { error: "Too many password change attempts. Please try again later." },
+            "Too many password change attempts. Please try again later.",
+        ],
         [400, {}, "Unable to change your password. Please try again."],
         [500, { error: "boom" }, "Unable to change your password. Please try again."],
     ])("answers a %i from the backend with the right message", async (status, data, message) => {

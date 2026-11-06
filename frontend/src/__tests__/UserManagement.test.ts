@@ -6,7 +6,11 @@ import { createVuetify } from "vuetify";
 import { UserRoles, UserStatus, type IUser } from "@commons/user";
 import UserManagement from "@src/views/admin/UserManagement.vue";
 
-const fake = vi.hoisted(() => ({ auth: null as never as { isAdmin: boolean }, users: null as never as { users: unknown[]; fetchUsers: () => Promise<void> }, push: vi.fn() }));
+const fake = vi.hoisted(() => ({
+    auth: null as never as { isAdmin: boolean },
+    users: null as never as { users: unknown[]; fetchUsers: () => Promise<void> },
+    push: vi.fn(),
+}));
 
 vi.mock("vue-router", () => ({ useRouter: () => ({ push: fake.push }) }));
 vi.mock("@src/stores/auth", () => ({ useAuthStore: () => fake.auth }));
@@ -39,8 +43,10 @@ const render = async () => {
     await flushPromises();
     return wrapper;
 };
-const rowNames = (wrapper: Awaited<ReturnType<typeof render>>) => wrapper.findAll("tbody tr").map((r) => r.findAll("td")[0]!.text());
-const button = (wrapper: Awaited<ReturnType<typeof render>>, text: string) => wrapper.findAll("button").filter((b) => b.text().includes(text));
+const rowNames = (wrapper: Awaited<ReturnType<typeof render>>) =>
+    wrapper.findAll("tbody tr").map((r) => r.findAll("td")[0]!.text());
+const button = (wrapper: Awaited<ReturnType<typeof render>>, text: string) =>
+    wrapper.findAll("button").filter((b) => b.text().includes(text));
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -83,7 +89,11 @@ describe("UserManagement", () => {
         await flushPromises();
         expect(rowNames(wrapper)).toEqual(["Name u2", "Name u3"]);
         const chips = wrapper.findAll(".v-chip");
-        expect(chips.map((c) => c.text())).toEqual([`Status: ${UserStatus.ACTIVE}`, `Status: ${UserStatus.INVITED}`, `Role: ${UserRoles.EXTERNAL}`]);
+        expect(chips.map((c) => c.text())).toEqual([
+            `Status: ${UserStatus.ACTIVE}`,
+            `Status: ${UserStatus.INVITED}`,
+            `Role: ${UserRoles.EXTERNAL}`,
+        ]);
         await chips[2]!.find(".v-chip__close").trigger("click");
         expect(vm.roleFilter).toEqual([]);
         await chips[0]!.find(".v-chip__close").trigger("click");

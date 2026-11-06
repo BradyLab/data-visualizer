@@ -51,7 +51,8 @@ const render = async () => {
     await flushPromises();
     return wrapper;
 };
-const newButton = (wrapper: Awaited<ReturnType<typeof render>>) => wrapper.findAll("button").find((b) => b.text().includes("New Dataset"));
+const newButton = (wrapper: Awaited<ReturnType<typeof render>>) =>
+    wrapper.findAll("button").find((b) => b.text().includes("New Dataset"));
 
 beforeEach(() => {
     vi.clearAllMocks();

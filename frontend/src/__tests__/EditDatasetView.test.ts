@@ -41,7 +41,14 @@ vi.stubGlobal(
 );
 
 // Vuetify positions dialogs with visualViewport, which jsdom lacks
-vi.stubGlobal("visualViewport", { width: 1024, height: 768, offsetLeft: 0, offsetTop: 0, addEventListener() {}, removeEventListener() {} });
+vi.stubGlobal("visualViewport", {
+    width: 1024,
+    height: 768,
+    offsetLeft: 0,
+    offsetTop: 0,
+    addEventListener() {},
+    removeEventListener() {},
+});
 
 // The dropzone is a labs component that is awkward in jsdom: a stand-in that shows its title and lets a test pick a file with setValue
 const FileUpload = defineComponent({
@@ -84,7 +91,8 @@ const saveButton = (w: VueWrapper) => w.findAll("button").find((b) => /Create Ne
 const text = (w: VueWrapper) => w.text();
 const deleteButton = (w: VueWrapper) => w.findAll("button").find((b) => b.text() === "Delete Dataset");
 // The confirm dialog is teleported to the body, so its buttons are looked up there
-const dialogButton = (label: string) => [...document.body.querySelectorAll("button")].find((b) => b.textContent?.trim() === label);
+const dialogButton = (label: string) =>
+    [...document.body.querySelectorAll("button")].find((b) => b.textContent?.trim() === label);
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -163,17 +171,19 @@ describe("EditDatasetView: creating", () => {
         await nameInput(wrapper).setValue("Atlas");
         expect(saveButton(wrapper).attributes("disabled")).toBeDefined();
         // plots picked that leave the tissue plot out
-        (wrapper.findAllComponents({ name: "VSelect" }).find((s) => s.props("multiple"))!.vm as { $emit: (event: string, value: unknown) => void }).$emit(
-            "update:modelValue",
-            [DatasetPlots.UMAP]
-        );
+        (
+            wrapper.findAllComponents({ name: "VSelect" }).find((s) => s.props("multiple"))!.vm as {
+                $emit: (event: string, value: unknown) => void;
+            }
+        ).$emit("update:modelValue", [DatasetPlots.UMAP]);
         await nextTick();
         expect(text(wrapper)).not.toContain("A tissue map is required");
         expect(saveButton(wrapper).attributes("disabled")).toBeUndefined();
-        (wrapper.findAllComponents({ name: "VSelect" }).find((s) => s.props("multiple"))!.vm as { $emit: (event: string, value: unknown) => void }).$emit(
-            "update:modelValue",
-            [DatasetPlots.UMAP, DatasetPlots.TISSUE]
-        );
+        (
+            wrapper.findAllComponents({ name: "VSelect" }).find((s) => s.props("multiple"))!.vm as {
+                $emit: (event: string, value: unknown) => void;
+            }
+        ).$emit("update:modelValue", [DatasetPlots.UMAP, DatasetPlots.TISSUE]);
         await nextTick();
         expect(text(wrapper)).toContain("A tissue map is required");
         pick(wrapper, "Tissue Map", [file("map.csv")]);
@@ -187,7 +197,10 @@ describe("EditDatasetView: creating", () => {
         expect(select().props("disabled")).toBe(true);
         expect(select().props("items")).toEqual([{ title: "Una", value: "u1" }]);
 
-        mocks.auth = reactive({ user: { id: "u1", name: "Una", role: UserRoles.ADMIN, status: UserStatus.ACTIVE }, isAdmin: true });
+        mocks.auth = reactive({
+            user: { id: "u1", name: "Una", role: UserRoles.ADMIN, status: UserStatus.ACTIVE },
+            isAdmin: true,
+        });
         mocks.user.users = [
             { id: "u1", name: "Una", role: UserRoles.ADMIN, status: UserStatus.ACTIVE },
             { id: "u2", name: "Lab", role: UserRoles.LAB_MEMBER, status: UserStatus.ACTIVE },
@@ -239,10 +252,11 @@ describe("EditDatasetView: creating", () => {
     it("saves without uploading when no files were picked", async () => {
         const wrapper = mountView();
         await nameInput(wrapper).setValue("Atlas");
-        (wrapper.findAllComponents({ name: "VSelect" }).find((s) => s.props("multiple"))!.vm as { $emit: (event: string, value: unknown) => void }).$emit(
-            "update:modelValue",
-            [DatasetPlots.UMAP]
-        );
+        (
+            wrapper.findAllComponents({ name: "VSelect" }).find((s) => s.props("multiple"))!.vm as {
+                $emit: (event: string, value: unknown) => void;
+            }
+        ).$emit("update:modelValue", [DatasetPlots.UMAP]);
         await nextTick();
         await saveButton(wrapper).trigger("click");
         await flushPromises();
@@ -256,7 +270,9 @@ describe("EditDatasetView: creating", () => {
         [400, {}, "Please try again."],
         [500, {}, "Please try again."],
     ])("explains a failed save (status %i)", async (status, data, message) => {
-        fn("dataset", "addDataset").mockRejectedValue(new AxiosError("fail", "ERR", undefined, undefined, { status, data } as never));
+        fn("dataset", "addDataset").mockRejectedValue(
+            new AxiosError("fail", "ERR", undefined, undefined, { status, data } as never)
+        );
         const wrapper = mountView();
         pick(wrapper, "Tissue Map", file("m.csv"));
         await nameInput(wrapper).setValue("Atlas");
@@ -316,7 +332,12 @@ describe("EditDatasetView: editing", () => {
         expect(saveButton(wrapper).text()).toBe("Save Changes");
         expect(saveButton(wrapper).attributes("disabled")).toBeUndefined();
         expect(text(wrapper)).not.toContain("A tissue map is required");
-        expect(wrapper.findAllComponents({ name: "VSelect" }).find((s) => !s.props("multiple"))!.props("disabled")).toBe(true);
+        expect(
+            wrapper
+                .findAllComponents({ name: "VSelect" })
+                .find((s) => !s.props("multiple"))!
+                .props("disabled")
+        ).toBe(true);
     });
 
     it("does not rewrite the url when the name changes", async () => {
@@ -448,7 +469,9 @@ describe("EditDatasetView: deleting", () => {
         expect(del).toBeDefined();
         expect(del.element.closest(".v-row")).toBe(save.element.closest(".v-row"));
         const buttons = [...del.element.closest(".v-row")!.querySelectorAll("button")];
-        expect(buttons.indexOf(del.element as HTMLButtonElement)).toBeLessThan(buttons.indexOf(save.element as HTMLButtonElement));
+        expect(buttons.indexOf(del.element as HTMLButtonElement)).toBeLessThan(
+            buttons.indexOf(save.element as HTMLButtonElement)
+        );
     });
 
     it("is disabled until the dataset has loaded", async () => {
