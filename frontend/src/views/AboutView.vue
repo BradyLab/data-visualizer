@@ -132,17 +132,16 @@ async function save() {
             <v-divider class="my-6" />
             <section aria-labelledby="technical-details">
                 <h2 id="technical-details" class="text-h6 font-weight-bold mb-3">Technical details</h2>
-                <dl class="technical-details">
+                <p>
                     Source code: <a :href="REPO_URL" target="_blank" rel="noopener noreferrer">{{ REPO_URL }}</a>
                     (MIT license)
-
-                    <dt>Built with</dt>
-                    <ul>
-                        <li v-for="item in BUILT_WITH" :key="item.label">
-                            <strong>{{ item.label }}:</strong> {{ item.tech }}
-                        </li>
-                    </ul>
-                </dl>
+                </p>
+                <h3 class="text-subtitle-1 font-weight-bold mt-3">Built with</h3>
+                <ul>
+                    <li v-for="item in BUILT_WITH" :key="item.label">
+                        <strong>{{ item.label }}:</strong> {{ item.tech }}
+                    </li>
+                </ul>
             </section>
 
             <section aria-label="Built by" class="d-flex align-center flex-wrap ga-2">
