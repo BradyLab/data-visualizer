@@ -287,6 +287,15 @@ describe("processing status", () => {
         expect(button(wrapper, "Generate Plots")!.attributes("disabled")).toBeDefined();
     });
 
+    it("tells that a large dataset is queued for a machine with more memory, and does not allow plots yet", async () => {
+        find(dataset({ status: DatasetStatus.WAITING_FOR_LARGE_MEMORY }));
+        const wrapper = await render();
+        expect(alerts(wrapper)[0]).toContain("queued for processing on a machine with more memory");
+        expect(alerts(wrapper)[0]).not.toContain("could not be processed");
+        expect(button(wrapper, "Try again")).toBeUndefined();
+        expect(button(wrapper, "Generate Plots")!.attributes("disabled")).toBeDefined();
+    });
+
     it("tells that processing failed and shows the reason, without a retry for those who cannot edit", async () => {
         find(dataset({ status: DatasetStatus.FAILED, statusMessage: "Error: out of memory" }));
         const wrapper = await render();
