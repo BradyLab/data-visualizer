@@ -180,8 +180,26 @@ MAX_HEATMAP_CELLS <- 20000
 # (WCAG 1.4.11). The first 4 are Okabe-Ito's blue, vermillion, green and purple. Any prefix is the best set of that size, and black and grey
 # are left out because the labels and the cells that are not picked use them. Past 8 groups some pairs get close; no palette can avoid that
 COLORBLIND_COLORS <- c(
-  "#0072B2", "#D55E00", "#009E73", "#CC79A7", "#8700F0", "#693C1E", "#9678FF", "#960069", "#FF005A", "#4B3CB4",
-  "#A5004B", "#870F87", "#964B0F", "#5A783C", "#E12DC3", "#874BF0", "#5A96E1", "#5A0FC3", "#B44B87", "#FF2D78"
+  "#0072B2",
+  "#D55E00",
+  "#009E73",
+  "#CC79A7",
+  "#8700F0",
+  "#693C1E",
+  "#9678FF",
+  "#960069",
+  "#FF005A",
+  "#4B3CB4",
+  "#A5004B",
+  "#870F87",
+  "#964B0F",
+  "#5A783C",
+  "#E12DC3",
+  "#874BF0",
+  "#5A96E1",
+  "#5A0FC3",
+  "#B44B87",
+  "#FF2D78"
 )
 
 # n colors: the list above for up to 20 groups, then Polychrome 36 (stretched for more than 36), darkened to 3:1 against white
