@@ -13,7 +13,7 @@ import { cleanUpExpiredUploads, TUS_PATH, tusServer } from "@src/services/tus.ts
 import { ensureDirs } from "@src/services/storage.ts";
 import { resume as resumeProcessing } from "@src/services/processing.ts";
 import { viewerEnabled } from "@src/services/viewer.ts";
-import { secretsBlockStartup, warnAboutDefaultPassword } from "@src/services/startupChecks.ts";
+import { preprocessConfigBlocksStartup, secretsBlockStartup, warnAboutDefaultPassword } from "@src/services/startupChecks.ts";
 import { attachSocket } from "@src/services/socket.ts";
 import { apis } from "@commons/general.ts";
 import { trustProxyHops } from "@src/utils/trustProxy.ts";
@@ -25,6 +25,7 @@ import fileRouter from "@src/routers/file.ts";
 import activityRouter from "@src/routers/activity.ts";
 import authRouter from "@src/routers/auth.ts";
 import pageRouter from "@src/routers/page.ts";
+import workerRouter from "@src/routers/worker.ts";
 
 import { UniqueConstraintError, ValidationError, ForeignKeyConstraintError, DatabaseError } from "sequelize";
 
@@ -74,6 +75,8 @@ export const get = () => {
     app.use(`/api/${apis.ACTIVITY}`, activityRouter);
     app.use(`/api/${apis.AUTH}`, authRouter);
     app.use(`/api/${apis.PAGE}`, pageRouter);
+    // The large-memory worker (not a browser): its own secret instead of a login
+    app.use("/api/worker", workerRouter);
 
     // Centralized error handling: must be registered after the routers. Express 5 forwards rejected async handlers here
     app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
@@ -111,6 +114,8 @@ export const start = async () => {
     }
     // Weak or placeholder secrets: a warning in development, a refusal in production (NODE_ENV=production)
     if (secretsBlockStartup()) process.exit(1);
+    // PREPROCESS_MODE and its memory settings: a mode that sends jobs to the worker needs the worker's secret
+    if (preprocessConfigBlocksStartup()) process.exit(1);
 
     const app = get();
 

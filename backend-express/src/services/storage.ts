@@ -79,3 +79,44 @@ export const removeParquet = async (datasetId: string) => {
 
 /** Deletes only the half-built folder a failed preprocessing run leaves next to the dataset's Parquet folder, never the published data */
 export const removeParquetTmp = (datasetId: string) => rm(`${parquetPath(datasetId)}.tmp`, { recursive: true, force: true });
+
+/**
+ * The files the preprocessing job writes into a dataset's Parquet folder (see shiny/README.md). The large-memory worker may upload only
+ * these names. The first four are always written; scale_data.parquet only when the object has scale.data. Add a new file here when
+ * preprocess.R starts writing one
+ */
+export const PARQUET_FILES = [
+    "cells.parquet",
+    "genes.parquet",
+    "expression.parquet",
+    "column_levels.parquet",
+    "scale_data.parquet",
+] as const;
+export const REQUIRED_PARQUET_FILES: readonly string[] = PARQUET_FILES.slice(0, 4);
+
+/** Where a dataset's Parquet folder is built before it is published (the same place preprocess.R builds it) */
+export const parquetTmpPath = (datasetId: string) => `${parquetPath(datasetId)}.tmp`;
+
+/** Size of a file in bytes, or null if it does not exist */
+export const sizeOf = (file: string) =>
+    stat(file).then(
+        (s) => (s.isFile() ? s.size : null),
+        () => null
+    );
+
+/**
+ * Replaces the dataset's published Parquet folder with the finished one built next to it, as preprocess.R does at its end: the old folder
+ * is moved aside first, so the viewer is without data only for an instant, and removed once the new one is in place
+ */
+export const publishParquet = async (datasetId: string) => {
+    const final = parquetPath(datasetId);
+    const old = `${final}.old`;
+    await rm(old, { recursive: true, force: true });
+    const hadOld = await stat(final).then(
+        () => true,
+        () => false
+    );
+    if (hadOld) await rename(final, old);
+    await rename(parquetTmpPath(datasetId), final);
+    await rm(old, { recursive: true, force: true });
+};
