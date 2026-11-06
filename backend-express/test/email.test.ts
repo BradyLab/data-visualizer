@@ -1,7 +1,7 @@
 // Unit tests for the invite email: skipped without config, never throws, and sends the right payload to EmailJS
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { sendInviteEmail } from "@src/services/email.ts";
+import { isNoticeConfigured, sendInviteEmail, sendNotice } from "@src/services/email.ts";
 
 const invite = { name: "New User", email: "new@example.com", invitedBy: { name: "Ada Admin", email: "ada@example.com" } };
 const KEYS = ["EMAILJS_SERVICE_ID", "EMAILJS_TEMPLATE_ID", "EMAILJS_PUBLIC_KEY", "EMAILJS_PRIVATE_KEY"] as const;
@@ -71,4 +71,63 @@ test("sendInviteEmail returns false, without throwing, when EmailJS refuses or t
         throw new Error("network down");
     }) as typeof fetch;
     assert.equal(await sendInviteEmail(invite), false);
+});
+
+// ---- notices to the lab (NOTIFY_EMAIL_TO, through a second EmailJS template) ----
+
+const NOTICE_KEYS = ["EMAILJS_NOTIFY_TEMPLATE_ID", "NOTIFY_EMAIL_TO"] as const;
+const configureNotices = () => {
+    process.env.EMAILJS_NOTIFY_TEMPLATE_ID = "notice-template";
+    process.env.NOTIFY_EMAIL_TO = "lab@example.org , boss@example.org,";
+};
+afterEach(() => {
+    for (const key of NOTICE_KEYS) delete process.env[key];
+});
+
+test("sendNotice does nothing unless the notice template and a recipient are configured, or under NODE_ENV=test", async () => {
+    let calls = 0;
+    globalThis.fetch = (async () => {
+        calls++;
+        return new Response("ok");
+    }) as typeof fetch;
+    assert.equal(isNoticeConfigured(), false);
+    assert.equal(await sendNotice("s", "m"), false);
+    process.env.EMAILJS_NOTIFY_TEMPLATE_ID = "notice-template"; // still no recipient
+    assert.equal(await sendNotice("s", "m"), false);
+    configureNotices();
+    process.env.NODE_ENV = "test";
+    assert.equal(await sendNotice("s", "m"), false);
+    assert.equal(calls, 0);
+});
+
+test("sendNotice sends one message per recipient, with the notice template and its variables", async () => {
+    configureNotices();
+    const bodies: any[] = [];
+    globalThis.fetch = (async (_url: string, init: RequestInit) => {
+        bodies.push(JSON.parse(init.body as string));
+        return new Response("OK");
+    }) as typeof fetch;
+    assert.equal(isNoticeConfigured(), true);
+    assert.equal(await sendNotice("Subject", "Body text"), true);
+    assert.deepEqual(
+        bodies.map((b) => b.template_params),
+        [
+            { to_email: "lab@example.org", subject: "Subject", message: "Body text" },
+            { to_email: "boss@example.org", subject: "Subject", message: "Body text" },
+        ]
+    );
+    assert.equal(bodies[0].template_id, "notice-template");
+    assert.equal(bodies[0].accessToken, "test-EMAILJS_PRIVATE_KEY");
+});
+
+test("sendNotice returns false, without throwing, when a message is refused or fails, and still tries the other recipients", async () => {
+    configureNotices();
+    let calls = 0;
+    globalThis.fetch = (async () => {
+        calls++;
+        if (calls === 1) throw new Error("network down");
+        return new Response("bad key", { status: 403 });
+    }) as typeof fetch;
+    assert.equal(await sendNotice("s", "m"), false);
+    assert.equal(calls, 2);
 });

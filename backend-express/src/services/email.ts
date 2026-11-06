@@ -64,3 +64,58 @@ export const sendInviteEmail = async ({ name, email, invitedBy }: InviteEmail) =
         return false;
     }
 };
+
+/** The addresses that get notices about the processing queue (NOTIFY_EMAIL_TO, comma separated; use a shared lab mailbox) */
+const noticeRecipients = () =>
+    (process.env.NOTIFY_EMAIL_TO ?? "")
+        .split(",")
+        .map((address) => address.trim())
+        .filter(Boolean);
+
+/** True if notices can be sent: the EmailJS account settings, a template for notices (EMAILJS_NOTIFY_TEMPLATE_ID) and at least one recipient */
+export const isNoticeConfigured = () =>
+    !isEmailDisabled() &&
+    !!(
+        process.env.EMAILJS_SERVICE_ID &&
+        process.env.EMAILJS_NOTIFY_TEMPLATE_ID &&
+        process.env.EMAILJS_PUBLIC_KEY &&
+        process.env.EMAILJS_PRIVATE_KEY
+    ) &&
+    noticeRecipients().length > 0;
+
+/**
+ * Emails a short notice to the lab (for example "a dataset is waiting for the large-memory worker"), one message per recipient in
+ * NOTIFY_EMAIL_TO. Returns true if EmailJS accepted every message; false if notices are not configured or any send failed. Never throws:
+ * the notice is a courtesy and must not affect what it is about. The EmailJS template can use the variables to_email, subject and message
+ */
+export const sendNotice = async (subject: string, message: string) => {
+    if (!isNoticeConfigured()) {
+        console.log("[EMAIL SERVICE] Notices are not configured or are disabled, skipping the notice:", subject);
+        return false;
+    }
+    let allSent = true;
+    for (const to of noticeRecipients()) {
+        try {
+            const response = await fetch(EMAILJS_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
+                body: JSON.stringify({
+                    service_id: process.env.EMAILJS_SERVICE_ID,
+                    template_id: process.env.EMAILJS_NOTIFY_TEMPLATE_ID,
+                    user_id: process.env.EMAILJS_PUBLIC_KEY,
+                    accessToken: process.env.EMAILJS_PRIVATE_KEY,
+                    template_params: { to_email: to, subject, message },
+                }),
+            });
+            if (!response.ok) {
+                console.error(`[EMAIL SERVICE] EmailJS refused the notice (${response.status}): ${await response.text()}`);
+                allSent = false;
+            }
+        } catch (err) {
+            console.error("[EMAIL SERVICE] Could not send the notice", err);
+            allSent = false;
+        }
+    }
+    return allSent;
+};
