@@ -25,7 +25,7 @@ const AUTHOR = {
         { label: "GitHub", icon: "mdi-github", url: "https://github.com/lizwright06" },
     ],
 };
-const REPO_URL ="https://github.com/BradyLab/data-visualizer";
+const REPO_URL = "https://github.com/BradyLab/data-visualizer";
 const BUILT_WITH = [
     { label: "Frontend", tech: "Vue 3, Vuetify, Pinia, Vite, TypeScript" },
     { label: "Backend", tech: "Node.js, Express, Sequelize, PostgreSQL, Socket.IO, tus resumable uploads" },
@@ -134,8 +134,8 @@ async function save() {
                 <h2 id="technical-details" class="text-h6 font-weight-bold mb-3">Technical details</h2>
                 <dl class="technical-details">
                     Source code: <a :href="REPO_URL" target="_blank" rel="noopener noreferrer">{{ REPO_URL }}</a>
-                        (MIT license)
-                    
+                    (MIT license)
+
                     <dt>Built with</dt>
                     <ul>
                         <li v-for="item in BUILT_WITH" :key="item.label">
