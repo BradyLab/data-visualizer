@@ -101,7 +101,14 @@ beforeEach(() => {
         fetchMine: vi.fn(async () => {}),
         canManage: vi.fn((d: IDataset) => d.owner === "u1"),
     });
-    mocks.user = reactive({ editUser: vi.fn(async (_id: string, fields: object) => ({ id: "u1", role: UserRoles.LAB_MEMBER, status: UserStatus.ACTIVE, ...fields })) });
+    mocks.user = reactive({
+        editUser: vi.fn(async (_id: string, fields: object) => ({
+            id: "u1",
+            role: UserRoles.LAB_MEMBER,
+            status: UserStatus.ACTIVE,
+            ...fields,
+        })),
+    });
 });
 
 describe("SettingsView: user settings", () => {
@@ -196,7 +203,10 @@ describe("SettingsView: who sees the admin section", () => {
 
     it("shows an admin every management page and the dataset list", async () => {
         setAuth(UserRoles.ADMIN);
-        (mocks.dataset as { datasets: IDataset[] }).datasets = [makeDataset(), makeDataset({ id: "d2", url: "leaf", name: "Leaf atlas", visibility: DatasetVisibility.PUBLIC })];
+        (mocks.dataset as { datasets: IDataset[] }).datasets = [
+            makeDataset(),
+            makeDataset({ id: "d2", url: "leaf", name: "Leaf atlas", visibility: DatasetVisibility.PUBLIC }),
+        ];
         const wrapper = mountView();
         await flushPromises();
         for (const [label, name] of [
@@ -254,7 +264,8 @@ describe("SettingsView: visibility switches", () => {
     it("cancels the popup, or goes to the edit page from it", async () => {
         const wrapper = adminWith(makeDataset({ doi: "" }));
         await flip(wrapper, 0, true);
-        const popupButton = (label: string) => [...document.body.querySelectorAll("button")].find((b) => b.textContent!.includes(label))!;
+        const popupButton = (label: string) =>
+            [...document.body.querySelectorAll("button")].find((b) => b.textContent!.includes(label))!;
         popupButton("Cancel").click();
         await flushPromises();
         expect(mocks.push).not.toHaveBeenCalled();

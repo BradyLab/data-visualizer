@@ -26,9 +26,11 @@ vi.mock("@src/stores/socket", async () => {
     };
 });
 
-const activity = (id: string, user_id: string | null = "u1", type = ActivityType.USER_UPDATED) => ({ id, user_id, type }) as IActivity;
+const activity = (id: string, user_id: string | null = "u1", type = ActivityType.USER_UPDATED) =>
+    ({ id, user_id, type }) as IActivity;
 const page = (rows: IActivity[], total = rows.length) => ({ rows, total });
-const push = (a: IActivity) => (socket.handlers.get(SocketEvent.ACTIVITY_CREATED) as (e: { activity: IActivity }) => void)({ activity: a });
+const push = (a: IActivity) =>
+    (socket.handlers.get(SocketEvent.ACTIVITY_CREATED) as (e: { activity: IActivity }) => void)({ activity: a });
 
 beforeEach(() => {
     vi.resetAllMocks();

@@ -9,7 +9,11 @@ import ActivityLogs from "@src/views/admin/ActivityLogs.vue";
 type Fake = {
     route: { query: Record<string, unknown> };
     auth: { isAdmin: boolean };
-    users: { users: { id: string; name: string }[]; fetchUsers: ReturnType<typeof vi.fn>; getById: (id: string) => { id: string; name: string } | undefined };
+    users: {
+        users: { id: string; name: string }[];
+        fetchUsers: ReturnType<typeof vi.fn>;
+        getById: (id: string) => { id: string; name: string } | undefined;
+    };
     activities: { activities: IActivity[]; total: number; fetchActivities: ReturnType<typeof vi.fn> };
 };
 const fake = vi.hoisted(() => ({}) as Fake);
@@ -43,8 +47,15 @@ beforeEach(() => {
     vi.clearAllMocks();
     fake.route = reactive({ query: {} });
     fake.auth = reactive({ isAdmin: true });
-    const users = [{ id: "u1", name: "Ada" }, { id: "u2", name: "Bo" }];
-    fake.users = reactive({ users, fetchUsers: vi.fn().mockResolvedValue(undefined), getById: (id: string) => users.find((u) => u.id === id) });
+    const users = [
+        { id: "u1", name: "Ada" },
+        { id: "u2", name: "Bo" },
+    ];
+    fake.users = reactive({
+        users,
+        fetchUsers: vi.fn().mockResolvedValue(undefined),
+        getById: (id: string) => users.find((u) => u.id === id),
+    });
     fake.activities = reactive({
         activities: [act("a1", "u1", ActivityType.PERM_GRANTED), act("a2", "ghost"), act("a3", null, ActivityType.USER_DELETED)],
         total: 60,

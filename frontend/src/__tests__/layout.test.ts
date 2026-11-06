@@ -33,7 +33,14 @@ vi.stubGlobal(
         disconnect() {}
     }
 );
-vi.stubGlobal("visualViewport", { width: 1024, height: 768, offsetLeft: 0, offsetTop: 0, addEventListener() {}, removeEventListener() {} });
+vi.stubGlobal("visualViewport", {
+    width: 1024,
+    height: 768,
+    offsetLeft: 0,
+    offsetTop: 0,
+    addEventListener() {},
+    removeEventListener() {},
+});
 
 const global = { plugins: [createVuetify()], stubs: { RouterLink: RouterLinkStub } };
 // Header and layout need a v-app around them
@@ -57,8 +64,20 @@ beforeEach(() => {
     document.body.innerHTML = "";
     fake.push = vi.fn();
     fake.route = { meta: {} };
-    fake.auth = reactive({ isLoggedIn: false, canCreateDatasets: false, restoreFailed: false, logout: vi.fn().mockResolvedValue(undefined) });
-    fake.datasets = reactive({ datasets: [{ url: "brain", name: "Brain" }, { url: "liver", name: "Liver" }], loadFailed: false, fetchDatasets: vi.fn().mockResolvedValue(undefined) });
+    fake.auth = reactive({
+        isLoggedIn: false,
+        canCreateDatasets: false,
+        restoreFailed: false,
+        logout: vi.fn().mockResolvedValue(undefined),
+    });
+    fake.datasets = reactive({
+        datasets: [
+            { url: "brain", name: "Brain" },
+            { url: "liver", name: "Liver" },
+        ],
+        loadFailed: false,
+        fetchDatasets: vi.fn().mockResolvedValue(undefined),
+    });
 });
 
 describe("LayoutHelper", () => {
@@ -197,7 +216,10 @@ describe("AppDefault", () => {
         fake.auth.restoreFailed = true;
         const wrapper = inApp(AppDefault, stubs);
         expect(wrapper.find(".v-alert").text()).toContain("couldn't restore your session");
-        await wrapper.findAll(".v-alert button").find((b) => b.text() === "Reload")!.trigger("click");
+        await wrapper
+            .findAll(".v-alert button")
+            .find((b) => b.text() === "Reload")!
+            .trigger("click");
         expect(reload).toHaveBeenCalled();
         vi.stubGlobal("location", original);
     });
@@ -207,7 +229,10 @@ describe("AppDefault", () => {
         fake.datasets.fetchDatasets.mockRejectedValue(new Error("down"));
         const wrapper = inApp(AppDefault, stubs);
         expect(wrapper.find(".v-alert").text()).toContain("couldn't load the datasets");
-        await wrapper.findAll(".v-alert button").find((b) => b.text() === "Retry")!.trigger("click");
+        await wrapper
+            .findAll(".v-alert button")
+            .find((b) => b.text() === "Retry")!
+            .trigger("click");
         await flushPromises();
         expect(fake.datasets.fetchDatasets).toHaveBeenCalled();
     });

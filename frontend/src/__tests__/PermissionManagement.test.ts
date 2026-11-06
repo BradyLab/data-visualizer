@@ -12,7 +12,11 @@ type Fake = {
     route: { query: Record<string, unknown> };
     router: { replace: ReturnType<typeof vi.fn> };
     auth: { user: { id: string }; isAdmin: boolean };
-    users: { names: { id: string; name: string; role: UserRoles; status: UserStatus }[]; fetchNames: ReturnType<typeof vi.fn>; nameOf: (id: string) => string };
+    users: {
+        names: { id: string; name: string; role: UserRoles; status: UserStatus }[];
+        fetchNames: ReturnType<typeof vi.fn>;
+        nameOf: (id: string) => string;
+    };
     datasets: { datasets: { id: string; name: string; owner: string }[]; fetchDatasets: ReturnType<typeof vi.fn> };
     perms: {
         adminPermissions: { user_id: string; dataset_id: string; perm: PermissionOptions }[];
@@ -41,7 +45,14 @@ vi.stubGlobal(
 );
 
 // The dialog's overlay positions itself with the visual viewport, which jsdom lacks
-vi.stubGlobal("visualViewport", { width: 1024, height: 768, offsetLeft: 0, offsetTop: 0, addEventListener() {}, removeEventListener() {} });
+vi.stubGlobal("visualViewport", {
+    width: 1024,
+    height: 768,
+    offsetLeft: 0,
+    offsetTop: 0,
+    addEventListener() {},
+    removeEventListener() {},
+});
 
 const stubs = { NewPermissionDialog: { name: "NewPermissionDialog", props: ["modelValue", "datasets"], template: "<div />" } };
 type Vm = { userFilter: string[]; datasetFilter: string[]; showInactive: boolean; error: string | null; confirmOpen: boolean };
@@ -50,7 +61,8 @@ const render = async () => {
     await flushPromises();
     return { wrapper, vm: wrapper.vm as unknown as Vm };
 };
-const rows = (wrapper: Awaited<ReturnType<typeof render>>["wrapper"]) => wrapper.findAll("tbody tr").map((r) => r.findAll("td").map((c) => c.text()));
+const rows = (wrapper: Awaited<ReturnType<typeof render>>["wrapper"]) =>
+    wrapper.findAll("tbody tr").map((r) => r.findAll("td").map((c) => c.text()));
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -69,7 +81,10 @@ beforeEach(() => {
         nameOf: (id: string) => names.find((u) => u.id === id)?.name ?? id,
     });
     fake.datasets = reactive({
-        datasets: [{ id: "d1", name: "Brain", owner: "admin" }, { id: "d2", name: "Liver", owner: "other" }],
+        datasets: [
+            { id: "d1", name: "Brain", owner: "admin" },
+            { id: "d2", name: "Liver", owner: "other" },
+        ],
         fetchDatasets: vi.fn().mockResolvedValue(undefined),
     });
     fake.perms = reactive({
@@ -221,7 +236,9 @@ describe("PermissionManagement", () => {
         const { wrapper, vm } = await render();
         const confirm = async () => {
             await wrapper.findAll('button[aria-label^="Delete permission"]')[0]!.trigger("click");
-            [...document.body.querySelectorAll<HTMLButtonElement>(".v-dialog button")].find((b) => b.textContent!.includes("Delete"))!.click();
+            [...document.body.querySelectorAll<HTMLButtonElement>(".v-dialog button")]
+                .find((b) => b.textContent!.includes("Delete"))!
+                .click();
             await flushPromises();
         };
         await confirm();
@@ -237,7 +254,10 @@ describe("PermissionManagement", () => {
         const { wrapper } = await render();
         const dialog = wrapper.findComponent({ name: "NewPermissionDialog" });
         expect(dialog.props("datasets")).toHaveLength(2);
-        await wrapper.findAll("button").find((b) => b.text().includes("New Permission"))!.trigger("click");
+        await wrapper
+            .findAll("button")
+            .find((b) => b.text().includes("New Permission"))!
+            .trigger("click");
         expect(dialog.props("modelValue")).toBe(true);
     });
 });

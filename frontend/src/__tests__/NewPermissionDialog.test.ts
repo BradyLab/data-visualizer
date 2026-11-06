@@ -30,7 +30,8 @@ const datasets = [
     { id: "d1", name: "Liver", owner: "ext-a" },
     { id: "d2", name: "Brain", owner: "someone" },
 ] as IDataset[];
-const axiosError = (status: number) => Object.assign(new Error("request failed"), { isAxiosError: true, response: { status, data: {} } });
+const axiosError = (status: number) =>
+    Object.assign(new Error("request failed"), { isAxiosError: true, response: { status, data: {} } });
 
 let wrapper: VueWrapper;
 const isOpen = () => (wrapper.props() as { modelValue: boolean }).modelValue;

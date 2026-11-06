@@ -56,6 +56,43 @@ describe("AboutView", () => {
         expect(wrapper.findAll("h1")).toHaveLength(1);
     });
 
+    it("shows the technical details below the text, with a link to the source code", async () => {
+        const wrapper = await render();
+        const section = wrapper.find('section[aria-labelledby="technical-details"]');
+        expect(section.find("h2").text()).toBe("Technical details");
+        expect(section.text()).toContain("Built with");
+        const link = section.find("a");
+        expect(link.attributes("href")).toBe("https://github.com/BradyLab/data-visualizer");
+        expect(link.attributes("rel")).toContain("noopener");
+        expect(wrapper.findAll("h1")).toHaveLength(1);
+    });
+
+    it("shows a Built by row with LinkedIn and GitHub icon links that open in a new tab", async () => {
+        const wrapper = await render();
+        const row = wrapper.find('section[aria-label="Built by"]');
+        expect(row.text()).toContain("Built by");
+        const links = row.findAll("a");
+        expect(links.map((a) => a.attributes("aria-label"))).toEqual([
+            expect.stringContaining("LinkedIn"),
+            expect.stringContaining("GitHub"),
+        ]);
+        expect(links[0]!.attributes("href")).toContain("linkedin.com");
+        expect(links[1]!.attributes("href")).toContain("github.com");
+        for (const a of links) {
+            expect(a.attributes("target")).toBe("_blank");
+            expect(a.attributes("rel")).toContain("noopener");
+        }
+    });
+
+    it("hides the technical details and Built by row while the page is being edited", async () => {
+        fake.auth.isAdmin = true;
+        const wrapper = await render();
+        await button(wrapper, "Edit")!.trigger("click");
+        await flushPromises();
+        expect(wrapper.find("#technical-details").exists()).toBe(false);
+        expect(wrapper.find('section[aria-label="Built by"]').exists()).toBe(false);
+    });
+
     it("offers no Edit button to anyone but an admin", async () => {
         expect(button(await render(), "Edit")).toBeUndefined();
     });

@@ -233,7 +233,8 @@ watch(
             class="mt-1"
             aria-controls="dataset-description"
             :aria-expanded="descriptionExpanded"
-            @click="descriptionExpanded = !descriptionExpanded">
+            @click="descriptionExpanded = !descriptionExpanded"
+        >
             {{ descriptionExpanded ? "Show less" : "Show more" }}
         </v-btn>
 

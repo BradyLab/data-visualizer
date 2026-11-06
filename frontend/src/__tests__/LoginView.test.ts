@@ -90,15 +90,18 @@ describe("LoginView", () => {
         expect(nav.push).toHaveBeenCalledWith("/datasets/abc");
     });
 
-    it.each(["https://evil.example/", "//evil.example/", "javascript:alert(1)", ["/a"]])("does not follow the redirect %j", async (redirect) => {
-        nav.query = { redirect };
-        const { wrapper, auth } = render();
-        loggedInAs(auth);
-        await fill(wrapper, "a@b.c", "secret");
-        await wrapper.find("form").trigger("submit");
-        await flushPromises();
-        expect(nav.push).toHaveBeenCalledWith("/home");
-    });
+    it.each(["https://evil.example/", "//evil.example/", "javascript:alert(1)", ["/a"]])(
+        "does not follow the redirect %j",
+        async (redirect) => {
+            nav.query = { redirect };
+            const { wrapper, auth } = render();
+            loggedInAs(auth);
+            await fill(wrapper, "a@b.c", "secret");
+            await wrapper.find("form").trigger("submit");
+            await flushPromises();
+            expect(nav.push).toHaveBeenCalledWith("/home");
+        }
+    );
 
     it("sends an invited user to settings to choose a password, whatever the redirect", async () => {
         nav.query = { redirect: "/datasets/abc" };

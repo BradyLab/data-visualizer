@@ -21,8 +21,15 @@ vi.stubGlobal(
 );
 vi.stubGlobal("visualViewport", { width: 1024, height: 768, scale: 1, addEventListener() {}, removeEventListener() {} });
 
-const invitedUser = { id: "u9", name: "Ann Lee", email: "ann@b.c", role: UserRoles.EXTERNAL, status: UserStatus.INVITED } as IUser;
-const axiosError = (status: number) => Object.assign(new Error("request failed"), { isAxiosError: true, response: { status, data: {} } });
+const invitedUser = {
+    id: "u9",
+    name: "Ann Lee",
+    email: "ann@b.c",
+    role: UserRoles.EXTERNAL,
+    status: UserStatus.INVITED,
+} as IUser;
+const axiosError = (status: number) =>
+    Object.assign(new Error("request failed"), { isAxiosError: true, response: { status, data: {} } });
 
 // jsdom has no clipboard; replaces only that property (replacing the whole navigator would break Vuetify's browser checks)
 const setClipboard = (writeText: () => Promise<void>) =>
