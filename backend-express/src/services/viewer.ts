@@ -10,7 +10,7 @@ import { getAccess, hasAccess, type Access } from "@src/services/access.ts";
 import { jwtSecret } from "@src/services/auth.ts";
 import { getByUrl } from "@src/services/dataset.ts";
 import { PermissionOptions } from "@commons/permissions.ts";
-import { DatasetStatus } from "@commons/dataset.ts";
+import { DatasetStatus, DatasetVisibility } from "@commons/dataset.ts";
 import { UserStatus } from "@commons/user.ts";
 
 const TICKET = "viewer-ticket";
@@ -25,7 +25,7 @@ export const viewerEnabled = () => Boolean(process.env.SHINY_URL && process.env.
 
 /**
  * Signs what the Shiny app may know about the viewer: the dataset id, the plots the dataset offers, and whether the viewer may download
- * them as images (DOWNLOAD access or above).
+ * them as images (the dataset is PUBLIC, so anyone including guests may, or they have DOWNLOAD access or above).
  * Shiny Server does not hand request headers or query strings to the R app, so the identity cannot travel as trusted headers.
  * It goes in the iframe URL instead (?ctx=...), where the browser can read it but cannot change it: the value is
  * `<base64url JSON>.<hex HMAC-SHA256>` made with SHINY_SECRET, which only Express and Shiny know, and the R app verifies it.
@@ -40,7 +40,7 @@ export const signShinyContext = (
         JSON.stringify({
             dataset_id: dataset.id,
             plots: dataset.plots ?? [],
-            can_download: hasAccess(access, PermissionOptions.DOWNLOAD),
+            can_download: dataset.visibility === DatasetVisibility.PUBLIC || hasAccess(access, PermissionOptions.DOWNLOAD),
             exp,
         })
     ).toString("base64url");
