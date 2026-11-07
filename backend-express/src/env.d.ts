@@ -42,6 +42,22 @@ declare global {
             VIEWER_SESSION_EXPIRES_IN?: string;
             // Where the Shiny plot data (one Parquet folder per dataset) is kept; a "parquet" folder next to UPLOAD_DIR (/data/parquet) unless set
             PARQUET_DIR?: string;
+            // Where preprocessing jobs run: "local" (default: on this server), "auto" (too big for this server's memory, or out of memory here: on the
+            // large-memory worker) or "remote" (always there); anything but local needs REMOTE_WORKER_TOKEN (see services/routing.ts)
+            PREPROCESS_MODE?: string;
+            // Memory a job may use here (a size such as 24g; default: this machine's RAM minus PREPROCESS_MEMORY_RESERVE, default 8g), and the
+            // job's peak memory as a multiple of the RDS file's size (default 5): jobs that would not fit go to the worker in "auto" mode
+            PREPROCESS_LOCAL_MEMORY?: string;
+            PREPROCESS_MEMORY_RESERVE?: string;
+            PREPROCESS_MEMORY_RATIO?: string;
+            // Secret of the large-memory worker (at least 32 characters, different from the other secrets): enables the /api/worker routes
+            REMOTE_WORKER_TOKEN?: string;
+            // How long a worker's claim on a job lasts without a heartbeat (ms, default 15 minutes), and the largest Parquet file it may send (bytes)
+            REMOTE_LEASE_MS?: string;
+            REMOTE_UPLOAD_MAX_BYTES?: string;
+            // Who is emailed when a dataset is waiting for the worker (comma separated; use a shared lab mailbox), and the EmailJS template for it
+            NOTIFY_EMAIL_TO?: string;
+            EMAILJS_NOTIFY_TEMPLATE_ID?: string;
             // Program and script of the preprocessing job (defaults: Rscript and shiny/preprocess/preprocess.R) and its time limit in ms
             PREPROCESS_COMMAND?: string;
             PREPROCESS_SCRIPT?: string;

@@ -20,6 +20,7 @@ export enum DatasetVisibility {
 // Where a dataset is in the processing that turns its uploaded .rds into the Parquet files the plot viewer reads (stored in the DB enum)
 export enum DatasetStatus {
     PROCESSING = "PROCESSING",
+    WAITING_FOR_LARGE_MEMORY = "WAITING_FOR_LARGE_MEMORY",
     READY = "READY",
     FAILED = "FAILED",
 }

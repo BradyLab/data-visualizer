@@ -64,3 +64,17 @@ export const changePasswordLimiter = rateLimit({
     },
     message: { error: "Too many password change attempts. Please try again later." },
 });
+
+/**
+ * Limits failed attempts to use the large-memory worker's routes (20 per 15 minutes per client IP): the token is a long random secret, so
+ * this is only a brake on guessing. Requests that succeed do not count
+ */
+export const workerAuthLimiter = rateLimit({
+    windowMs: WINDOW_MS,
+    limit: 20,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    skipSuccessfulRequests: true,
+    store: new PostgresStore("worker-token"),
+    message: { error: "Too many failed attempts. Please try again later." },
+});

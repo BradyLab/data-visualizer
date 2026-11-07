@@ -67,6 +67,15 @@ services:
       PARQUET_DIR: /data/parquet
       # Uploads are processed by the preprocess service below, through this shared folder
       PREPROCESS_SPOOL_DIR: /data/jobs
+      # Datasets too big for that service go to the large-memory worker (shiny/preprocess/cluster-worker.sh) instead. local: everything is
+      # processed here (default); auto: too big for PREPROCESS_MEM_LIMIT (or killed for memory) goes to the worker; remote: everything does.
+      # Anything but local needs REMOTE_WORKER_TOKEN, the worker's secret (see .env.prod.example)
+      PREPROCESS_MODE: ${PREPROCESS_MODE:-local}
+      PREPROCESS_LOCAL_MEMORY: ${PREPROCESS_MEM_LIMIT:-24g}
+      REMOTE_WORKER_TOKEN: ${REMOTE_WORKER_TOKEN:-}
+      # Who is told when a dataset waits for the worker (EmailJS template with to_email, subject and message)
+      NOTIFY_EMAIL_TO: ${NOTIFY_EMAIL_TO:-}
+      EMAILJS_NOTIFY_TEMPLATE_ID: ${EMAILJS_NOTIFY_TEMPLATE_ID:-}
       # Invite emails; all four must be set for any to be sent (see backend-express/README.md)
       EMAILJS_SERVICE_ID: ${EMAILJS_SERVICE_ID:-}
       EMAILJS_TEMPLATE_ID: ${EMAILJS_TEMPLATE_ID:-}
@@ -138,6 +147,9 @@ services:
     entrypoint: ["/worker.sh"]
     # Same user as the backend, so the files it writes are ones the backend can delete; R needs a writable home
     user: "1000:1000"
+    # No network at all: the worker talks to the backend only through files in /data/jobs, and a data file is untrusted input
+    # (readRDS can run code embedded in an RDS), so a job must not be able to reach the internet or the other services
+    network_mode: none
     environment:
       HOME: /tmp
     mem_limit: ${PREPROCESS_MEM_LIMIT:-24g}

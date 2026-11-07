@@ -243,6 +243,15 @@ watch(
             The data for this dataset is being processed. Plots will be available when that is done.
         </v-alert>
         <v-alert
+            v-else-if="datasetStore.currentDataset.status === DatasetStatus.WAITING_FOR_LARGE_MEMORY"
+            type="info"
+            variant="tonal"
+            class="mt-6"
+        >
+            This dataset is large, so it is queued for processing on a machine with more memory. Plots will be available when that
+            is done, which can take longer than usual.
+        </v-alert>
+        <v-alert
             v-else-if="datasetStore.currentDataset.status === DatasetStatus.FAILED"
             type="error"
             variant="tonal"

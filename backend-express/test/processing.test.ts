@@ -250,6 +250,34 @@ test("spool mode: a re-upload cancels the running job on the worker", async () =
     }
 });
 
+test("worker.sh reports a job killed for lack of memory (exit code 137) as out of memory, not as a plain failure", async () => {
+    process.env.PREPROCESS_SPOOL_DIR = spool;
+    startWorker();
+    try {
+        const { runSpooled } = await import("@src/services/processingSpool.ts");
+        await addDataset("s5", "oom");
+        const input = storage.storedPath({ dataset_id: "s5", type: FileTypes.RDS, version: 1, ogName: "x.rds" });
+        const result = await runSpooled(spool, { stopped: false }, input, storage.parquetPath("s5"), 60000);
+        assert.equal(result.ok, false);
+        assert.equal(result.outOfMemory, true);
+        assert.match(result.message, /ran out of memory/);
+        // Any other failure is not reported as one
+        await addDataset("s6", "fail");
+        const plain = await runSpooled(
+            spool,
+            { stopped: false },
+            storage.storedPath({ dataset_id: "s6", type: FileTypes.RDS, version: 1, ogName: "x.rds" }),
+            storage.parquetPath("s6"),
+            60000
+        );
+        assert.equal(plain.ok, false);
+        assert.equal(plain.outOfMemory, undefined);
+    } finally {
+        stopWorker();
+        delete process.env.PREPROCESS_SPOOL_DIR;
+    }
+});
+
 test("worker.sh refuses paths outside the upload and parquet folders", async () => {
     process.env.PREPROCESS_SPOOL_DIR = spool;
     startWorker();
