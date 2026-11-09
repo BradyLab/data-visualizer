@@ -65,6 +65,16 @@ variables `invitee_name`, `invitee_email`, `admin_name`, `admin_email` (the only
 template text, and set its *To* field to `{{invitee_email}}`), enable *Allow EmailJS API for non-browser applications* under Security, and put the four IDs/keys in `.env`.
 If invites stop arriving, check that the mailbox connection in EmailJS is still authorised (a password or MFA change can revoke it).
 
+## Password reset
+
+`POST /auth/forgot-password` with `{ email }` is public. It always answers 202 with the same message (so it does not reveal which emails have accounts) and, for an
+active account, emails a new random password to that account's own address and sets its status to `invited`, so the user must change it at their next login
+(older tokens and open sessions stop working). The password is changed only after EmailJS accepted the email, so a failed send never locks anyone out.
+Requests are limited to 3 per account and 10 per IP per 15 minutes. Inactive accounts are not reset.
+
+Setup in EmailJS: create a second template with the variables `user_name`, `user_email`, `new_password` (set its *To* field to `{{user_email}}`) and put its
+ID in `EMAILJS_RESET_TEMPLATE_ID`. Without it, reset requests change nothing.
+
 ## Scripts
 
 | Script | What it does |

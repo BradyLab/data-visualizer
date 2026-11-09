@@ -2,12 +2,13 @@
 // About page view: shows the page's Markdown text (a built-in text until one is saved); admins can edit it in a Markdown editor
 import { nextTick, onMounted, ref } from "vue";
 import { useAuthStore } from "@src/stores/auth";
-import { pageApi } from "@src/api/page";
+import { usePageStore } from "@src/stores/page";
 import MarkdownContent from "@src/components/MarkdownContent.vue";
 import MarkdownEditor from "@src/components/MarkdownEditor.vue";
 import { PageSlug } from "@commons/page";
 
 const auth = useAuthStore();
+const pages = usePageStore();
 
 // Shown until an admin saves their own text, and again if they save an empty one
 const DEFAULT_ABOUT = `This site shows the Brady Lab's datasets as interactive plots. Pick a dataset from the home page to explore it.
@@ -52,7 +53,7 @@ async function load() {
     loading.value = true;
     loadFailed.value = false;
     try {
-        saved.value = (await pageApi.getPage(PageSlug.ABOUT)).content;
+        saved.value = (await pages.getPage(PageSlug.ABOUT)).content;
     } catch {
         loadFailed.value = true;
     } finally {
@@ -83,7 +84,7 @@ async function save() {
     saving.value = true;
     error.value = null;
     try {
-        saved.value = (await pageApi.savePage(PageSlug.ABOUT, draft.value)).content;
+        saved.value = (await pages.savePage(PageSlug.ABOUT, draft.value)).content;
         justSaved.value = true;
         await stopEditing();
     } catch {

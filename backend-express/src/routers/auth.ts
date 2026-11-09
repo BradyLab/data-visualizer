@@ -2,7 +2,13 @@
 import { Router } from "express";
 import * as controller from "@src/controllers/auth.ts";
 import { requireAuthAllowInvited } from "@src/middleware/auth.ts";
-import { changePasswordLimiter, loginAccountLimiter, loginIpLimiter } from "@src/middleware/rateLimit.ts";
+import {
+    changePasswordLimiter,
+    forgotPasswordAccountLimiter,
+    forgotPasswordIpLimiter,
+    loginAccountLimiter,
+    loginIpLimiter,
+} from "@src/middleware/rateLimit.ts";
 
 // Express router for the authentication endpoints
 const router = Router();
@@ -12,6 +18,9 @@ router.post("/login", loginIpLimiter, loginAccountLimiter, controller.login);
 
 // Protected: requireAuthAllowInvited validates the Bearer token and loads the user before the controller runs (INVITED users allowed)
 router.get("/me", requireAuthAllowInvited, controller.me);
+
+// Public: emails a new temporary password to the account's own address and marks it INVITED; limited per IP and per account (429)
+router.post("/forgot-password", forgotPasswordIpLimiter, forgotPasswordAccountLimiter, controller.forgotPassword);
 
 // Protected: acknowledges the logout; the client is responsible for discarding the token
 router.post("/logout", requireAuthAllowInvited, controller.logout);

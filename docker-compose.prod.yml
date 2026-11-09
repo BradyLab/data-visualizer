@@ -79,6 +79,7 @@ services:
       # Invite emails; all four must be set for any to be sent (see backend-express/README.md)
       EMAILJS_SERVICE_ID: ${EMAILJS_SERVICE_ID:-}
       EMAILJS_TEMPLATE_ID: ${EMAILJS_TEMPLATE_ID:-}
+      EMAILJS_RESET_TEMPLATE_ID: ${EMAILJS_RESET_TEMPLATE_ID:-}
       EMAILJS_PUBLIC_KEY: ${EMAILJS_PUBLIC_KEY:-}
       EMAILJS_PRIVATE_KEY: ${EMAILJS_PRIVATE_KEY:-}
     volumes:

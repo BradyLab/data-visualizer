@@ -38,6 +38,7 @@ const typeLabels: Record<ActivityType, string> = {
     [ActivityType.INVITE_USER]: "User Invited",
     [ActivityType.USER_JOINED]: "User Joined",
     [ActivityType.USER_UPDATED]: "User Updated",
+    [ActivityType.PASSWORD_RESET]: "Password Reset",
     [ActivityType.USER_DEACTIVATED]: "User Deactivated",
     [ActivityType.USER_REACTIVATED]: "User Reactivated",
     [ActivityType.USER_DELETED]: "User Deleted",

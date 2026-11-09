@@ -2,7 +2,6 @@
 // Popup for the logged-in user to change their password; asks for the old password too, which the backend verifies
 import { computed, ref, watch } from "vue";
 import axios from "axios";
-import { authApi } from "@src/api/auth";
 import { useAuthStore } from "@src/stores/auth";
 import { useSocketStore } from "@src/stores/socket";
 import { validateForm } from "@src/utils/validateForm";
@@ -61,12 +60,9 @@ async function submit() {
     saving.value = true;
     error.value = null;
     try {
-        const newToken = await authApi.changePassword(oldPassword.value, newPassword.value, socket.socketId);
+        // The store switches to the fresh token (the old one stopped working) and activates an invited user, as the backend does
+        await auth.changePassword(oldPassword.value, newPassword.value, socket.socketId);
         success.value = true;
-        // The old token stopped working with the password change, so switch to the fresh one
-        auth.setToken(newToken);
-        // The backend activates invited users on their first password change
-        auth.markPasswordChanged();
     } catch (err) {
         const response = axios.isAxiosError(err) ? err.response : undefined;
         // 400 and 429 carry the backend's reason (e.g. new password is the default password, too many attempts)

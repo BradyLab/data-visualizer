@@ -5,6 +5,7 @@ import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "@src/stores/auth";
 import { UserStatus } from "@commons/user";
 import { validateForm } from "@src/utils/validateForm";
+import axios from "axios";
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -34,6 +35,43 @@ const submit = async () => {
     if (!(await validateForm(form.value))) return;
     if (!(await auth.login(email.value, password.value))) return;
     await router.push(afterLogin());
+};
+
+// "Forgot password?" dialog: asks the backend to email a new password to the address entered (the same answer is shown whether or not an account exists)
+const resetOpen = ref(false);
+const resetEmail = ref("");
+const resetLoading = ref(false);
+const resetDone = ref(false);
+const resetError = ref("");
+
+// Opens the dialog, starting from whatever was typed in the login form
+const openReset = () => {
+    resetEmail.value = email.value ?? "";
+    resetDone.value = false;
+    resetError.value = "";
+    resetOpen.value = true;
+};
+
+// Sends the request; shows the confirmation, or an error (too many requests, or the server being unreachable)
+const sendReset = async () => {
+    const address = resetEmail.value?.trim();
+    if (!address) {
+        resetError.value = "Email address is required";
+        return;
+    }
+    resetLoading.value = true;
+    resetError.value = "";
+    try {
+        await auth.forgotPassword(address);
+        resetDone.value = true;
+    } catch (err) {
+        resetError.value =
+            axios.isAxiosError(err) && err.response?.data?.error
+                ? err.response.data.error
+                : "Could not send the request. Please try again.";
+    } finally {
+        resetLoading.value = false;
+    }
 };
 
 // Already logged in: skip the login page
@@ -101,10 +139,49 @@ onMounted(() => {
                 <v-alert v-if="auth.error" type="error" variant="tonal" density="compact" class="mb-3">
                     {{ auth.error }}
                 </v-alert>
-                <v-btn type="submit" color="primary" block class="mb-3" :loading="auth.loading"> Log In </v-btn>
+                <v-btn type="submit" color="primary" block class="mb-2" :loading="auth.loading"> Log In </v-btn>
             </v-form>
+
+            <!-- Password reset: the new password is emailed to the account's own address -->
+            <v-row class="justify-center mb-3 mt-0">
+                <v-btn variant="text" size="x-small" color="primary" data-test="forgot-password" @click="openReset">
+                    Forgot password?
+                </v-btn>
+            </v-row>
 
             <v-row class="justify-center text-label-medium">Need an account? Reach out to the Brady Lab!</v-row>
         </v-card>
+
+        <v-dialog v-model="resetOpen" max-width="440">
+            <v-card class="pa-4" rounded="lg">
+                <v-card-title>Reset your password</v-card-title>
+                <v-card-text>
+                    <template v-if="resetDone">
+                        If an account exists for {{ resetEmail }}, a new password has been emailed to it. Log in with it, and you
+                        will be asked to choose your own.
+                    </template>
+                    <v-form v-else @submit.prevent="sendReset">
+                        <p class="mb-4">We will email a new password to the address on your account.</p>
+                        <v-text-field
+                            v-model="resetEmail"
+                            type="email"
+                            autocomplete="email"
+                            prepend-inner-icon="mdi-email-outline"
+                            label="Email Address"
+                            :error-messages="resetError"
+                        ></v-text-field>
+                    </v-form>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn variant="text" color="on-primary" @click="resetOpen = false">{{
+                        resetDone ? "Close" : "Cancel"
+                    }}</v-btn>
+                    <v-btn v-if="!resetDone" color="on-primary" variant="flat" :loading="resetLoading" @click="sendReset">
+                        Email me a new password
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </v-container>
 </template>

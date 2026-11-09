@@ -22,6 +22,8 @@ declare global {
             EMAILJS_TEMPLATE_ID?: string;
             EMAILJS_PUBLIC_KEY?: string;
             EMAILJS_PRIVATE_KEY?: string;
+            // EmailJS template for the password reset email (variables user_name, user_email, new_password); without it resets are refused
+            EMAILJS_RESET_TEMPLATE_ID?: string;
             // "true" skips sending the invite email even when the EmailJS settings above are set
             EMAIL_DISABLED?: string;
             // Number of reverse proxies in front of the server (1 for the Caddy container of the production compose file); unset when there are none
