@@ -154,15 +154,15 @@ describe("AppHeader", () => {
         expect(fake.push).toHaveBeenCalledWith("/login");
     });
 
-    it("offers SETTINGS, PLANTMAP VIEWER and LOG OUT to a logged-in user, and logging out goes home", async () => {
+    it("offers PLANTMAP VIEWER, SETTINGS and LOG OUT to a logged-in user, and logging out goes home", async () => {
         fake.auth.isLoggedIn = true;
         const wrapper = inApp(AppHeader);
         const items = await menuItems(wrapper.find(".v-toolbar__append button"));
-        expect(items.map((i) => i.textContent!.trim())).toEqual(["SETTINGS", "PLANTMAP VIEWER", "LOG OUT"]);
+        expect(items.map((i) => i.textContent!.trim())).toEqual(["PLANTMAP VIEWER", "SETTINGS", "LOG OUT"]);
         items[0]!.click();
-        expect(fake.push).toHaveBeenCalledWith("/settings");
+        expect(fake.push).toHaveBeenCalledWith("/plantmap");
         items[1]!.click();
-        expect(fake.push).toHaveBeenLastCalledWith("/plantmap");
+        expect(fake.push).toHaveBeenLastCalledWith("/settings");
         items[2]!.click();
         await flushPromises();
         expect(fake.auth.logout).toHaveBeenCalled();
