@@ -77,6 +77,7 @@ test.describe('as an admin', () => {
 
   for (const [name, url] of [
     ['settings', '/settings'],
+    ['plantmap viewer', '/plantmap'],
     ['user management', '/admin/user-mgmt'],
     ['permissions management', '/admin/permissions'],
     ['activity logs', '/admin/activity-logs'],

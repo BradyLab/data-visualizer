@@ -87,6 +87,7 @@ async function logout() {
 
                 <v-list>
                     <v-list-item v-if="!auth.isLoggedIn" @click="navTo('/login')"> LOG IN </v-list-item>
+                    <v-list-item v-if="auth.isLoggedIn" @click="navTo('/plantmap')"> PLANTMAP VIEWER </v-list-item>
                     <v-list-item v-if="auth.isLoggedIn" @click="navTo('/settings')"> SETTINGS </v-list-item>
                     <v-list-item v-if="auth.isLoggedIn" @click="logout()"> LOG OUT </v-list-item>
                 </v-list>

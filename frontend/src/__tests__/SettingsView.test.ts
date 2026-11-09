@@ -188,7 +188,7 @@ describe("SettingsView: who sees the admin section", () => {
         expect(wrapper.text()).not.toContain("Root atlas");
     });
 
-    it("shows the owner of a dataset the permissions page only, and no dataset list", async () => {
+    it("shows the owner of a dataset the permissions page and a list of only their own datasets", async () => {
         (mocks.dataset as { datasets: IDataset[] }).datasets = [makeDataset()];
         const wrapper = mountView();
         await flushPromises();
@@ -196,7 +196,8 @@ describe("SettingsView: who sees the admin section", () => {
         expect(button(wrapper, "Permissions Management")).toBeDefined();
         expect(button(wrapper, "User Management")).toBeUndefined();
         expect(button(wrapper, "Activity Logs")).toBeUndefined();
-        expect(wrapper.text()).not.toContain("Root atlas");
+        expect(wrapper.text()).toContain("Root atlas");
+        expect(wrapper.find('[aria-label="Root atlas is public"]').exists()).toBe(true);
         await button(wrapper, "Permissions Management")!.trigger("click");
         expect(mocks.push).toHaveBeenCalledWith({ name: "permissions" });
     });

@@ -11,6 +11,7 @@ vi.mock("@src/api/auth", () => ({ authApi: { login: vi.fn(), logout: vi.fn(), me
 // Pages are lazy-loaded and not under test; stub them so navigating does not pull in the whole UI
 vi.mock("@src/views/HomeView.vue", () => ({ default: { template: "<div />" } }));
 vi.mock("@src/views/LoginView.vue", () => ({ default: { template: "<div />" } }));
+vi.mock("@src/views/PlantmapView.vue", () => ({ default: { template: "<div />" } }));
 vi.mock("@src/views/SettingsView.vue", () => ({ default: { template: "<div />" } }));
 vi.mock("@src/views/EditDatasetView.vue", () => ({ default: { template: "<div />" } }));
 vi.mock("@src/views/admin/UserManagement.vue", () => ({ default: { template: "<div />" } }));
@@ -54,6 +55,16 @@ describe("route guard", () => {
         await logInAs(UserRoles.EXTERNAL);
         await router.push("/settings");
         expect(router.currentRoute.value.name).toBe("settings");
+    });
+
+    it("keeps the plantmap viewer for logged-in users", async () => {
+        await router.push("/plantmap");
+        expect(router.currentRoute.value.name).toBe("login");
+        expect(router.currentRoute.value.query.redirect).toBe("/plantmap");
+        await logInAs(UserRoles.EXTERNAL);
+        await router.push("/plantmap");
+        expect(router.currentRoute.value.name).toBe("plantmap");
+        expect(document.title).toBe("Plantmap Viewer | Brady Lab Datasets");
     });
 
     it("sends non-admins away from admin pages", async () => {

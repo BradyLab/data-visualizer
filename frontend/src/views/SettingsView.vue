@@ -72,6 +72,9 @@ onMounted(() => {
     permissionStore.fetchMine(auth.user.id).catch(() => {});
 });
 
+// Datasets whose visibility the user may change: every dataset for admins, only their own for everyone else
+const managedDatasets = computed(() => datasetStore.datasets.filter((d) => permissionStore.canManage(d)));
+
 // Admins see every management page; others only see Permissions, and only if they own some dataset
 const canManagePermissions = computed(() => auth.isAdmin || datasetStore.datasets.some((d) => permissionStore.canManage(d)));
 
@@ -157,9 +160,9 @@ watch(
         </v-row>
 
         <!-- One row per dataset: name (links to the dataset), private/public switch, and edit button -->
-        <!-- Only admins see this list and the visibility error above it -->
+        <!-- Admins see every dataset, owners only their own; the visibility error above follows the same rule -->
         <v-alert
-            v-if="auth.isAdmin && visibilityError"
+            v-if="managedDatasets.length && visibilityError"
             type="error"
             variant="tonal"
             closable
@@ -168,8 +171,8 @@ watch(
         >
             {{ visibilityError }}
         </v-alert>
-        <template v-if="auth.isAdmin">
-            <v-row v-for="dataset in datasetStore.datasets" :key="dataset.url" align="center" class="mx-4">
+        <template v-if="managedDatasets.length">
+            <v-row v-for="dataset in managedDatasets" :key="dataset.url" align="center" class="mx-4">
                 <v-col>
                     <RouterLink :to="'/dataset/' + dataset.url">{{ dataset.name }}</RouterLink>
                 </v-col>

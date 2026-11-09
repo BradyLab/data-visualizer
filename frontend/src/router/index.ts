@@ -68,6 +68,13 @@ const router = createRouter({
             component: () => import("@src/views/EditDatasetView.vue"),
             meta: { title: "New Dataset", hideFooter: false, requiresAuth: true, requiresDatasetCreator: true },
         },
+        // Draws a ggPlantmap CSV in the browser to check its shapes and names; not tied to a dataset
+        {
+            path: "/plantmap",
+            name: "plantmap",
+            component: () => import("@src/views/PlantmapView.vue"),
+            meta: { title: "Plantmap Viewer", hideFooter: false, requiresAuth: true },
+        },
         // Login page (footer hidden)
         {
             path: "/login",
