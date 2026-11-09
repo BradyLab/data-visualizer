@@ -8,7 +8,6 @@ import { useFileStore } from "@src/stores/file";
 import { useAuthStore } from "@src/stores/auth";
 import { useDatasetStore } from "@src/stores/dataset";
 import { usePermissionStore } from "@src/stores/permission";
-import { datasetApi } from "@src/api/dataset";
 import { DatasetStatus } from "@commons/dataset";
 
 const route = useRoute();
@@ -48,7 +47,7 @@ async function generatePlots() {
     error.value = null;
     viewerLoading.value = true;
     try {
-        viewerUrl.value = await datasetApi.getViewerUrl(datasetStore.currentDataset!.id);
+        viewerUrl.value = await datasetStore.getViewerUrl(datasetStore.currentDataset!.id);
         // The Generate Plots button the keyboard focus was on disappears, so move the focus to the plots that replace it
         await nextTick();
         viewerFrame.value?.focus();

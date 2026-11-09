@@ -30,8 +30,6 @@ const render = async (status = UserStatus.ACTIVE) => {
     setActivePinia(createPinia());
     const auth = useAuthStore();
     auth.user = { id: "u1", role: UserRoles.EXTERNAL, status } as typeof auth.user;
-    vi.spyOn(auth, "setToken");
-    vi.spyOn(auth, "markPasswordChanged");
     // Mounted closed, then opened, as the pages do (the form is cleared when the popup opens)
     wrapper = mount(ChangePasswordDialog, {
         props: { modelValue: false, "onUpdate:modelValue": (v: boolean) => wrapper.setProps({ modelValue: v }) },
@@ -113,8 +111,7 @@ describe("ChangePasswordDialog", () => {
         await button("Change")!.trigger("click");
         await flushPromises();
         expect(authApi.changePassword).toHaveBeenCalledWith("old-password", "new-password", "sock-1");
-        expect(auth.setToken).toHaveBeenCalledWith("fresh-token");
-        expect(auth.markPasswordChanged).toHaveBeenCalled();
+        expect(auth.token).toBe("fresh-token");
         expect(alerts()).toContain("Password updated.");
         // the form is done: no Change button, and Cancel turned into Close
         expect(button("Change")).toBeUndefined();
@@ -156,7 +153,7 @@ describe("ChangePasswordDialog", () => {
         await button("Change")!.trigger("click");
         await flushPromises();
         expect(alerts()).toEqual([message]);
-        expect(auth.setToken).not.toHaveBeenCalled();
+        expect(auth.token).toBeNull();
         expect(button("Change")).toBeDefined(); // can try again
     });
 

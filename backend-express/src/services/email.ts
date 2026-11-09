@@ -65,6 +65,60 @@ export const sendInviteEmail = async ({ name, email, invitedBy }: InviteEmail) =
     }
 };
 
+export interface PasswordResetEmail {
+    name: string;
+    email: string;
+    // The new temporary password; this is the one email that carries a password, so only ever send it to the account's own address
+    password: string;
+}
+
+/** True if every EmailJS setting plus the password reset template (EMAILJS_RESET_TEMPLATE_ID) is present and sending is not disabled */
+export const isResetEmailConfigured = () =>
+    !isEmailDisabled() &&
+    !!(
+        process.env.EMAILJS_SERVICE_ID &&
+        process.env.EMAILJS_RESET_TEMPLATE_ID &&
+        process.env.EMAILJS_PUBLIC_KEY &&
+        process.env.EMAILJS_PRIVATE_KEY
+    );
+
+/**
+ * Emails a user their new temporary password (the EmailJS template decides its text). Returns true if EmailJS accepted it, false if
+ * email is not configured or sending failed; never throws. The template can use the variables user_name, user_email and new_password
+ */
+export const sendPasswordResetEmail = async ({ name, email, password }: PasswordResetEmail) => {
+    if (!isResetEmailConfigured()) {
+        console.log(
+            "[EMAIL SERVICE] The password reset template is not configured or email is disabled, skipping the reset email"
+        );
+        return false;
+    }
+    try {
+        const response = await fetch(EMAILJS_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
+            body: JSON.stringify({
+                service_id: process.env.EMAILJS_SERVICE_ID,
+                template_id: process.env.EMAILJS_RESET_TEMPLATE_ID,
+                user_id: process.env.EMAILJS_PUBLIC_KEY,
+                accessToken: process.env.EMAILJS_PRIVATE_KEY,
+                template_params: { user_name: name, user_email: email, new_password: password },
+            }),
+        });
+        if (!response.ok) {
+            // The response body is not logged: it could echo the request, which holds the password
+            console.error(`[EMAIL SERVICE] EmailJS refused the password reset email (${response.status})`);
+            return false;
+        }
+        console.log("[EMAIL SERVICE] Password reset email sent successfully");
+        return true;
+    } catch (err) {
+        console.error("[EMAIL SERVICE] Could not send the password reset email", (err as Error).name);
+        return false;
+    }
+};
+
 /** The addresses that get notices about the processing queue (NOTIFY_EMAIL_TO, comma separated; use a shared lab mailbox) */
 const noticeRecipients = () =>
     (process.env.NOTIFY_EMAIL_TO ?? "")

@@ -120,6 +120,9 @@ export const useDatasetStore = defineStore("dataset", () => {
         () => fetchDatasets().catch(() => {})
     );
 
+    /** Asks the backend for a viewer ticket URL for the dataset (it only lives about a minute); rejects if the request fails (503 viewer down, 409 data not ready) */
+    const getViewerUrl = (id: string) => datasetApi.getViewerUrl(id);
+
     return {
         datasets,
         currentDataset,
@@ -131,5 +134,6 @@ export const useDatasetStore = defineStore("dataset", () => {
         editDataset,
         reprocessDataset,
         removeDataset,
+        getViewerUrl,
     };
 });

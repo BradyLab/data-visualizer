@@ -26,6 +26,36 @@ export const loginIpLimiter = rateLimit({
     message: TOO_MANY,
 });
 
+// Body of the two reset limiters
+const TOO_MANY_RESETS = { error: "Too many password reset requests. Please try again later." };
+
+/** Limits password reset requests per client IP (10 per 15 minutes); every request counts, since each one can send an email */
+export const forgotPasswordIpLimiter = rateLimit({
+    windowMs: WINDOW_MS,
+    limit: 10,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    store: new PostgresStore("forgot-password-ip"),
+    message: TOO_MANY_RESETS,
+});
+
+/**
+ * Limits password reset requests per target account (3 per 15 minutes), so nobody can flood a user's inbox or keep resetting
+ * their password out from under them. The 429 looks the same whether or not the email exists
+ */
+export const forgotPasswordAccountLimiter = rateLimit({
+    windowMs: WINDOW_MS,
+    limit: 3,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    store: new PostgresStore("forgot-password-account"),
+    keyGenerator: (req: Request) => {
+        const email = req.body?.email;
+        return typeof email === "string" && email.trim() ? `email:${email.trim().toLowerCase()}` : ipKeyGenerator(req.ip ?? "");
+    },
+    message: TOO_MANY_RESETS,
+});
+
 /**
  * Limits failed logins per target account (5 per 15 minutes), so an attacker rotating IPs still cannot
  * guess one account's password. This is a temporary throttle, not a lockout, and the 429 looks the same
