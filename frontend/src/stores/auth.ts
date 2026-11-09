@@ -98,6 +98,9 @@ export const useAuthStore = defineStore("auth", () => {
         markPasswordChanged();
     }
 
+    /** Asks for a new password to be emailed to the account; the answer is the same whether or not it exists. Rejects with the request's error (e.g. 429) */
+    const forgotPassword = (email: string) => authApi.forgotPassword(email);
+
     /**
      * Restores the user from a saved token (call on app start). Logs out only if the server rejects the token (401);
      * on a network error or 5xx the token is kept, so a reload can retry, and the user shows as logged out until then
@@ -167,6 +170,7 @@ export const useAuthStore = defineStore("auth", () => {
         canCreateDatasets,
         login,
         changePassword,
+        forgotPassword,
         restore,
         logout,
         markPasswordChanged,

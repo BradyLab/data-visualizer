@@ -27,6 +27,11 @@ export const authApi = {
         return response.data.token;
     },
 
+    /** POST /auth/forgot-password : asks for a new password to be emailed to the account; answers the same whether or not the account exists, rejects with 429 when asked too often */
+    async forgotPassword(email: string): Promise<void> {
+        await axios.post(`${baseURL}/${apis.AUTH}/forgot-password`, { email });
+    },
+
     /** GET /auth/me : returns the user for the current token (sent via the axios Authorization header) */
     async me(): Promise<IUser> {
         const response = await axios.get<IUser>(`${baseURL}/${apis.AUTH}/me`);
