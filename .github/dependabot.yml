@@ -7,6 +7,9 @@ updates:
     directory: /backend-express
     schedule:
       interval: weekly
+      day: monday
+      time: "02:00"
+      timezone: America/Los_Angeles
     # A new release waits a week before it is proposed, so a compromised one can be caught and pulled first (matters for auto-merge)
     cooldown:
       default-days: 7
@@ -22,6 +25,9 @@ updates:
     directory: /frontend
     schedule:
       interval: weekly
+      day: monday
+      time: "02:00"
+      timezone: America/Los_Angeles
     cooldown:
       default-days: 7
     groups:
@@ -36,6 +42,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+      day: monday
+      time: "02:00"
+      timezone: America/Los_Angeles
     cooldown:
       default-days: 7
     groups:
@@ -47,6 +56,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+      day: monday
+      time: "02:00"
+      timezone: America/Los_Angeles
   # The two R images share one entry and one group so they always move to the same R version in a single PR
   - package-ecosystem: docker
     directories:
@@ -54,6 +66,9 @@ updates:
       - /shiny/preprocess
     schedule:
       interval: weekly
+      day: monday
+      time: "02:00"
+      timezone: America/Los_Angeles
     groups:
       r-images:
         patterns: ["rocker/*"]
