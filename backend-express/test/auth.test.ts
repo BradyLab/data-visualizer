@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import jwt from "jsonwebtoken";
 import * as service from "@src/services/auth.ts";
 import * as controller from "@src/controllers/auth.ts";
+import * as email from "@src/services/email.ts";
 import { optionalAuth, requireAuth, requireAuthAllowInvited, requireRole, requireSelfOrAdmin } from "@src/middleware/auth.ts";
 import { Users } from "@src/models/user.ts";
 import { hashPassword } from "@src/utils/password.ts";
@@ -120,10 +121,87 @@ test("changePassword changes nothing when the old password is wrong or the user 
     assert.equal(await service.changePassword("u1", "x", "y"), null);
 });
 
+// ---- password reset ----
+
+const resetEnv = () => {
+    process.env.NODE_ENV = "development";
+    Object.assign(process.env, {
+        EMAILJS_SERVICE_ID: "s",
+        EMAILJS_RESET_TEMPLATE_ID: "r",
+        EMAILJS_PUBLIC_KEY: "p",
+        EMAILJS_PRIVATE_KEY: "k",
+    });
+};
+const mockSend = (ok: boolean) => {
+    const sent: Record<string, string>[] = [];
+    mock.method(globalThis, "fetch", async (_url: string, init: RequestInit) => {
+        sent.push(JSON.parse(init.body as string).template_params);
+        return new Response("", { status: ok ? 200 : 500 });
+    });
+    return sent;
+};
+
+test("resetPassword emails a new password, stores its hash, sets the user to invited and revokes old tokens", async () => {
+    resetEnv();
+    const user = await makeUser();
+    const oldToken = service.signToken(user.id as string, user.password as string);
+    mock.method(Users, "findOne", async () => user);
+    const sent = mockSend(true);
+    assert.deepEqual(await service.resetPassword(" A@B.org "), { id: "u1", previousStatus: UserStatus.ACTIVE });
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0]?.user_email, "a@b.org");
+    assert.ok(await service.verifyPassword(sent[0]?.new_password ?? "", user.password as string));
+    assert.equal(user.status, UserStatus.INVITED);
+    assert.notEqual(service.verifyToken(oldToken)?.pv, service.passwordVersion(user.password as string));
+    process.env.NODE_ENV = "test";
+});
+
+test("resetPassword changes nothing for an unknown or inactive user, or when the email cannot be sent", async () => {
+    resetEnv();
+    const sent = mockSend(true);
+    mock.method(Users, "findOne", async () => null);
+    assert.equal(await service.resetPassword("x@y.org"), null);
+    const inactive = await makeUser({ status: UserStatus.INACTIVE });
+    mock.method(Users, "findOne", async () => inactive);
+    assert.equal(await service.resetPassword("a@b.org"), null);
+    assert.equal(sent.length, 0);
+    mock.restoreAll();
+    const user = await makeUser();
+    const oldHash = user.password;
+    mock.method(Users, "findOne", async () => user);
+    mockSend(false);
+    assert.equal(await service.resetPassword("a@b.org"), null);
+    assert.equal(user.password, oldHash);
+    assert.equal(user.status, UserStatus.ACTIVE);
+    process.env.NODE_ENV = "test";
+});
+
+test("the forgot-password controller needs an email, and answers 202 the same for unknown accounts", async () => {
+    const bad = fakeRes();
+    await controller.forgotPassword(fakeReq({ body: {} }), bad as never);
+    assert.equal(bad.statusCode, 400);
+    mock.method(Users, "findOne", async () => null);
+    const res = fakeRes();
+    await controller.forgotPassword(fakeReq({ body: { email: "nobody@x.org" } }), res as never);
+    assert.equal(res.statusCode, 202);
+});
+
+test("the reset email is not sent when email is disabled, as under NODE_ENV=test", async () => {
+    resetEnv();
+    process.env.NODE_ENV = "test";
+    assert.equal(await email.sendPasswordResetEmail({ name: "A", email: "a@b.org", password: "x" }), false);
+});
+
 // ---- controller input checks (they answer before touching the database) ----
 
 test("the login controller needs a string email and password", async () => {
-    for (const body of [undefined, {}, { email: "a@b.org" }, { email: 1, password: "x" }, { email: "a@b.org", password: ["x"] }]) {
+    for (const body of [
+        undefined,
+        {},
+        { email: "a@b.org" },
+        { email: 1, password: "x" },
+        { email: "a@b.org", password: ["x"] },
+    ]) {
         const res = fakeRes();
         await controller.login(fakeReq({ body }), res as never);
         assert.equal(res.statusCode, 400);
@@ -168,7 +246,10 @@ test("the change-password controller rejects missing, short, unchanged and defau
 test("the change-password controller answers 403 when the old password is wrong", async () => {
     mock.method(Users, "findByPk", async () => makeUser());
     const res = fakeRes({ user: { id: "u1", status: UserStatus.ACTIVE } });
-    await controller.changePassword(fakeReq({ body: { oldPassword: "wrong", newPassword: "x".repeat(MIN_PASSWORD_LENGTH + 2) } }), res as never);
+    await controller.changePassword(
+        fakeReq({ body: { oldPassword: "wrong", newPassword: "x".repeat(MIN_PASSWORD_LENGTH + 2) } }),
+        res as never
+    );
     assert.equal(res.statusCode, 403);
 });
 
@@ -181,7 +262,11 @@ test("logout answers 204", () => {
 // ---- middleware ----
 
 // Runs a middleware and reports whether it let the request through
-const run = async (middleware: (...args: never[]) => unknown, headers: Record<string, string> = {}, locals: Record<string, unknown> = {}) => {
+const run = async (
+    middleware: (...args: never[]) => unknown,
+    headers: Record<string, string> = {},
+    locals: Record<string, unknown> = {}
+) => {
     const res = fakeRes(locals);
     let passed = false;
     await middleware(fakeReq({ headers }) as never, res as never, (() => (passed = true)) as never);
@@ -240,7 +325,10 @@ test("optionalAuth treats no header as a guest, a bad token as 401, and an invit
     assert.equal(asGuest.res.locals.user, null);
     mock.restoreAll();
     const active = await loggedIn();
-    assert.equal(((await run(optionalAuth, { authorization: active.Authorization! })).res.locals.user as { id: string }).id, "u1");
+    assert.equal(
+        ((await run(optionalAuth, { authorization: active.Authorization! })).res.locals.user as { id: string }).id,
+        "u1"
+    );
     mock.restoreAll();
     const inactive = await loggedIn({ status: UserStatus.INACTIVE });
     assert.equal((await run(optionalAuth, { authorization: inactive.Authorization! })).res.statusCode, 401);

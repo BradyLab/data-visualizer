@@ -3,7 +3,7 @@ import { Request, Response } from "express";
 import * as service from "@src/services/auth.ts";
 import * as userService from "@src/services/user.ts";
 import { emitUserChanged, revokeSession } from "@src/services/socket.ts";
-import { logActivity } from "@src/services/activity.ts";
+import { logActivity, logActivityAs } from "@src/services/activity.ts";
 import { ActivityType } from "@commons/activity.ts";
 import { SessionRevokedReason } from "@commons/socket.ts";
 import { MIN_PASSWORD_LENGTH } from "@commons/general.ts";
@@ -71,6 +71,35 @@ export const changePassword = async (req: Request, res: Response) => {
     }
     // Tokens issued before the change no longer work, so hand back a fresh one for the caller's own session
     res.status(200).json({ token });
+};
+
+/**
+ * POST /forgot-password : emails a new temporary password to the account with the given email and marks it INVITED (so it must be changed at login).
+ * Always answers 202 with the same message once the email is well-formed (400 if it is missing), whether or not an account exists, so it cannot be used to
+ * find out who has one; the work happens after the response so timing gives nothing away either
+ */
+export const forgotPassword = async (req: Request, res: Response) => {
+    console.log("[AUTH CONTROLLER] Attempting to reset a password...");
+    const { email } = req.body ?? {};
+    if (typeof email !== "string" || !email.trim()) {
+        return res.status(400).json({ error: "Email is required" });
+    }
+    res.status(202).json({ message: "If an account exists for that email, a new password has been sent to it." });
+    try {
+        const reset = await service.resetPassword(email);
+        if (!reset) return;
+        const { id, previousStatus } = reset;
+        // Logged as the user who got the new password (the request itself has no logged-in user); the password is not recorded
+        await logActivityAs(id, ActivityType.PASSWORD_RESET, {
+            changes: { status: { before: previousStatus, after: UserStatus.INVITED } },
+        });
+        // The old token no longer works, so end the user's open sessions
+        await revokeSession(id, SessionRevokedReason.PASSWORD_CHANGED);
+        const user = await userService.getById(id);
+        if (user) await emitUserChanged(user.get({ plain: true }));
+    } catch (err) {
+        console.error("[AUTH CONTROLLER] Password reset failed", err);
+    }
 };
 
 /** GET /me : returns the logged-in user (set by requireAuthAllowInvited) */

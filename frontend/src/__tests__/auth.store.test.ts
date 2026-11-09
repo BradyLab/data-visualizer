@@ -157,6 +157,17 @@ describe("changePassword", () => {
     });
 });
 
+describe("forgotPassword", () => {
+    it("passes the email on, and rejects with the request's error", async () => {
+        const auth = useAuthStore();
+        vi.mocked(authApi.forgotPassword).mockResolvedValue(undefined);
+        await auth.forgotPassword("a@b.c");
+        expect(authApi.forgotPassword).toHaveBeenCalledWith("a@b.c");
+        vi.mocked(authApi.forgotPassword).mockRejectedValue(httpError(429));
+        await expect(auth.forgotPassword("a@b.c")).rejects.toMatchObject({ response: { status: 429 } });
+    });
+});
+
 describe("401 interceptor", () => {
     // Drives the store's response interceptor with a rejected response, without a network
     const respondWith = (status: number) =>

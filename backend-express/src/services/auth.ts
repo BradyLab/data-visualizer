@@ -4,7 +4,8 @@ import jwt from "jsonwebtoken";
 import { fn, col, where } from "sequelize";
 import { Users } from "@src/models/user.ts";
 import { UserStatus } from "@commons/user.ts";
-import { hashPassword, scryptAsync } from "@src/utils/password.ts";
+import { generatePassword, hashPassword, scryptAsync } from "@src/utils/password.ts";
+import { sendPasswordResetEmail } from "@src/services/email.ts";
 
 // Payload stored in the token
 export interface TokenPayload {
@@ -132,4 +133,25 @@ export const login = async (email: string, password: string) => {
         const { password: _password, ...publicUser } = user.get({ plain: true });
         return { token: signToken(user.id, user.password), user: publicUser };
     } else return null;
+};
+
+/**
+ * Resets the password of the account with this email: emails a new random password to that address and sets the account to INVITED, so
+ * the user must change it at their next login. Returns the user's id and their status before the reset if it was reset, or null (changing nothing) for an unknown or
+ * inactive account, or when the email could not be sent. The password is changed only after the email was accepted, so a failed send
+ * never locks the user out; it goes nowhere except the account's own address, so whoever asks for a reset cannot learn it
+ */
+export const resetPassword = async (email: string) => {
+    console.log("[AUTH SERVICE] Looking up user to reset the password...");
+    const user = await Users.findOne({ where: where(fn("lower", col("email")), email.trim().toLowerCase()) });
+    if (!user || user.status === UserStatus.INACTIVE) {
+        console.log("[AUTH SERVICE] No active user for that email, nothing to reset");
+        return null;
+    }
+    const password = generatePassword();
+    if (!(await sendPasswordResetEmail({ name: user.name, email: user.email, password }))) return null;
+    // Stored hash changes, so every token issued before the reset stops working
+    const previousStatus = user.status;
+    await user.update({ password: await hashPassword(password), status: UserStatus.INVITED });
+    return { id: user.id, previousStatus };
 };
