@@ -1,4 +1,4 @@
-// Component tests for the About page: the saved or default text, and the admin-only Markdown editor (the API and auth store are mocked)
+// Component tests for the About page: the saved or default text, and the admin-only Markdown editor (the page and auth stores are mocked)
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { reactive } from "vue";
 import { flushPromises, mount } from "@vue/test-utils";
@@ -12,7 +12,7 @@ const fake = vi.hoisted(() => ({
 }));
 
 vi.mock("@src/stores/auth", () => ({ useAuthStore: () => fake.auth }));
-vi.mock("@src/api/page", () => ({ pageApi: fake.api }));
+vi.mock("@src/stores/page", () => ({ usePageStore: () => fake.api }));
 
 vi.stubGlobal(
     "ResizeObserver",

@@ -6,7 +6,9 @@ import { UserRoles, UserStatus, type IUser } from "@commons/user";
 import { authApi } from "@src/api/auth";
 import { useAuthStore } from "@src/stores/auth";
 
-vi.mock("@src/api/auth", () => ({ authApi: { login: vi.fn(), logout: vi.fn(), me: vi.fn(), changePassword: vi.fn() } }));
+vi.mock("@src/api/auth", () => ({
+    authApi: { login: vi.fn(), logout: vi.fn(), me: vi.fn(), changePassword: vi.fn(), forgotPassword: vi.fn() },
+}));
 // The 403 handler imports the router lazily; it is not under test here
 vi.mock("@src/router", () => ({ default: { push: vi.fn() } }));
 
@@ -129,6 +131,29 @@ describe("markPasswordChanged", () => {
         await auth.login("a@b.c", "pw");
         auth.markPasswordChanged();
         expect(auth.user.status).toBe(UserStatus.ACTIVE);
+    });
+});
+
+describe("changePassword", () => {
+    it("sends the passwords and socket id, switches to the fresh token and activates an invited user", async () => {
+        vi.mocked(authApi.login).mockResolvedValue({ token: "old", user: makeUser(UserRoles.EXTERNAL, UserStatus.INVITED) });
+        vi.mocked(authApi.changePassword).mockResolvedValue("fresh");
+        const auth = useAuthStore();
+        await auth.login("a@b.c", "pw");
+        await auth.changePassword("old-pw", "new-pw", "sock-1");
+        expect(authApi.changePassword).toHaveBeenCalledWith("old-pw", "new-pw", "sock-1");
+        expect(auth.token).toBe("fresh");
+        expect(axios.defaults.headers.common["Authorization"]).toBe("Bearer fresh");
+        expect(auth.user.status).toBe(UserStatus.ACTIVE);
+    });
+
+    it("rejects with the request's error and keeps the token when it fails", async () => {
+        vi.mocked(authApi.login).mockResolvedValue({ token: "old", user: makeUser() });
+        vi.mocked(authApi.changePassword).mockRejectedValue(httpError(403));
+        const auth = useAuthStore();
+        await auth.login("a@b.c", "pw");
+        await expect(auth.changePassword("bad", "new-pw")).rejects.toMatchObject({ response: { status: 403 } });
+        expect(auth.token).toBe("old");
     });
 });
 

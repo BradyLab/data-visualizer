@@ -90,6 +90,15 @@ export const useAuthStore = defineStore("auth", () => {
     }
 
     /**
+     * Changes the logged-in user's password. On success switches to the fresh token (the old one stopped working) and marks an invited user
+     * as active, as the backend does. Rejects with the request's error (403 wrong old password, 400/429 with a reason) for the caller to show
+     */
+    async function changePassword(oldPassword: string, newPassword: string, socketId?: string | null) {
+        setToken(await authApi.changePassword(oldPassword, newPassword, socketId));
+        markPasswordChanged();
+    }
+
+    /**
      * Restores the user from a saved token (call on app start). Logs out only if the server rejects the token (401);
      * on a network error or 5xx the token is kept, so a reload can retry, and the user shows as logged out until then
      */
@@ -157,6 +166,7 @@ export const useAuthStore = defineStore("auth", () => {
         isAdmin,
         canCreateDatasets,
         login,
+        changePassword,
         restore,
         logout,
         markPasswordChanged,

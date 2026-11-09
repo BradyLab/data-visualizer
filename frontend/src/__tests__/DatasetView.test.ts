@@ -7,7 +7,6 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { createVuetify } from "vuetify";
 import { DatasetStatus, DatasetVisibility, type IDataset } from "@commons/dataset";
 import DatasetView from "@src/views/DatasetView.vue";
-import { datasetApi } from "@src/api/dataset";
 
 // Reactive stand-ins for the route and the stores, created by the mock factories (they need vue, which vi.hoisted cannot import)
 const h = vi.hoisted(() => ({
@@ -18,6 +17,7 @@ const h = vi.hoisted(() => ({
         currentDataset: IDataset | null;
         getByUrl: ReturnType<typeof vi.fn>;
         reprocessDataset: ReturnType<typeof vi.fn>;
+        getViewerUrl: ReturnType<typeof vi.fn>;
     },
     permissions: null as unknown as {
         fetchMine: ReturnType<typeof vi.fn>;
@@ -38,7 +38,7 @@ vi.mock("@src/stores/auth", async () => {
 });
 vi.mock("@src/stores/dataset", async () => {
     const { reactive } = await import("vue");
-    h.datasets = reactive({ currentDataset: null, getByUrl: vi.fn(), reprocessDataset: vi.fn() });
+    h.datasets = reactive({ currentDataset: null, getByUrl: vi.fn(), reprocessDataset: vi.fn(), getViewerUrl: vi.fn() });
     return { useDatasetStore: () => h.datasets };
 });
 vi.mock("@src/stores/permission", async () => {
@@ -51,7 +51,6 @@ vi.mock("@src/stores/file", async () => {
     h.files = reactive({ downloading: false, downloadRds: vi.fn() });
     return { useFileStore: () => h.files };
 });
-vi.mock("@src/api/dataset", () => ({ datasetApi: { getViewerUrl: vi.fn() } }));
 
 vi.stubGlobal(
     "ResizeObserver",
@@ -336,12 +335,12 @@ describe("processing status", () => {
 
 describe("plots", () => {
     it("opens the viewer in an iframe at the ticket URL, and replaces the button", async () => {
-        vi.mocked(datasetApi.getViewerUrl).mockResolvedValue("/shiny/root-atlas/?viewer_ticket=t");
+        h.datasets.getViewerUrl.mockResolvedValue("/shiny/root-atlas/?viewer_ticket=t");
         const wrapper = await render();
         expect(wrapper.find("iframe").exists()).toBe(false);
         await button(wrapper, "Generate Plots")!.trigger("click");
         await flushPromises();
-        expect(datasetApi.getViewerUrl).toHaveBeenCalledWith("d1");
+        expect(h.datasets.getViewerUrl).toHaveBeenCalledWith("d1");
         const frame = wrapper.find("iframe");
         expect(frame.attributes("src")).toBe("/shiny/root-atlas/?viewer_ticket=t");
         expect(frame.attributes("referrerpolicy")).toBe("same-origin");
@@ -353,7 +352,7 @@ describe("plots", () => {
         [409, "The data for this dataset is not ready yet."],
         [500, "Unable to open the plot viewer. Please try again."],
     ])("explains a viewer that cannot be opened (%i), and keeps the button", async (status, message) => {
-        vi.mocked(datasetApi.getViewerUrl).mockRejectedValue(httpError(status));
+        h.datasets.getViewerUrl.mockRejectedValue(httpError(status));
         const wrapper = await render();
         await button(wrapper, "Generate Plots")!.trigger("click");
         await flushPromises();
@@ -363,7 +362,7 @@ describe("plots", () => {
     });
 
     it("closes the viewer when the plot data stops being ready, and offers the button again", async () => {
-        vi.mocked(datasetApi.getViewerUrl).mockResolvedValue("/shiny/root-atlas/?viewer_ticket=t");
+        h.datasets.getViewerUrl.mockResolvedValue("/shiny/root-atlas/?viewer_ticket=t");
         const wrapper = await render();
         await button(wrapper, "Generate Plots")!.trigger("click");
         await flushPromises();
@@ -378,7 +377,7 @@ describe("plots", () => {
 
     describe("height reported by the viewer", () => {
         const open = async () => {
-            vi.mocked(datasetApi.getViewerUrl).mockResolvedValue("/shiny/root-atlas/?viewer_ticket=t");
+            h.datasets.getViewerUrl.mockResolvedValue("/shiny/root-atlas/?viewer_ticket=t");
             const wrapper = await render();
             await button(wrapper, "Generate Plots")!.trigger("click");
             await flushPromises();
