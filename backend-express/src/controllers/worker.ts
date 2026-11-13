@@ -6,6 +6,11 @@ import * as service from "@src/services/remoteProcessing.ts";
 
 const GONE = { error: "This job is no longer active" };
 
+/** GET /waiting : how many jobs a worker could claim now (200, one text line waiting=<n>). Changes nothing, so a cheap scheduled job can ask first */
+export const waiting = async (req: Request, res: Response) => {
+    res.type("text/plain").send(`waiting=${await service.countWaiting()}\n`);
+};
+
 /** POST /claim : gives the worker the oldest waiting job (200, text lines id, dataset_id, size_bytes, timeout_seconds), or 204 when there is none */
 export const claim = async (req: Request, res: Response) => {
     const job = await service.claimNext();

@@ -1,5 +1,5 @@
 // A small real Express app with the large-memory worker's routes (the real router, middleware and services), for the HTTP tests of /api/worker
-// and for running shiny/preprocess/cluster-worker.sh against. The Postgres rate limit store is replaced with counters in memory; the models are
+// and for running shiny/preprocess/cluster/cluster-worker.sh against. The Postgres rate limit store is replaced with counters in memory; the models are
 // stubbed by the test (fixtures/fakeRemoteDb.ts)
 import { mock } from "node:test";
 import type { AddressInfo } from "node:net";

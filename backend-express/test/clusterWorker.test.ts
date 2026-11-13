@@ -1,4 +1,4 @@
-// Runs the real shiny/preprocess/cluster-worker.sh (bash and curl) against the real /api/worker routes, with a fake Apptainer in place of the
+// Runs the real shiny/preprocess/cluster/cluster-worker.sh (bash and curl) against the real /api/worker routes, with a fake Apptainer in place of the
 // preprocess container. Checks the protocol from the worker's side: claim, download, process, upload, complete or fail, and stopping when the
 // app drops the job. Needs bash, curl and timeout, as the worker itself does
 import { test, before, beforeEach, afterEach, after } from "node:test";
@@ -18,7 +18,7 @@ const { resetLimits, startWorkerApp } = await import("./fixtures/workerApp.ts");
 const remote = await import("@src/services/remoteProcessing.ts");
 const storage = await import("@src/services/storage.ts");
 
-const script = path.resolve(import.meta.dirname, "../../shiny/preprocess/cluster-worker.sh");
+const script = path.resolve(import.meta.dirname, "../../shiny/preprocess/cluster/cluster-worker.sh");
 const fakeApptainer = path.resolve(import.meta.dirname, "fixtures/fake-apptainer.mjs");
 const TOKEN = "c".repeat(48);
 const db = createFakeDb();

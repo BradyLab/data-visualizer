@@ -1,4 +1,4 @@
-// Runs the real shiny/preprocess/refresh-image.sh (bash) with a fake curl (the registry) and a fake apptainer (the pull), to check when the
+// Runs the real shiny/preprocess/cluster/refresh-image.sh (bash) with a fake curl (the registry) and a fake apptainer (the pull), to check when the
 // cluster's .sif is replaced: only when the registry's digest differs, never by a failed or broken pull, and with the old one kept
 import { test, before, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
@@ -7,7 +7,7 @@ import { chmod, mkdtemp, readFile, readdir, rm, writeFile, mkdir } from "node:fs
 import os from "node:os";
 import path from "node:path";
 
-const script = path.resolve(import.meta.dirname, "../../shiny/preprocess/refresh-image.sh");
+const script = path.resolve(import.meta.dirname, "../../shiny/preprocess/cluster/refresh-image.sh");
 const root = await mkdtemp(path.join(os.tmpdir(), "refresh-image-test-"));
 const bin = path.join(root, "bin");
 const callLog = path.join(root, "calls.log");

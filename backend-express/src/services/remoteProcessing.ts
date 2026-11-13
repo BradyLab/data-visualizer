@@ -1,5 +1,5 @@
 // Processing on the large-memory worker: datasets too big for this server's memory wait here, and a worker running elsewhere (the school's
-// cluster, see shiny/preprocess/cluster-worker.sh) fetches the RDS file over HTTP, runs preprocess.R, and sends the Parquet files back.
+// cluster, see shiny/preprocess/cluster/cluster-worker.sh) fetches the RDS file over HTTP, runs preprocess.R, and sends the Parquet files back.
 // The worker never touches the database or the disk of this server; it only calls the /api/worker routes (routers/worker.ts), which use
 // the functions below.
 //
@@ -87,6 +87,19 @@ export interface Claim {
     // How long the worker may take; it should give up after this (the same limit as local processing)
     timeoutMs: number;
 }
+
+/**
+ * How many jobs a worker could claim right now (the same ones claimNext looks at), without claiming or changing anything: for a small
+ * scheduled check that starts the big worker only when there is something to do. Jobs that are out of date are not counted (nor removed;
+ * claimNext does that)
+ */
+export const countWaiting = async (): Promise<number> => {
+    const cutoff = new Date(Date.now() - leaseMs());
+    const jobs = await RemoteJobs.findAll({ where: { [Op.or]: [{ claimedAt: null }, { heartbeatAt: { [Op.lt]: cutoff } }] } });
+    let waiting = 0;
+    for (const job of jobs) if (await activeFor(job)) waiting++;
+    return waiting;
+};
 
 /**
  * Gives the oldest waiting job (never claimed, or claimed with a heartbeat older than the lease) to a worker, under a new id, or returns

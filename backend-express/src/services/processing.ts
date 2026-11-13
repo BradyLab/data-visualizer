@@ -130,7 +130,7 @@ const handOff = async (job: Running, fileVersion: number, sizeBytes: number) => 
     void sendNotice(
         "A dataset is waiting for the large-memory worker",
         `The dataset "${dataset?.name ?? datasetId}" (data file ${gigabytes} GB) is too large to process on the server. ` +
-            "Start the large-memory worker on the cluster (shiny/preprocess/cluster-worker.sh) to process it; the dataset page shows its status."
+            "Start the large-memory worker on the cluster (shiny/preprocess/cluster/cluster-worker.sh) to process it; the dataset page shows its status."
     );
 };
 

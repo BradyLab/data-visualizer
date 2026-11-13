@@ -1,5 +1,5 @@
 // In-memory stand-ins for the database rows the large-memory worker code reads and writes (datasets, their current RDS file and the RemoteJobs
-// table), for the tests of services/remoteProcessing, the /api/worker routes and shiny/preprocess/cluster-worker.sh. Install it in beforeEach
+// table), for the tests of services/remoteProcessing, the /api/worker routes and shiny/preprocess/cluster/cluster-worker.sh. Install it in beforeEach
 // and call restore() in afterEach
 import { mock } from "node:test";
 import { DatasetStatus, DatasetVisibility } from "@commons/dataset.ts";
@@ -110,6 +110,11 @@ export const createFakeDb = () => {
                     .filter((j) => j.claimedAt === null || (j.heartbeatAt !== null && j.heartbeatAt.getTime() < cutoff))
                     .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0] ?? null
             );
+        });
+        // All the jobs a worker could claim (what countWaiting asks for)
+        stub(RemoteJobs, "findAll", async () => {
+            const cutoff = Date.now() - lease();
+            return [...jobs.values()].filter((j) => j.claimedAt === null || (j.heartbeatAt !== null && j.heartbeatAt.getTime() < cutoff));
         });
         stub(
             RemoteJobs,

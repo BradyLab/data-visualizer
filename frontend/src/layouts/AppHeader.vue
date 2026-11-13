@@ -53,7 +53,8 @@ async function logout() {
                         >
                             {{ dataset.name }}
                         </v-list-item>
-                        <v-divider></v-divider>
+                        <v-list-item v-if="datasetStore.datasets.length === 0">No Datasets</v-list-item>
+                        <v-divider v-if="auth.canCreateDatasets"></v-divider>
                         <v-list-item v-if="auth.canCreateDatasets" @click="navTo('/dataset/new')" class="pb-0 pt-2">
                             <template #prepend><v-icon size="small">mdi-plus</v-icon> New Dataset</template>
                         </v-list-item>
