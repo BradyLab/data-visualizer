@@ -89,6 +89,19 @@ export interface Claim {
 }
 
 /**
+ * How many jobs a worker could claim right now (the same ones claimNext looks at), without claiming or changing anything: for a small
+ * scheduled check that starts the big worker only when there is something to do. Jobs that are out of date are not counted (nor removed;
+ * claimNext does that)
+ */
+export const countWaiting = async (): Promise<number> => {
+    const cutoff = new Date(Date.now() - leaseMs());
+    const jobs = await RemoteJobs.findAll({ where: { [Op.or]: [{ claimedAt: null }, { heartbeatAt: { [Op.lt]: cutoff } }] } });
+    let waiting = 0;
+    for (const job of jobs) if (await activeFor(job)) waiting++;
+    return waiting;
+};
+
+/**
  * Gives the oldest waiting job (never claimed, or claimed with a heartbeat older than the lease) to a worker, under a new id, or returns
  * null when there is none. Jobs that are out of date are dropped on the way
  */

@@ -9,6 +9,7 @@ const router = Router();
 
 router.use(workerAuthLimiter, requireWorker);
 
+router.get("/waiting", controller.waiting);
 router.post("/claim", controller.claim);
 router.get("/jobs/:id/rds", controller.rds);
 router.post("/jobs/:id/heartbeat", controller.heartbeat);

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Stands in for `apptainer exec --cleanenv --bind <job dir>:/job <image> Rscript /preprocess.R /job/input.rds /job/out/dataset` in the tests of
-// shiny/preprocess/cluster-worker.sh. The input file's text says what to do: "ok" writes the Parquet files like preprocess.R does,
+// shiny/preprocess/cluster/cluster-worker.sh. The input file's text says what to do: "ok" writes the Parquet files like preprocess.R does,
 // "fail" prints an R-style error and exits 1, "oom" exits 137 like a process killed for memory, "slow" waits a long time (to be stopped)
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 

@@ -73,6 +73,7 @@ test("the routes are off (503) while no worker token is configured", async () =>
 test("every route refuses a missing or wrong token (401), including a user's login token", async () => {
     const userToken = signToken("u1", "salt:hash");
     const routes: [string, string][] = [
+        ["GET", "/waiting"],
         ["POST", "/claim"],
         ["GET", "/jobs/x/rds"],
         ["POST", "/jobs/x/heartbeat"],
@@ -109,6 +110,31 @@ test("claim answers 204 with no job, and plain text lines with one", async () =>
     assert.equal(job.size_bytes, "3");
     assert.equal(job.timeout_seconds, String(6 * 60 * 60));
     assert.equal((await call("POST", "/claim")).status, 204, "a claimed job is not handed out again");
+});
+
+test("waiting counts the jobs a worker could claim, and claims nothing itself", async () => {
+    const waiting = async () => {
+        const response = await call("GET", "/waiting");
+        assert.equal(response.status, 200);
+        return (await response.text()).trim();
+    };
+    assert.equal(await waiting(), "waiting=0");
+    db.addDataset("d1");
+    db.addJob("d1");
+    db.addDataset("d2");
+    db.addJob("d2");
+    // Out of date: its dataset is no longer waiting for the worker, so nothing can be done for it
+    db.addDataset("d3", DatasetStatus.READY);
+    db.addJob("d3");
+    assert.equal(await waiting(), "waiting=2");
+    assert.equal(await waiting(), "waiting=2", "asking does not use anything up");
+    assert.equal(db.jobs.size, 3, "and removes nothing");
+    assert.equal((await call("POST", "/claim")).status, 200);
+    assert.equal(await waiting(), "waiting=1", "a claimed job is no longer waiting");
+    // A claim whose heartbeats stopped is waiting again
+    const lost = [...db.jobs.values()].find((j) => j.claimedAt)!;
+    lost.heartbeatAt = new Date(Date.now() - 60 * 60 * 1000);
+    assert.equal(await waiting(), "waiting=2");
 });
 
 test("the RDS file is downloaded whole or by range, and only for an active job", async () => {
