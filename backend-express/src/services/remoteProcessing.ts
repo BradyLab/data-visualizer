@@ -1,5 +1,5 @@
 // Processing on the large-memory worker: datasets too big for this server's memory wait here, and a worker running elsewhere (the school's
-// cluster, see shiny/preprocess/cluster-worker.sh) fetches the RDS file over HTTP, runs preprocess.R, and sends the Parquet files back.
+// cluster, see shiny/preprocess/cluster/cluster-worker.sh) fetches the RDS file over HTTP, runs preprocess.R, and sends the Parquet files back.
 // The worker never touches the database or the disk of this server; it only calls the /api/worker routes (routers/worker.ts), which use
 // the functions below.
 //

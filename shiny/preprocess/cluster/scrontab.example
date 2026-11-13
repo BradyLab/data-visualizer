@@ -1,0 +1,24 @@
+# Entry for `scrontab -e` on the cluster: every 15 minutes, a tiny job asks the web app whether a dataset is waiting and, only if one is, submits
+# the real worker (cluster-worker.sbatch). Nothing in the repo reads this file; it is here to copy from. Replace <account>, <partition> and the
+# paths (the lab folder from discussions/clusterSetup.txt, step 1). Needs the same setup as the hand-started worker (clusterSetup.txt, steps
+# 1-6): the scripts, ~/.dv-worker.env, the token and the image. The Slurm options of the worker itself (memory, time) stay in cluster-worker.sbatch.
+#
+# How it behaves
+#  - The check job is small (1 CPU, 200 MB, 2 minutes), so it starts quickly even on a busy queue. The big allocation is only requested when
+#    GET /api/worker/waiting says something is waiting.
+#  - No second worker is submitted while one is queued or running (MAX_WORKERS, default 1, counts jobs named dv-worker, whoever started them).
+#  - A worker started this way gives its allocation back after WORKER_IDLE_SECONDS (default 300) without work, instead of the hour of a
+#    hand-started one. Both settings can go in ~/.dv-worker.env.
+#  - One log file, appended to (open-mode). Rotate it by hand. Try it first without submitting anything:  DRY_RUN=1 ./cluster-check.sh
+#  - To pause: put a # in front of the schedule line. `scrontab -r` removes ALL your entries.
+
+#SCRON --job-name=dv-check
+#SCRON --account=<account>
+#SCRON --partition=<partition>
+#SCRON --cpus-per-task=1
+#SCRON --mem=200M
+#SCRON --time=00:02:00
+#SCRON --chdir=<lab folder>/dv-worker
+#SCRON --output=<lab folder>/dv-worker/dv-check.log
+#SCRON --open-mode=append
+*/15 * * * * <lab folder>/dv-worker/cluster-check.sh

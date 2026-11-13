@@ -24,13 +24,13 @@ Uploading an RDS (tus upload finishing in `backend-express/src/services/tus.ts`)
   that machine needs R with Seurat, arrow and Matrix (see `preprocess/Dockerfile` for the system libraries).
 
 - **On a big machine (large datasets):** with `PREPROCESS_MODE=auto` or `remote` (see [`backend-express/README.md`](../backend-express/README.md#large-memory-worker)),
-  datasets that do not fit this server's memory wait as `WAITING_FOR_LARGE_MEMORY` until `preprocess/cluster-worker.sh` picks them up. It runs on the
-  school's cluster as a Slurm job (`preprocess/cluster-worker.sbatch`: set the lab's `--account`, `--mem` and the settings file described in its comments),
+  datasets that do not fit this server's memory wait as `WAITING_FOR_LARGE_MEMORY` until `preprocess/cluster/cluster-worker.sh` picks them up. It runs on the
+  school's cluster as a Slurm job (`preprocess/cluster/cluster-worker.sbatch`: set the lab's `--account`, `--mem` and the settings file described in its comments),
   asks the app for work over HTTPS with the `REMOTE_WORKER_TOKEN` (kept in a `chmod 600` file, never on a command line), downloads the `.rds`, runs the same
-  `preprocess.R` from the preprocess image with Apptainer (`preprocess/refresh-image.sh`, which the sbatch file runs first, keeps the `.sif` in step with the registry: it compares digests and pulls only a changed image, and keeps the old one as `.sif.prev`),
+  `preprocess.R` from the preprocess image with Apptainer (`preprocess/cluster/refresh-image.sh`, which the sbatch file runs first, keeps the `.sif` in step with the registry: it compares digests and pulls only a changed image, and keeps the old one as `.sif.prev`),
   uploads the Parquet files and exits after an hour with nothing to do (`IDLE_EXIT_SECONDS`). Needs only bash, curl, `timeout` and Apptainer on the cluster. A job that
   is cut off (Slurm time limit, `scancel`) is not reported: the app gives it to the next worker once the heartbeats have stopped for 15 minutes. Start the
-  worker whenever the app (or the lab's email notice) says a dataset is waiting. `preprocess/cluster-test.sh` runs the same image on an `.rds` already on the cluster, without the app, to measure time and peak memory.
+  worker whenever the app (or the lab's email notice) says a dataset is waiting. `preprocess/cluster/cluster-test.sh` runs the same image on an `.rds` already on the cluster, without the app, to measure time and peak memory.
 
 Either way:
 

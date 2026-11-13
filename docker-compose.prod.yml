@@ -67,7 +67,7 @@ services:
       PARQUET_DIR: /data/parquet
       # Uploads are processed by the preprocess service below, through this shared folder
       PREPROCESS_SPOOL_DIR: /data/jobs
-      # Datasets too big for that service go to the large-memory worker (shiny/preprocess/cluster-worker.sh) instead. local: everything is
+      # Datasets too big for that service go to the large-memory worker (shiny/preprocess/cluster/cluster-worker.sh) instead. local: everything is
       # processed here (default); auto: too big for PREPROCESS_MEM_LIMIT (or killed for memory) goes to the worker; remote: everything does.
       # Anything but local needs REMOTE_WORKER_TOKEN, the worker's secret (see .env.prod.example)
       PREPROCESS_MODE: ${PREPROCESS_MODE:-local}
