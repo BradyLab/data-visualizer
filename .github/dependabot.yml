@@ -37,6 +37,10 @@ updates:
     ignore:
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
+      # 1.65.0 bundles a Firefox that crashes the page during the axe accessibility scans (e2e/accessibility.spec.ts); only this version is skipped,
+      # so 1.65.1 and later are still proposed. Remove this entry once a release fixes it
+      - dependency-name: "@playwright/test"
+        versions: ["1.65.0"]
 
   - package-ecosystem: github-actions
     directory: /
