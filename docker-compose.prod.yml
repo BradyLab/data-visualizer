@@ -98,7 +98,7 @@ services:
     logging: *logging
 
   postgres:
-    image: postgres:18-alpine
+    image: postgres:19-alpine
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
