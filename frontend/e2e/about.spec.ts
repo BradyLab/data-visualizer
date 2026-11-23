@@ -54,8 +54,9 @@ test.describe('as an admin', () => {
     await expect(page.getByText('Thrown away')).toHaveCount(0)
   })
 
+  // The image has an alt text so an accessibility scan that runs at the same time in another worker does not flag it
   test('scripts in the text are not run', async ({ page }) => {
-    await saveAboutPage(page.request, await login(page.request, 'admin'), '<img src="x" onerror="document.title=\'hacked\'">\n\nSafe text')
+    await saveAboutPage(page.request, await login(page.request, 'admin'), '<img src="x" alt="broken" onerror="document.title=\'hacked\'">\n\nSafe text')
     await page.goto('/about')
     await expect(page.getByText('Safe text')).toBeVisible()
     await expect(page).not.toHaveTitle('hacked')

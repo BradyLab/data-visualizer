@@ -34,7 +34,11 @@ export const pickOption = async (page: Page, field: Locator, name: string) => {
   await expect(list).toBeVisible()
   // Scroll with the mouse wheel over the list, as a user would, until the option is rendered or the end of the list is reached.
   // A frame is awaited after each step so the list can render its new rows
-  await list.hover()
+  // The menu can still be sliding into place (or be re-rendered) when it first appears, and another field can sit under it for a moment,
+  // so the hover is retried until the list is stable and on top
+  await expect(async () => {
+    await list.hover({ timeout: 2_000 })
+  }).toPass({ timeout: 10_000 })
   for (let step = 0; step < 300 && (await option.count()) === 0; step++) {
     await page.mouse.wheel(0, 300)
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
