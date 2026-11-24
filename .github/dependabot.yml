@@ -31,16 +31,20 @@ updates:
     cooldown:
       default-days: 7
     groups:
+      # Playwright gets its own PR (its browser builds can break the e2e tests), so a blocked or ignored Playwright update never holds up the rest
+      playwright:
+        patterns: ["@playwright/*", "playwright", "playwright-core"]
       frontend-minor-and-patch:
         update-types: [minor, patch]
+        exclude-patterns: ["@playwright/*", "playwright", "playwright-core"]
     # @types/node follows the Node version the project runs on (.nvmrc and the compose files), not the newest Node
     ignore:
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
-      # 1.65.0 bundles a Firefox that crashes the page during the axe accessibility scans (e2e/accessibility.spec.ts); only this version is skipped,
-      # so 1.65.1 and later are still proposed. Remove this entry once a release fixes it
+      # The Firefox bundled with 1.65.0 and 1.65.1 crashes the page during the axe accessibility scans (e2e/accessibility.spec.ts, the `label` rule);
+      # 1.64.1 is fine. Only the 1.65 releases are skipped, so 1.66 and later are still proposed. Remove this entry once a release fixes it
       - dependency-name: "@playwright/test"
-        versions: ["1.65.0"]
+        versions: ["1.65.x"]
 
   - package-ecosystem: github-actions
     directory: /

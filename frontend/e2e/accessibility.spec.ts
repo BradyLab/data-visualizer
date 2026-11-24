@@ -12,7 +12,8 @@ const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
 
 /** Fails with the rule, the elements and the fix hint of every violation found on the page as it is now */
 const expectAccessible = async (page: Page) => {
-  const { violations } = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze()
+  // The Vue DevTools overlay (injected by vite-plugin-vue-devtools in the dev server only) is not part of the app
+  const { violations } = await new AxeBuilder({ page }).withTags(WCAG_TAGS).exclude('.vue-devtools__panel').analyze()
   expect(
     violations.map((v) => ({ rule: v.id, impact: v.impact, help: v.help, targets: v.nodes.map((n) => n.target.join(' ')) })),
     'axe violations'

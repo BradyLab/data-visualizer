@@ -32,6 +32,8 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     // Always headless (a headed WebKit window under WSLg ends up with a 0x0 viewport); pass --headed to watch a run
     headless: true,
+    // Menus and messages appear at once (see a11y.css) instead of fading in, so clicks and scans never meet a half-animated element
+    reducedMotion: 'reduce',
   },
 
   projects: [
